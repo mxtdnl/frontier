@@ -333,6 +333,14 @@ describe('steps 15–16: headlines and DATA lines', () => {
     expect(r.state.history[0]?.T).toBe(r.outputs.T);
   });
 
+  it('returns outputs that do not alias the new state', () => {
+    const r = resolveRound(game(3), {});
+    r.outputs.firms.f0!.cash = -1;
+    r.outputs.headlines.length = 0;
+    expect(r.state.history[0]?.firms.f0?.cash).not.toBe(-1);
+    expect(r.state.history[0]?.headlines.length).toBeGreaterThan(0);
+  });
+
   it('does not mutate the input state', () => {
     const g = game(3);
     const copy = structuredClone(g);

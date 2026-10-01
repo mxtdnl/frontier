@@ -354,7 +354,7 @@ export function resolveRound(
   s.history.push(record);
   s.round = round;
 
-  const outputs: RoundOutputs = { ...record, collapsedNow, notices, finalRound };
+  const outputs: RoundOutputs = { ...structuredClone(record), collapsedNow, notices, finalRound };
   const g = { label: s.label, round, T, M, collapsed: s.collapsed };
   const dataLines = s.firms.map((f) => dataLine(g, f, firmResults[f.id] as FirmRoundResult));
   return { state: s, outputs, dataLines };
