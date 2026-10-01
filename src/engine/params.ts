@@ -102,14 +102,14 @@ export interface Params {
 
 export const PARAMS: Params = {
   T0: 72,
-  R: 0.16,
+  R: 0.25, // calibrated, was 0.16 (docs/CALIBRATION.md step 1)
   TAU_MIN: 30,
   TAU_MAX: 40,
   TRUST_MAX: 100,
 
   CAP_GAIN: [2, 4, 7, 11],
   COMPUTE_COST: [12, 20, 32, 48],
-  DRAW: [1.0, 2.5, 5.5, 9.0],
+  DRAW: [0.125, 0.3125, 0.6875, 1.125], // calibrated, was [1.0, 2.5, 5.5, 9.0] (step 2)
   INC_BASE: [0.02, 0.05, 0.15, 0.3],
 
   SAFETY_MAX: 30,
@@ -148,7 +148,7 @@ export const PARAMS: Params = {
   DEFAULT_PACE: 2,
   DEFAULT_SAFETY: 10,
 
-  EXPO_CUTS: [1.5, 3.5, 6],
+  EXPO_CUTS: [0.1875, 0.4375, 0.75], // scaled with DRAW, was [1.5, 3.5, 6] (step 3, spec deviation)
 
   FINE_RATES: [0.1, 0.25, 0.4],
   FINE_MIN: 10,
