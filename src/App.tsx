@@ -1,0 +1,35 @@
+import { useRoute } from './router';
+import { Control } from './screens/Control/Control';
+import { Index } from './screens/Index';
+import { Kit } from './screens/Kit/Kit';
+import { NewGame } from './screens/NewGame/NewGame';
+import { Play } from './screens/Play/Play';
+import { Results } from './screens/Results/Results';
+import { Screen } from './screens/Screen/Screen';
+
+export function App() {
+  const { segments } = useRoute();
+  switch (segments[0]) {
+    case undefined:
+      return <Index />;
+    case 'screen':
+      return <Screen />;
+    case 'play':
+      return <Play />;
+    case 'control':
+      return <Control />;
+    case 'new':
+      return <NewGame />;
+    case 'results':
+      return <Results />;
+    case 'kit':
+      return <Kit />;
+    default:
+      return (
+        <div className="page stack">
+          <p className="notice err" role="alert">No view at this address. Open the index and select a view.</p>
+          <a href="#/">INDEX</a>
+        </div>
+      );
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "frontier",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run lint:copy && npm run lint:design && tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:rules": "tsx scripts/not-implemented.ts test:rules",
+    "calibrate": "tsx scripts/not-implemented.ts calibrate",
+    "bots": "tsx scripts/not-implemented.ts bots",
+    "lint:copy": "tsx scripts/lint-copy.ts",
+    "shots": "tsx scripts/screenshots.ts",
+    "lint:design": "tsx scripts/lint-design.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "qrcode-generator": "^2.0.4",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "playwright": "^1.63.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^5.0.3"
+  }
+}
