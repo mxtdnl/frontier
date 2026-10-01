@@ -6,5 +6,5 @@ export default defineConfig({
   base: './',
   plugins: [react(), viteSingleFile()],
   build: { assetsInlineLimit: 100_000_000, chunkSizeWarningLimit: 4000 },
-  test: { include: ['tests/**/*.test.ts', 'src/**/*.test.ts'], exclude: ['tests/rules/**', '**/node_modules/**'] },
+  test: { include: ['tests/**/*.test.ts', 'src/**/*.test.ts'], exclude: ['tests/rules/**', 'tests/emulator/**', '**/node_modules/**'] },
 });
