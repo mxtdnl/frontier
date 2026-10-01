@@ -32,3 +32,97 @@
 
 **Next steps**
 - Session 2: engine and calibration.
+
+## 2026-10-01 — Session 2: engine and calibration
+
+**Done**
+- `src/engine/` modules, all pure TypeScript: `types`, `params`, `rng`, `resolve`, `cards`, `pacts`, `headlines`, `counterfactual`, `policies`, `data`, and `index` for the public API.
+  - None of them use Firebase, the DOM, `Date.now` or `Math.random`. A test enforces this.
+- `createGame(settings, firms, seed)`:
+  - draws τ ~ U[30, 40] and the end round once from the `setup` stream
+  - stores both only in the engine state.
+- `resolveRound(state, decisions, params)`:
+  - follows steps 1–16 of §6.3 in order
+  - returns `{state, outputs, dataLines}`
+  - never changes its input.
+- Randomness: `mulberry32(hash(seed, round, stream))`, with streams `setup`, `incident`, `headline`, `audit` and `bot`.
+  - Every firm takes one incident draw and one bot draw per quarter, in creation order. Every pact takes one audit draw per quarter, in creation order. Draws therefore never shift between the actual run and the counterfactual.
+- Pacts (§9.2, §9.3):
+  - compliance checks and manual and automatic audits
+  - graduated fines with a minimum of 10, and expulsion at the third detected violation
+  - LOBBY waiver, BREACH flag and dissolution
+  - disclosure snapshot.
+- Headline engine with 57 templates (at least 40 required). Fictional entities only. A test checks every template against the copy rules.
+  - Exported helpers produce the pact form, join and leave headlines and the disclosure headlines for Session 6.
+- `runCounterfactual`, `attribution` and `compareIndustry` (§10). Bot policies `cautious`, `standard`, `greedy` and `mimic-leader`, plus an internal `sustainable` policy.
+- Helpers for Session 5: `exposureOf`, `exposureLabel`, `estimatedCost`, `allowedCards` and `nextPactName`.
+- Tests: 81 engine tests across 11 files, 127 including Session 1.
+  - Each resolution step has its own tests.
+  - Property tests over 84 random games, with random pacts, audits and disclosure toggles:
+    - T stays within [0, 100]
+    - shares sum to 1 ± 1e-9
+    - the same seed gives identical output
+    - the counterfactual's incident draws match the actual run's.
+  - A 40-seed calibration smoke test guards C1–C4.
+- `tools/calibrate.ts` (`npm run calibrate -- --seeds 200`) runs C1–C4 and every §8.2 diagnostic for N = 4, 6, 8, 10 and 12. It writes:
+  - `reports/calibration.md`
+  - a DATA-line sample in `reports/calibration-data.txt` (seed 1, N = 8, C1–C3).
+  - Options: `--params` for overrides, `--json`, `--no-diagnostics` and `--data-all`.
+- Calibration: C1–C4 pass for every N at 200 seeds, and again at 500 seeds. Changes are logged in `docs/CALIBRATION.md`:
+  - R 0.16 → 0.25
+  - DRAW × 1/8.
+
+**Interpretations agreed with the owner before coding**
+1. **C2 value test.** It compares quarter-14 valuations against C1 on the same seed. "≥ X% higher" is measured as (X − Y) / |Y|, because C1 valuations are negative. C3 uses the same rule. Both tests use the median across seeds.
+2. **Counting audit findings.** One audit counts as one detected violation per firm, however many quarters it finds.
+   - The audit still fines a firm that has since left the pact.
+   - Expulsion applies only if the firm is still a member.
+3. **Manual audits.** The facilitator queues them in `state.pendingAudits`, and they run at step 11 of the next resolution, together with automatic audits. This gives the LOBBY waiver ("the quarter of detection") a clear meaning.
+4. **POACH target.** The target may not be the firm's previous POACH target.
+5. **Live-event headlines.** Pact form, join and leave headlines and the disclosure headlines are exported functions for live events. Resolution produces 2–4 headlines in this priority:
+   - moratorium start
+   - moratorium continuing
+   - final quarter
+   - breach
+   - clean audit
+   - insolvency
+   - incident
+   - rank change
+   - card
+   - pace 4
+   - trust band
+   - general news as filler.
+6. **Fines.** Fine = max(10, rate × cash after profit and loss).
+7. **Mimic-leader bot.** It copies the previous rank-1 firm's pace only if the previous quarter's disclosure snapshot exists. Its safety is always 8.
+8. **Attribution.** Value share counts negative valuations as 0.
+9. **Exposure cutoffs.** They are scaled with DRAW. See the spec deviations below.
+10. **Moratorium haircut.** It applies to positive cash only. Negative balances are unchanged (owner decision).
+
+**Further implementation choices (spec silent; no mechanics added)**
+- **Pact age.** A pact's age counts its creation quarter. A pact created in quarter r with fewer than 2 members is dissolved at the resolution of quarter r + 1.
+- **BREACH flag.** `breachUntilRound = detection round + 1`. The board should show BREACH while `round ≤ breachUntilRound`, which covers 2 quarters.
+- **Rank changes.** `rankDelta` is 0 in quarter 1. The rank headline names the largest climber and the firm it passed.
+- **DATA lines.** `draw=` in DATA lines is the firm's actual trust draw d_i × 8/N. The disclosure snapshot's `expo` is d_i.
+- **Counterfactual valuations.** Per-firm counterfactual valuations differ slightly because each firm keeps its own incident draws. `perFirm` reports the mean.
+- **Card dominance diagnostic.** It uses a myopic best response: the card that maximises the firm's own valuation at the end of that quarter.
+
+**Spec deviations (with reasons)**
+1. **Exposure cutoffs.** `EXPO_CUTS` was scaled from [1.5, 3.5, 6] to [0.1875, 0.4375, 0.75] to match the DRAW calibration. Without this every decision would show LOW. Each pace and safety combination keeps the label the spec intended.
+2. **Moratorium haircut.** The cash haircut skips negative cash (owner decision). The spec says every firm.
+
+**Open issues**
+- **Weak cards.** In the myopic card search, firms choose no card in about 87% of quarters. The 60% dominance check passes, but cards look weak under short-term valuation, and LOBBY is never chosen when no pact exists. Worth watching in Session 9's dominant-strategy search.
+- **Stable rankings.** Leaderboard volatility in a mixed field is low: 0.07–1.15 firms change rank per quarter.
+- **Large temptation.** One greedy firm ends at about 4.5 times the others' valuation. C3 passes by a wide margin, which may make defection very attractive in class.
+- **DRAW scale.** After calibration, DRAW is exactly 1/8 of the spec values. This may mean the spec intended total draw to be the average d_i rather than 8 × the average. Behaviour is the same; owner confirmation is welcome.
+- **Firebase arrays.** Engine state uses arrays for firms, pacts, history and headlines. Firebase drops empty arrays and objects, so Session 3's API layer must normalise them when reading back.
+
+**Market behaviour (200 seeds per N)**
+- **All firms greedy:** the moratorium comes in quarter 6 (median). 80% of games fall in quarters 4–8 (3–9 at N = 4), and every seed reaches one by quarter 12.
+- **All firms restrained (pace 2, safety 15):** no moratorium in 30 quarters. Valuations end about 5.6× those of the greedy field.
+- **One greedy firm:** it does not cause a moratorium alone (1% of seeds at N = 4, 0% otherwise), and it earns about 4.5× the others.
+- **Half greedy:** a moratorium by quarter 14 in 22–35% of seeds, and by quarter 30 in 72–74%.
+- **Everyone keeps the defaults:** trust rises from 72 to about 85 and holds there.
+
+**Next steps**
+- Session 3: Firebase data layer and security rules.
