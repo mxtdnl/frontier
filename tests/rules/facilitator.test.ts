@@ -107,8 +107,11 @@ describe('join codes', () => {
     await assertFails(as('fac').ref('codes/QWER').set(G2));
   });
 
-  it('denies taking over an existing code', async () => {
+  it('denies taking over or repointing an existing code', async () => {
     await assertFails(as('fac').ref('codes/PLRV').set('g1'));
+    await assertSucceeds(as('fac').ref('games/g3/meta').set({ code: 'QWER', title: 'New', createdAt: 1, facilitatorUid: 'fac', settings: { timerSec: 120 } }));
+    await assertFails(as('fac').ref('codes/KXMT').set('g3'));
+    await assertFails(as('fac').ref('codes/KXMT').set('g1'));
   });
 
   it('denies codes with I, O, digits or the wrong length', async () => {

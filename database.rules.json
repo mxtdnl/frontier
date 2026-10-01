@@ -10,7 +10,7 @@
     "codes": {
       "$code": {
         ".read": "auth != null",
-        ".write": "auth != null && root.child('facilitators').child(auth.uid).val() === true && (!data.exists() || root.child('games').child(data.val()).child('meta/facilitatorUid').val() === auth.uid) && (!newData.exists() || newData.parent().parent().child('games').child(newData.val()).child('meta/facilitatorUid').val() === auth.uid)",
+        ".write": "auth != null && root.child('facilitators').child(auth.uid).val() === true && (data.exists() ? !newData.exists() && root.child('games').child(data.val()).child('meta/facilitatorUid').val() === auth.uid : newData.parent().parent().child('games').child(newData.val()).child('meta/facilitatorUid').val() === auth.uid)",
         ".validate": "$code.matches(/^[A-HJ-NP-Z]{4}$/) && newData.isString() && newData.val().matches(/^[^.#$\\[\\]\\/]{1,64}$/)"
       }
     },
