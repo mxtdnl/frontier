@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:rules": "tsx scripts/not-implemented.ts test:rules",
-    "calibrate": "tsx scripts/not-implemented.ts calibrate",
+    "calibrate": "tsx tools/calibrate.ts",
     "bots": "tsx scripts/not-implemented.ts bots",
     "lint:copy": "tsx scripts/lint-copy.ts",
     "shots": "tsx scripts/screenshots.ts",
