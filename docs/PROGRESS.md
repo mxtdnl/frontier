@@ -56,7 +56,7 @@
   - Exported helpers produce the pact form, join and leave headlines and the disclosure headlines for Session 6.
 - `runCounterfactual`, `attribution` and `compareIndustry` (§10). Bot policies `cautious`, `standard`, `greedy` and `mimic-leader`, plus an internal `sustainable` policy.
 - Helpers for Session 5: `exposureOf`, `exposureLabel`, `estimatedCost`, `allowedCards` and `nextPactName`.
-- Tests: 81 engine tests across 11 files, 127 including Session 1.
+- Tests: 80 engine tests in 10 files, 127 including Session 1.
   - Each resolution step has its own tests.
   - Property tests over 84 random games, with random pacts, audits and disclosure toggles:
     - T stays within [0, 100]
@@ -113,14 +113,14 @@
 **Open issues**
 - **Weak cards.** In the myopic card search, firms choose no card in about 87% of quarters. The 60% dominance check passes, but cards look weak under short-term valuation, and LOBBY is never chosen when no pact exists. Worth watching in Session 9's dominant-strategy search.
 - **Stable rankings.** Leaderboard volatility in a mixed field is low: 0.07–1.15 firms change rank per quarter.
-- **Large temptation.** One greedy firm ends at about 4.5 times the others' valuation. C3 passes by a wide margin, which may make defection very attractive in class.
+- **Large temptation.** One greedy firm ends at 4.5–5.3 times the others' median valuation. C3 passes by a wide margin, which may make defection very attractive in class.
 - **DRAW scale.** After calibration, DRAW is exactly 1/8 of the spec values. This may mean the spec intended total draw to be the average d_i rather than 8 × the average. Behaviour is the same; owner confirmation is welcome.
 - **Firebase arrays.** Engine state uses arrays for firms, pacts, history and headlines. Firebase drops empty arrays and objects, so Session 3's API layer must normalise them when reading back.
 
 **Market behaviour (200 seeds per N)**
 - **All firms greedy:** the moratorium comes in quarter 6 (median). 80% of games fall in quarters 4–8 (3–9 at N = 4), and every seed reaches one by quarter 12.
-- **All firms restrained (pace 2, safety 15):** no moratorium in 30 quarters. Valuations end about 5.6× those of the greedy field.
-- **One greedy firm:** it does not cause a moratorium alone (1% of seeds at N = 4, 0% otherwise), and it earns about 4.5× the others.
+- **All firms restrained (pace 2, safety 15):** no moratorium in 30 quarters. Median valuation per firm at quarter 14 is about 845, against about −231 in the greedy field, where firms end in debt.
+- **One greedy firm:** it does not cause a moratorium alone (1% of seeds at N = 4, 0% otherwise), and it ends at 4.5–5.3× the others' median valuation (5.3× at N = 4, 4.5× at N = 12).
 - **Half greedy:** a moratorium by quarter 14 in 22–35% of seeds, and by quarter 30 in 72–74%.
 - **Everyone keeps the defaults:** trust rises from 72 to about 85 and holds there.
 
