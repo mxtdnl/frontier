@@ -1,28 +1,17 @@
-import {
-  COMMITTED,
-  FIRMS,
-  HEADLINES,
-  PACTS,
-  ROUND,
-  TRUST,
-  TRUST_HISTORY,
-  prevProfit,
-  prevRank,
-  prevShare,
-  prevValue,
-  type MockFirm,
-} from '../../mock/fixtures';
+import { PARAMS } from '../../engine';
 import { DataTable, Delta, GlyphCheck, HBar, Panel, StepSparkline, Tag, type Column } from '../../ui/components';
 import { fmt, fmtInt, fmtShare, quarterLabel } from '../../ui/format';
+import { committedCount, marketCeiling, previousTrust, trustSeries, type BoardRow, type ScreenData } from './model';
 
 interface BoardProps {
+  rows: ReadonlyArray<BoardRow>;
   disclosure: boolean;
   reveal: boolean;
 }
 
-export function boardColumns(disclosure: boolean, reveal: boolean): Column<MockFirm>[] {
+export function boardColumns(disclosure: boolean, reveal: boolean): Column<BoardRow>[] {
   const prev = (s: string) => (reveal ? s : undefined);
-  const cols: Column<MockFirm>[] = [
+  const cols: Column<BoardRow>[] = [
     { key: 'rank', label: '#', w: 3, render: (_f, i) => i + 1 },
     { key: 'firm', label: 'FIRM', w: 7, render: (f) => f.ticker },
     {
@@ -30,28 +19,28 @@ export function boardColumns(disclosure: boolean, reveal: boolean): Column<MockF
       label: 'SHARE',
       w: 8,
       align: 'r',
-      render: (f) => <span data-roll="" data-prev={prev(fmtShare(prevShare(f)))}>{fmtShare(f.share)}</span>,
+      render: (f) => <span data-roll="" data-prev={prev(fmtShare(f.prevShare))}>{fmtShare(f.share)}</span>,
     },
     {
       key: 'profit',
       label: 'PROFIT',
       w: 9,
       align: 'r',
-      render: (f) => <span data-roll="" data-prev={prev(fmt(prevProfit(f)))}>{fmt(f.profit)}</span>,
+      render: (f) => <span data-roll="" data-prev={prev(fmt(f.prevProfit))}>{fmt(f.profit)}</span>,
     },
     {
       key: 'value',
       label: 'VALUE',
       w: 9,
       align: 'r',
-      render: (f) => <span data-roll="" data-prev={prev(fmt(prevValue(f)))}>{fmt(f.value)}</span>,
+      render: (f) => <span data-roll="" data-prev={prev(fmt(f.prevValue))}>{fmt(f.value)}</span>,
     },
     {
       key: 'chg',
       label: 'CHG',
       w: 9,
       align: 'r',
-      render: (f) => <Delta value={f.dValue} prev={prev(fmt(Math.abs(f.dValue) * 0.5))} />,
+      render: (f) => <Delta value={f.dValue} prev={prev(fmt(0))} />,
     },
     {
       key: 'cmt',
@@ -63,9 +52,9 @@ export function boardColumns(disclosure: boolean, reveal: boolean): Column<MockF
   ];
   if (disclosure) {
     cols.push(
-      { key: 'pace', label: 'PACE', w: 5, align: 'r', render: (f) => f.pace },
-      { key: 'safe', label: 'SAFE', w: 5, align: 'r', render: (f) => f.safety },
-      { key: 'expo', label: 'EXPO', w: 6, align: 'r', render: (f) => fmt(f.expo) },
+      { key: 'pace', label: 'PACE', w: 5, align: 'r', render: (f) => f.disclosed?.pace ?? '–' },
+      { key: 'safe', label: 'SAFE', w: 5, align: 'r', render: (f) => f.disclosed?.safety ?? '–' },
+      { key: 'expo', label: 'EXPO', w: 6, align: 'r', render: (f) => (f.disclosed ? fmt(f.disclosed.expo) : '–') },
     );
   }
   cols.push({
@@ -75,9 +64,9 @@ export function boardColumns(disclosure: boolean, reveal: boolean): Column<MockF
     className: 'tags',
     render: (f) => (
       <>
-        {f.tags.map((t) => (
-          <Tag key={t} kind={t} />
-        ))}
+        {f.bot ? <Tag kind="BOT" /> : null}
+        {f.auto ? <Tag kind="AUTO" /> : null}
+        {f.insolvent ? <Tag kind="INSOLV" /> : null}
         {f.pacts.map((p) => (
           <Tag key={p} pact={p} />
         ))}
@@ -88,16 +77,16 @@ export function boardColumns(disclosure: boolean, reveal: boolean): Column<MockF
   return cols;
 }
 
-export function BoardPanel({ disclosure, reveal }: BoardProps) {
+export function BoardPanel({ rows, disclosure, reveal }: BoardProps) {
   return (
-    <Panel title="BOARD" right={`${COMMITTED}/${FIRMS.length} CMT`}>
+    <Panel title="BOARD" right={`${committedCount(rows)}/${rows.length} CMT`}>
       <DataTable
         caption="Firm board"
         tall
         columns={boardColumns(disclosure, reveal)}
-        rows={FIRMS}
-        rowKey={(f) => f.ticker}
-        prevIndex={reveal ? prevRank : undefined}
+        rows={rows}
+        rowKey={(f) => f.id}
+        prevIndex={reveal ? (f) => f.prevIndex : undefined}
       />
       <p className="dim" style={{ marginTop: '1lh' }}>
         BOT automated firm · AUTO default settings applied · INSOLV forced to lowest pace · BREACH pact terms breached
@@ -106,13 +95,21 @@ export function BoardPanel({ disclosure, reveal }: BoardProps) {
   );
 }
 
-export function TrustPanel({ disclosure, reveal }: BoardProps) {
-  const delta = TRUST.value - TRUST.prev;
+export function TrustPanel({ data, reveal }: { data: ScreenData; reveal: boolean }) {
+  const { pub, rounds } = data;
+  const series = trustSeries(rounds);
+  const prev = previousTrust(rounds);
+  const delta = pub.round === 0 ? 0 : pub.T - prev;
+  const resolved = series.length - 1;
+  const latest = Object.values(rounds).length ? Math.max(...Object.keys(rounds).map(Number)) : 0;
+  const incidents = rounds[String(latest)]?.incidents ?? 0;
+  const firmCount = Object.keys(data.firms).length;
+  const activePacts = Object.values(data.pacts).filter((p) => p.status === 'active').length;
   return (
     <Panel title="PUBLIC TRUST">
       <div style={{ paddingTop: '0.5lh' }}>
         <div className="big signal" data-trust-numerals="" data-trust-delta={delta.toFixed(1)}>
-          <span data-roll="" data-prev={reveal ? fmt(TRUST.prev) : undefined}>{fmt(TRUST.value)}</span>
+          <span data-roll="" data-prev={reveal ? fmt(prev) : undefined}>{fmt(pub.T)}</span>
         </div>
         <div>
           <Delta value={delta} /> <span className="dim">QoQ</span>
@@ -120,30 +117,25 @@ export function TrustPanel({ disclosure, reveal }: BoardProps) {
       </div>
       <div style={{ marginTop: '1lh' }}>
         <StepSparkline
-          series={[{ values: TRUST_HISTORY, label: 'Trust', tone: 'signal' }]}
+          series={[{ values: series, label: 'Trust', tone: 'signal' }]}
           min={0}
           max={100}
           w={0}
           h={12}
-          count={TRUST_HISTORY.length}
-          description={`Public trust by quarter, from ${fmt(TRUST_HISTORY[0] ?? 0)} to ${fmt(TRUST.value)}`}
+          count={series.length}
+          description={`Public trust by quarter, from ${fmt(series[0] ?? PARAMS.T0)} to ${fmt(pub.T)}`}
         />
         <div className="dim" style={{ display: 'flex', justifyContent: 'space-between' }}>
           <span>Q1 Y1</span>
-          <span>{quarterLabel(ROUND)}</span>
+          <span>{quarterLabel(Math.max(1, resolved))}</span>
         </div>
       </div>
       <div className="stack" style={{ marginTop: '1lh', gap: 0 }}>
-        <HBar label="MKT" labelW={7} textW={8} value={TRUST.marketSize / TRUST.marketRef} text={fmtInt(TRUST.marketSize)} describe={`Market size ${fmtInt(TRUST.marketSize)}`} />
-        <div className="row"><span className="dim" style={{ width: '7ch' }}>INCID</span><span>{TRUST.incidents} this quarter</span></div>
-        <div className="row"><span className="dim" style={{ width: '7ch' }}>PACTS</span><span>{PACTS.length} active</span></div>
-        <div className="row"><span className="dim" style={{ width: '7ch' }}>DISCL</span><span>{disclosure ? 'ON' : 'OFF'}</span></div>
+        <HBar label="MKT" labelW={7} textW={8} value={pub.M / marketCeiling(firmCount)} text={fmtInt(pub.M)} describe={`Market size ${fmtInt(pub.M)}`} />
+        <div className="row"><span className="dim" style={{ width: '7ch' }}>INCID</span><span>{incidents} this quarter</span></div>
+        <div className="row"><span className="dim" style={{ width: '7ch' }}>PACTS</span><span>{activePacts} active</span></div>
+        <div className="row"><span className="dim" style={{ width: '7ch' }}>DISCL</span><span>{pub.disclosure ? 'ON' : 'OFF'}</span></div>
       </div>
     </Panel>
   );
 }
-
-export const WIRE_ITEMS = (disclosure: boolean): string[] => {
-  const base = HEADLINES.map((h) => h.text);
-  return disclosure ? ['ARCN accelerates release schedule', ...base.filter((t) => !t.startsWith('Unnamed lab'))] : base;
-};
