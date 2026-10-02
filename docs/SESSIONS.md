@@ -263,3 +263,41 @@ Read all of docs/spec.md, docs/PROGRESS.md and docs/CALIBRATION.md. Act as an in
    - every participant and projector string against the CLAUDE.md copy rules
    - every screen against §16.4 and the character grid, at the three viewport sizes.
 4. Write docs/REVIEW.md with findings ranked by severity. Each finding needs a reproduction and a proposed fix. Fix only critical and high issues; list the rest, in plain English, for the owner to decide.
+
+---
+
+## Session 10 — Scale to 40–50 participants (model: Opus 5.5)
+
+Added after Session 8. Read docs/spec.md §2, §6.2 (DRAW scale), §8, §13, §14.1, §14.4 and docs/PROGRESS.md (Session 8, "Defects found"). Present a detailed plan first and wait for "go".
+
+**Why.** Session 8 found that layouts clip as the firm count grows. It fixed them up to the spec's maximum of 16 firms, using one-line rows (board above 12 firms) and two columns (results panels 3 and 4 above 8 firms). That does not scale to 40–50 participants if each participant is a firm. The fixes were tuned for 16 and have no headroom beyond it.
+
+**First question to ask the owner (one question, before the plan).** Is the target 40–50 *participants* in teams of 3–5 (10–16 firms, already supported), or 40–50 *firms* of one person each? The spec supports 2–16 firms with 1–5 devices each, and calibration covers 4–12 firms. 40–50 firms is outside both, so it needs a spec change and a new calibration. The proposals below assume the harder case, 40–50 firms. Skip any step the owner's answer makes unnecessary.
+
+**Proposed fixes (to confirm in the plan; do not start without "go").**
+
+1. **Raise the limit deliberately.** Today `MAX_FIRMS` is 16 in `src/firebase/orchestrator.ts`, and the spec says 2–16. Raise it to 50 only with the owner's approval, and update spec §2 and §5.4. Check the engine (every loop is per firm, so cost is small), the `DRAW_REF_N / N` scaling, and the exposure cutoffs, which were scaled for N = 8.
+2. **Re-run calibration for large N.** Extend `tools/calibrate.ts` to N ∈ {20, 30, 40, 50} (C1–C4 and the §8.2 diagnostics, 200 seeds). Log changes in docs/CALIBRATION.md. If C1–C4 cannot pass without a structural change, stop and explain the options in plain English.
+3. **Projector board.** Choose one, in order of preference:
+   - **Paged board.** Show 10 rows at a time and rotate every 8 s with a page marker (for example `PAGE 2/5`). Rows stay two lines tall and legible from the back of the room. Pause rotation while the facilitator uses a key. Always show the leader and any firm that changed rank by 3 or more.
+   - **Multi-column board.** Single-line rows in 2 columns up to about 32 firms and 3 columns up to 50 at 1920×1080. At 1280×720 fall back to paging.
+   - **Top and bottom summary.** Show the top 10, the bottom 5 and the count in between. Full list on FIRM and a new `LIST` command.
+4. **Results panels.** FINAL BOARD, COUNTERFACTUAL and ATTRIBUTION need a rule that depends on the count, not fixed thresholds:
+   - columns = ceil(firms / 8), capped at 3, with single-line rows;
+   - above that, page the panel with F9 sub-steps (for example `3/6 · 2/3`), or show the top 10 and bottom 10 plus a distribution bar;
+   - ATTRIBUTION above 24 firms: show the 12 largest contributors to depletion and a "rest of market" line.
+5. **Lobby.** Firm list in columns with member counts, so 50 firms and their join progress fit. Keep the code and QR code visible.
+6. **Console.** Firms panel as a compact sortable table (scrolls inside the panel), with filters for "not committed" and "offline". Keep the F9 ADVANCE controls always visible, never scrolled away.
+7. **PACT view and PACTS tab.** Member lists for pacts with 20 or more firms need truncation (`+14 more`). The POACH target picker on `#/play` needs a search field or a scrollable list with the ticker typed to filter, because 49 radio buttons will not fit on a phone.
+8. **WIRE and ticker.** At 50 firms the engine may emit more headlines per quarter than the ticker shows. Check the headline priority list and the participants' WIRE tab for volume.
+9. **Connection budget.** Every device holds a live connection. 50 firms with several devices each, plus the projector and console, may approach the free plan's simultaneous connection limit. I believe the Spark plan limit is 100 simultaneous connections, but that is from memory, not verified. Read the current Firebase documentation and report the real figure to the owner before the plan is finalised. If the limit is a risk, options are the Blaze plan, one device per firm, or fewer subscriptions per page (for example, participants no longer subscribe to every firm's public data).
+10. **Reads per page.** Participants subscribe to `firms`, `firmsPublic` and `rounds`. At 50 firms check payload size per quarter and whether `rounds/{r}` can be split so phones download only their own rows.
+
+**Tests to add.**
+- Layout checks parametrised by firm count (17, 24, 32, 40, 50) on the board, lobby, console and all six results panels at 1280×720 and 1920×1080, using the existing clipping checks (`checkProjector`). Seed the database with synthetic results through the admin write path so these run in seconds rather than as full sessions.
+- A 14-quarter run with 50 bot clients (`npm run bots -- --firms 49`) plus one human, in the style of `scripts/e2e-rehearsal.ts`. Record the time each resolution takes and the size of the largest write.
+- Unit tests for the paging and column rules (pure functions, so they can be tested without a browser).
+- Rules tests if `MAX_FIRMS` is enforced in the rules (it is not today; decide whether it should be).
+- A phone check at 360×640 with 49 POACH targets.
+
+**Acceptance.** No clipped panel at 1280×720 or 1920×1080 for any firm count from 2 to the new maximum. Calibration passes at the new maximum. A 14-quarter rehearsal with the new maximum runs without errors. Phone screens stay usable at 360×640. The pull request states, in plain English, the connection limit that applies and the facilitator-visible changes (paging, new commands).

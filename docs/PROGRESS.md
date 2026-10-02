@@ -427,6 +427,7 @@
 **Open issues**
 - `npm audit` reports 4 high-severity findings in production dependencies, all through `firebase` → Firestore → `@grpc/grpc-js` (Firestore is not used or bundled). The suggested fix downgrades Firebase to version 9, a breaking change, so it is left for the owner.
 - The facilitator pages (`#/new`, `#/control`, `#/screen`, `#/results`) were not Lighthouse-audited; criterion 7 names `#/play`.
+- **Scale beyond 16 firms.** Session 8's clipping fixes are tuned for the spec maximum of 16 firms and do not scale to 40–50. The owner wants to scale to 40–50 participants. The plan, with proposed fixes and the questions to settle first (participants versus firms, connection limit, calibration), is **Session 10** in `docs/SESSIONS.md`.
 - A device that was not in the lobby cannot be added once joining closes (spec §13, unchanged).
 - Anonymous sign-in must be enabled in the Firebase console (Session 5 item, in the RUNBOOK).
 - The pending Session 6 database rules change (the `wire` block) still needs pasting into the Firebase console if not already done.
