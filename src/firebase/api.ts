@@ -21,6 +21,7 @@ import {
 import type { Decision, Pact, PactTerms } from '../engine';
 import { paths } from './paths';
 import {
+  arr,
   fromDecision,
   fromDecisions,
   fromEngine,
@@ -39,6 +40,7 @@ import {
   fromResults,
   fromRound,
   fromRounds,
+  fromWire,
   rec,
   toPactNode,
   type DecisionNode,
@@ -54,6 +56,7 @@ import {
   type PublicNode,
   type ResultsNode,
   type RoundNode,
+  type WireNode,
 } from './schema';
 
 export type Listener<T> = (value: T) => void;
@@ -122,6 +125,10 @@ export const subscribeFirmsPublic = (
 export const readRound = (db: Database, g: string, round: number): Promise<RoundNode | null> => read(db, paths.round(g, round), fromRound);
 export const subscribeRounds = (db: Database, g: string, cb: Listener<Record<string, RoundNode>>, onError?: ErrorListener): Unsubscribe =>
   watch(db, paths.rounds(g), fromRounds, cb, onError);
+
+export const readWire = (db: Database, g: string): Promise<Record<string, WireNode>> => read(db, paths.wire(g), fromWire);
+export const subscribeWire = (db: Database, g: string, cb: Listener<Record<string, WireNode>>, onError?: ErrorListener): Unsubscribe =>
+  watch(db, paths.wire(g), fromWire, cb, onError);
 
 export const readPacts = (db: Database, g: string): Promise<Record<string, Pact>> => read(db, paths.pacts(g), fromPacts);
 export const subscribePacts = (db: Database, g: string, cb: Listener<Record<string, Pact>>, onError?: ErrorListener): Unsubscribe =>
@@ -271,6 +278,26 @@ export async function transactPublic(
     { applyLocally: false },
   );
   return { committed: result.committed, value: fromPublic(result.snapshot.val()) };
+}
+
+/**
+ * Atomic add of a pact id to `engine/pendingAudits` (spec §9.2 manual audit). Several windows
+ * may queue different pacts at once, so this is a transaction rather than a plain write.
+ */
+export async function transactPendingAudits(
+  db: Database,
+  g: string,
+  step: (current: string[]) => string[] | undefined,
+): Promise<{ committed: boolean; value: string[] }> {
+  const result = await runTransaction(
+    ref(db, `${paths.engine(g)}/pendingAudits`),
+    (raw: unknown) => {
+      const next = step(arr(raw, String));
+      return next === undefined ? undefined : next.length ? next : null;
+    },
+    { applyLocally: false },
+  );
+  return { committed: result.committed, value: arr(result.snapshot.val(), String) };
 }
 
 export const updatePublic = (db: Database, g: string, patch: Partial<PublicNode>): Promise<void> =>
