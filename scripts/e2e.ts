@@ -106,6 +106,29 @@ async function scenario(browser: Browser): Promise<void> {
   await waitText(control, /CONTROL/, 'the console opens for the same account');
   await waitText(control, /ALPH[\s\S]*BETA/, 'the console lists the firms');
 
+  // Session 9 review, H1: a device that founds twice leaves a firm with no members; REMOVE clears it.
+  const p5 = await participant('participant who founds twice');
+  const p5uid = await h(p5.page, 'signIn');
+  const spare = await h(p5.page, 'found', g, 'Spare Works', 'SPAR', 'GH');
+  const gone = await h(p5.page, 'found', g, 'Gone Works', 'GONE', 'GH');
+  await waitText(fac, /SPAR[\s\S]*GONE/, 'the lobby lists both firms founded by one device', 15_000, '.scr');
+  for (const [firm, ticker] of [[spare, 'SPAR'], [gone, 'GONE']] as const) {
+    await control.getByRole('button', { name: `Remove ${ticker}` }).click();
+    await waitText(control, new RegExp(`Press REMOVE on ${ticker} again`), `the first REMOVE on ${ticker} only arms it`);
+    check((await adminGet(`games/${g}/firms/${firm.firmId}`)) !== null, `${ticker} is still there after one press`);
+    await control.getByRole('button', { name: `Remove ${ticker}` }).click();
+    await waitText(control, new RegExp(`${ticker} removed`), `a second REMOVE removes ${ticker}`);
+  }
+  check((await adminGet(`games/${g}/members/${p5uid}`)) === null, "the removed firm's device is no longer a member");
+  await waitText(fac, /4 FIRMS/, 'the projector drops the removed firms', 15_000, '.scr');
+  await control.getByRole('button', { name: 'LOCK JOINS' }).click();
+  await waitText(control, /Joining locked/, 'LOCK JOINS locks joining in the lobby');
+  check((await adminGet<boolean>(`games/${g}/public/joinLocked`)) === true, 'joinLocked is set by LOCK JOINS');
+  check(await refused(() => h(p5.page, 'found', g, 'Late Spare', 'LSPR', 'GH')), 'no firm can be founded once joins are locked');
+  await control.getByRole('button', { name: 'REOPEN JOINS' }).click();
+  await waitText(control, /Joining reopened/, 'REOPEN JOINS reopens joining in the lobby');
+  check((await adminGet<boolean>(`games/${g}/public/joinLocked`)) === false, 'joinLocked is cleared by REOPEN JOINS');
+
   // ── 4. Phase machine: briefing → quarter 1 ─────────────────────────────────
   await fac.keyboard.press('F9');
   await waitText(fac, /BRIEFING/, 'F9 opens the briefing', 15_000, '.scr');
