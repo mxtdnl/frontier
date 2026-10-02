@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { readFirmSecret, submitDecision } from '../../firebase/api';
+import { joinPact, leavePact, proposePact, readFirmSecret, submitDecision } from '../../firebase/api';
 import { getFirebase } from '../../firebase/init';
 import { isPermissionDenied, rememberSession, useParticipantAuth } from '../../firebase/participant';
+import { nextPactName, type PactTerms } from '../../engine';
 import { useRoute } from '../../router';
 import {
   useFirms,
@@ -15,6 +16,7 @@ import {
   usePublic,
   useRounds,
   useServerTimeOffset,
+  useWire,
 } from '../../state';
 import { Countdown, Delta } from '../../ui/components';
 import { fmt, quarterLabel } from '../../ui/format';
@@ -28,7 +30,8 @@ import {
   wireItems,
   type Draft,
 } from './model';
-import { Book, EndedCard, PactList, RevealCard, Wire } from './Panels';
+import { Book, EndedCard, RevealCard, Wire } from './Panels';
+import { PactsTab } from './PactsTab';
 import { useHeldFor, useServerNow } from './useServerNow';
 
 type Tab = 'DESK' | 'BOOK' | 'PACTS' | 'WIRE';
@@ -72,6 +75,7 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
   const priv = useOwnFirmPrivate(g, firmId);
   const roundsSub = useRounds(g);
   const pactsSub = usePacts(g);
+  const wireSub = useWire(g);
   const offset = useServerTimeOffset();
   const { connected } = usePresence(g, uid);
   const offline = useHeldFor(!connected, 2000);
@@ -137,6 +141,8 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
     setDraftState(d);
   };
 
+  const [pactBusy, setPactBusy] = useState(false);
+  const [pactError, setPactError] = useState('');
   const [tab, setTab] = useState<Tab>('DESK');
   const prevView = useRef(view);
   useEffect(() => {
@@ -194,6 +200,27 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
       setSending(false);
     }
   };
+
+  const pactCall = async (call: () => Promise<unknown>, what: string) => {
+    if (pactBusy) return;
+    setPactBusy(true);
+    setPactError('');
+    try {
+      await call();
+    } catch (e) {
+      setPactError(
+        isPermissionDenied(e)
+          ? `${what} was refused. The session may have moved on, or the pact changed. Check the pact list and try again.`
+          : `${what} was not sent. Check the connection, then try again.`,
+      );
+    } finally {
+      setPactBusy(false);
+    }
+  };
+  const onPropose = (terms: PactTerms) =>
+    void pactCall(() => proposePact(getFirebase().db, g, round, firmId, nextPactName(Object.values(pactsSub.data)), terms), 'The proposal');
+  const onJoin = (id: string) => void pactCall(() => joinPact(getFirebase().db, g, id, firmId, round), 'Joining');
+  const onLeave = (id: string) => void pactCall(() => leavePact(getFirebase().db, g, id, firmId), 'Leaving');
 
   const lastRow = book[book.length - 1];
   const committedBy = decision
@@ -267,6 +294,7 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
               headlines={roundNode?.headlines ?? []}
               pacts={pactsSub.data}
               firmId={firmId}
+              cardNotices={priv.data?.notices[String(round)] ?? []}
             />
           ) : (
             <>
@@ -290,8 +318,23 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
           )
         ) : null}
         {tab === 'BOOK' ? <Book rows={book} /> : null}
-        {tab === 'PACTS' ? <PactList pacts={pactsSub.data} firms={firms} ownFirmId={firmId} emphasis={view === 'summit'} /> : null}
-        {tab === 'WIRE' ? <Wire items={wireItems(roundsSub.data)} /> : null}
+        {tab === 'PACTS' ? (
+          <PactsTab
+            phase={pub.phase}
+            pacts={pactsSub.data}
+            firms={firms}
+            ownFirmId={firmId}
+            nextName={nextPactName(Object.values(pactsSub.data))}
+            summit={view === 'summit'}
+            busy={pactBusy}
+            offline={offline}
+            error={pactError}
+            onPropose={onPropose}
+            onJoin={onJoin}
+            onLeave={onLeave}
+          />
+        ) : null}
+        {tab === 'WIRE' ? <Wire items={wireItems(roundsSub.data, wireSub.data)} /> : null}
       </main>
     </div>
   );

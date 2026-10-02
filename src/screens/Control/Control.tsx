@@ -3,25 +3,30 @@ import {
   addTime,
   advance,
   endSession,
+  queueAudit,
   retryResolution,
   setPaused,
+  toggleDisclosure,
   toggleSummit,
   type ActionResult,
   type Seen,
 } from '../../firebase/orchestrator';
 import { useRoute } from '../../router';
-import { useFirms, useFirmsPublic, usePacts, usePublic, useServerTimeOffset } from '../../state';
+import { useFirms, useFirmsPublic, usePacts, usePublic, useRounds, useServerTimeOffset, useWire } from '../../state';
 import {
   useAutoResolve,
   useCommitSync,
   useDecisions,
   useEngine,
+  useLiveWire,
   useMembers,
   useMeta,
   useOrchestrator,
   usePactsPrivate,
   usePresenceAll,
 } from '../../state/facilitator';
+import type { Pact } from '../../engine';
+import type { FirmNode, RoundNode } from '../../firebase/schema';
 import { Countdown, DataTable, GlyphCheck, Panel, PresenceDot, Tag } from '../../ui/components';
 import { fmt, fmtTime, quarterLabel } from '../../ui/format';
 import { matchKey } from '../../ui/keys';
@@ -76,6 +81,8 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
   const firms = useFirms(g).data;
   const firmsPublic = useFirmsPublic(g).data;
   const pacts = usePacts(g).data;
+  const rounds = useRounds(g).data;
+  const wireSub = useWire(g);
   const members = useMembers(g).data;
   const presence = usePresenceAll(g).data;
   const engine = useEngine(g).data;
@@ -115,6 +122,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
 
   useAutoResolve(ctx, pub, meta?.settings.autoResolve ?? false, report);
   useCommitSync(g, pub, firms, firmsPublic, decisions);
+  useLiveWire(ctx, pub, firms, pacts, rounds, wireSub.data, !wireSub.loading);
 
   const run = useCallback(
     (action: () => Promise<ActionResult>) => {
@@ -142,6 +150,20 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
     }
   }, [ctx, run, say]);
 
+  const pactsPanel = useRef<HTMLDivElement>(null);
+  const activePactsRef = useRef<Pact[]>([]);
+  /** F6: one pact is queued directly; with several, focus moves to the pact list to choose. */
+  const auditKey = useCallback(() => {
+    const list = activePactsRef.current;
+    const only = list[0];
+    if (list.length === 0) say('No pacts in force to audit.');
+    else if (list.length === 1 && only) run(() => queueAudit(ctx, only.id));
+    else {
+      say('Select a pact: press Enter on its AUDIT button.');
+      pactsPanel.current?.querySelector('button')?.focus();
+    }
+  }, [ctx, run, say]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -150,14 +172,14 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
       if (a === 'advance') run(() => advance(ctx, seenRef.current));
       else if (a === 'summit') run(() => toggleSummit(ctx, seenRef.current));
       else if (a === 'end') pressEnd();
-      else if (a === 'audit') say('Audit is not connected yet.');
-      else if (a === 'disclosure') say('Disclosure toggle is not connected yet.');
+      else if (a === 'audit') auditKey();
+      else if (a === 'disclosure') run(() => toggleDisclosure(ctx, seenRef.current));
       else return;
       e.preventDefault();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [ctx, pressEnd, run, say]);
+  }, [ctx, pressEnd, run, auditKey]);
 
   const rows = useMemo(
     () =>
@@ -211,6 +233,9 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
     return n;
   };
   const pactRows = Object.values(pacts).filter((p) => p.status === 'active');
+  activePactsRef.current = pactRows;
+  const queued = new Set(engine?.pendingAudits ?? []);
+  const auditLog = auditOutcomes(rounds, pacts, firms);
 
   return (
     <div className="page stack">
@@ -277,13 +302,16 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
         <Panel title="CONTROLS" bodyClassName="pad">
           <div className="stack">
             <div className="row">
-              <button type="button" className="btn" onClick={() => say('Disclosure toggle is not connected yet.')}>F7 DISCL</button>
+              <button type="button" className="btn" aria-pressed={pub.disclosure} disabled={busyNow || pub.phase === 'ended'} onClick={() => run(() => toggleDisclosure(ctx, seenRef.current))}>
+                F7 DISCL {pub.disclosure ? 'ON' : 'OFF'}
+              </button>
               <button type="button" className="btn" disabled={busyNow} onClick={() => run(() => toggleSummit(ctx, seenRef.current))}>F8 SUMMIT</button>
               <button type="button" className="btn btn-signal" disabled={busyNow} onClick={() => run(() => advance(ctx, seenRef.current))}>F9 ADVANCE</button>
               <button type="button" className="btn" disabled={busyNow} onClick={pressEnd}>F10 END</button>
             </div>
             <div className="row">
-              <button type="button" className="btn" onClick={() => say('Audit is not connected yet.')}>F6 AUDIT</button>
+              <button type="button" className="btn" onClick={auditKey}>F6 AUDIT</button>
+              <span className="dim">Disclosure {pub.disclosure ? 'ON: PACE, SAFE and EXPO are published each quarter' : 'OFF: nothing is published'}.</span>
             </div>
             <p className="dim">Press END twice within 3 s. ADVANCE resolves an open quarter, with AUTO defaults for firms that have not committed.</p>
           </div>
@@ -328,24 +356,80 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
         </div>
       </Panel>
 
-      <Panel title="PACTS" bodyClassName="pad">
+      <Panel title="PACTS" right={queued.size ? `${queued.size} AUDIT QUEUED` : undefined} bodyClassName="pad">
         {pactRows.length === 0 ? <p className="dim">No pacts in force.</p> : null}
         {pactRows.length > 0 ? (
-          <div className="scroll-x">
+          <div className="scroll-x" ref={pactsPanel}>
             <DataTable
-              caption="Pacts and unaudited violations"
+              caption="Pacts, unaudited violations and audit actions"
               rows={pactRows}
               rowKey={(p) => p.id}
               columns={[
                 { key: 'id', label: 'PACT', w: 9, render: (p) => <Tag pact={p.name} /> },
                 { key: 'terms', label: 'TERMS', w: 26, render: (p) => `max pace ${p.terms.maxPace ?? '–'} · min safety ${p.terms.minSafety ?? '–'}` },
                 { key: 'm', label: 'MBRS', w: 6, align: 'r', render: (p) => Object.keys(p.members).length },
-                { key: 'u', label: 'UNAUD', w: 0, align: 'r', render: (p) => unaudited(p.id) },
+                { key: 'u', label: 'UNAUD', w: 8, align: 'r', render: (p) => unaudited(p.id) },
+                {
+                  key: 'a',
+                  label: 'AUDIT',
+                  w: 0,
+                  render: (p) =>
+                    queued.has(p.id) ? (
+                      <span className="signal">QUEUED</span>
+                    ) : (
+                      <button type="button" className="btn" disabled={busyNow} onClick={() => run(() => queueAudit(ctx, p.id))} aria-label={`Audit ${p.name}`}>
+                        AUDIT
+                      </button>
+                    ),
+                },
               ]}
             />
           </div>
         ) : null}
+        <p className="dim">An audit runs when the quarter resolves, together with the automatic audits. Unaudited counts are private.</p>
+      </Panel>
+
+      <Panel title="AUDIT OUTCOMES" bodyClassName="pad">
+        {auditLog.length === 0 ? <p className="dim">No audits have run yet.</p> : null}
+        <ul className="stack" style={{ listStyle: 'none', margin: 0, padding: 0, gap: 0 }}>
+          {auditLog.map((l) => (
+            <li key={l.key}>
+              <span className="dim">{quarterLabel(l.round)}</span> {l.pact} <span className="dim">{l.kind}</span> {l.text}
+            </li>
+          ))}
+        </ul>
       </Panel>
     </div>
   );
+}
+
+interface AuditLine {
+  key: string;
+  round: number;
+  pact: string;
+  kind: 'MAN' | 'AUTO';
+  text: string;
+}
+
+/** Published audit outcomes, newest quarter first (automatic and manual). */
+export function auditOutcomes(
+  rounds: Record<string, RoundNode>,
+  pacts: Record<string, Pact>,
+  firms: Record<string, FirmNode>,
+): AuditLine[] {
+  const out: AuditLine[] = [];
+  const nums = Object.keys(rounds).map(Number).filter((n) => n > 0).sort((a, b) => b - a);
+  for (const r of nums) {
+    for (const a of rounds[String(r)]?.audits ?? []) {
+      const name = pacts[a.pactId]?.name ?? a.pactId;
+      const text =
+        a.breaches.length === 0
+          ? 'full compliance'
+          : a.breaches
+              .map((b) => `${firms[b.firmId]?.ticker ?? '?'} breach #${b.count}, ${b.waived ? 'fine waived' : `fine ${fmt(b.fine)}`}${b.expelled ? ', expelled' : ''}`)
+              .join(' · ');
+      out.push({ key: `${r}-${a.pactId}`, round: r, pact: name, kind: a.kind === 'manual' ? 'MAN' : 'AUTO', text });
+    }
+  }
+  return out;
 }

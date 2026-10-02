@@ -114,6 +114,7 @@ function game(facilitatorUid: string, code: string): Record<string, unknown> {
         fB: { pace: 3, safety: 5, card: 'NONE', by: 'uB', at: 1 },
       },
     },
+    wire: { 'd-1-on': { at: 1, round: 1, seq: 1, kind: 'disclosure-on', text: 'Assembly passes frontier disclosure rule' } },
     rounds: { 1: { T: 72, dT: 0, M: 400, incidents: 0, headlines: [{ kind: 'ambient', text: 'Markets open.' }] } },
     pacts: {
       p1: { name: 'PACT-A', proposer: 'fA', terms: { maxPace: 2 }, members: { fA: 1 }, createdRound: 1, status: 'active' },

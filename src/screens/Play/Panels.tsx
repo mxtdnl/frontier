@@ -1,6 +1,6 @@
 import type { AuditResult, FirmRoundResult, Headline, Pact } from '../../engine';
-import type { FirmNode } from '../../firebase/schema';
-import { DataTable, Delta, Panel, StepSparkline, Tag } from '../../ui/components';
+import type { NoticeEntry } from '../../firebase/schema';
+import { DataTable, Delta, Panel, StepSparkline } from '../../ui/components';
 import { fmt, fmtSigned, quarterLabel } from '../../ui/format';
 import { resultNotices, shareChangePp, type BookRow, type WireItem } from './model';
 
@@ -11,10 +11,12 @@ interface RevealProps {
   headlines: ReadonlyArray<Headline>;
   pacts: Record<string, Pact>;
   firmId: string;
+  /** Cards dropped at resolution (private to the firm). */
+  cardNotices: ReadonlyArray<NoticeEntry>;
 }
 
 /** Quarter result card, notices and headlines (spec §14.3, reveal state). */
-export function RevealCard({ round, history, audits, headlines, pacts, firmId }: RevealProps) {
+export function RevealCard({ round, history, audits, headlines, pacts, firmId, cardNotices }: RevealProps) {
   const r = history[String(round)];
   if (!r) return <p className="notice" role="status">No result is recorded for this firm in {quarterLabel(round)}.</p>;
   const dShare = shareChangePp(history, round);
@@ -32,7 +34,7 @@ export function RevealCard({ round, history, audits, headlines, pacts, firmId }:
         </dl>
       </Panel>
       <Panel title="NOTICES" bodyClassName="pad">
-        {resultNotices(r, audits, pacts, firmId).map((n) => <p key={n}>{n}</p>)}
+        {resultNotices(r, audits, pacts, firmId, cardNotices).map((n) => <p key={n}>{n}</p>)}
       </Panel>
       <Wire items={headlines.map((h) => ({ round, label: quarterLabel(round), text: h.text }))} empty="No headlines this quarter." />
     </div>
@@ -90,45 +92,6 @@ export function Book({ rows }: { rows: BookRow[] }) {
           ]}
         />
       </div>
-    </div>
-  );
-}
-
-interface PactsProps {
-  pacts: Record<string, Pact>;
-  firms: Record<string, FirmNode>;
-  ownFirmId: string;
-  emphasis: boolean;
-}
-
-/** Existing pacts, read only. Session 6 adds propose, join and leave. */
-export function PactList({ pacts, firms, ownFirmId, emphasis }: PactsProps) {
-  const list = Object.values(pacts).sort((a, b) => a.createdRound - b.createdRound || a.name.localeCompare(b.name));
-  return (
-    <div className="stack">
-      <p className="dim">
-        {emphasis ? 'Existing pacts. Proposing, joining and leaving arrive in a later build.' : 'Existing pacts. Read only in this build.'}
-      </p>
-      {list.length === 0 ? <p className="notice">No pacts have been formed.</p> : null}
-      {list.map((p) => {
-        const members = Object.keys(p.members);
-        return (
-          <Panel
-            key={p.id}
-            title={p.name}
-            right={`${members.length} MBRS${p.status !== 'active' ? ' · ' + p.status.toUpperCase() : ''}`}
-            bodyClassName="pad"
-          >
-            <dl className="kv">
-              <dt>Max pace</dt><dd>{p.terms.maxPace ?? '–'}</dd>
-              <dt>Min safety</dt><dd>{p.terms.minSafety ?? '–'}</dd>
-              <dt>Members</dt>
-              <dd>{members.map((id) => firms[id]?.ticker ?? '?').join(' ') || '–'}</dd>
-              <dt>Your firm</dt><dd>{members.includes(ownFirmId) ? <Tag pact={p.name} /> : 'Not a member'}</dd>
-            </dl>
-          </Panel>
-        );
-      })}
     </div>
   );
 }

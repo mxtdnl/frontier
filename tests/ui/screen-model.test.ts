@@ -39,6 +39,7 @@ function data(over: Partial<ScreenData> = {}): ScreenData {
       '2': round(70, { a: { share: 0.4, profit: 5, valuation: 90, rank: 2 }, b: { share: 0.6, profit: 9, valuation: 120, rank: 1 } }, [{ kind: 'rank', text: 'Two' }, { kind: 'ambient', text: 'Three' }]),
     },
     pacts: {},
+    wire: {},
     memberCounts: {},
     ...over,
   };

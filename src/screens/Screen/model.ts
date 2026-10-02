@@ -4,7 +4,8 @@
  * projector component, may read `engine`, which holds τ and the end round.
  */
 import { PARAMS, type DisclosureEntry, type Pact } from '../../engine';
-import type { FirmNode, FirmPublicNode, MetaNode, PublicNode, RoundNode } from '../../firebase/schema';
+import type { FirmNode, FirmPublicNode, MetaNode, PublicNode, RoundNode, WireNode } from '../../firebase/schema';
+import { mergeWire } from '../../firebase/wire';
 
 export interface ScreenData {
   pub: PublicNode;
@@ -13,6 +14,8 @@ export interface ScreenData {
   firmsPublic: Record<string, FirmPublicNode>;
   rounds: Record<string, RoundNode>;
   pacts: Record<string, Pact>;
+  /** Headlines published outside resolution (pact events, disclosure toggle). */
+  wire: Record<string, WireNode>;
   /** Members per firm (facilitator only). */
   memberCounts: Record<string, number>;
 }
@@ -122,13 +125,50 @@ export interface WireItem {
   text: string;
 }
 
-/** Headlines, newest quarter first, in the order the engine produced them. */
-export function wireItems(rounds: Record<string, RoundNode>): WireItem[] {
-  const out: WireItem[] = [];
-  for (const r of roundNumbers(rounds).reverse()) {
-    for (const h of (rounds[String(r)] as RoundNode).headlines) out.push({ round: r, kind: h.kind, text: h.text });
-  }
-  return out;
+/** Resolved headlines and live events (pact changes, disclosure toggle), newest first. */
+export function wireItems(rounds: Record<string, RoundNode>, wire: Record<string, WireNode> = {}): WireItem[] {
+  return mergeWire(rounds, wire).map((h) => ({ round: h.round, kind: h.kind, text: h.text }));
+}
+
+export interface PactRow {
+  id: string;
+  name: string;
+  maxPace: number | null;
+  minSafety: number | null;
+  /** Member tickers, with the BREACH flag from the board. */
+  members: Array<{ id: string; ticker: string; breach: boolean }>;
+  /** The most recent published audit of the pact; null if none has run. */
+  lastAudit: { round: number; kind: 'manual' | 'auto'; breaches: number } | null;
+}
+
+/** Active pacts for the PACT view. Uses only published audit outcomes, never private violation records. */
+export function pactRows(d: ScreenData): PactRow[] {
+  const flagged = new Set(boardRows(d).filter((r) => r.breach).map((r) => r.id));
+  const rounds = roundNumbers(d.rounds).reverse();
+  return Object.values(d.pacts)
+    .filter((p) => p.status === 'active')
+    .sort((a, b) => a.createdRound - b.createdRound || a.name.localeCompare(b.name))
+    .map((p): PactRow => {
+      let lastAudit: PactRow['lastAudit'] = null;
+      for (const r of rounds) {
+        const a = d.rounds[String(r)]?.audits.find((x) => x.pactId === p.id);
+        if (a) {
+          lastAudit = { round: r, kind: a.kind, breaches: a.breaches.length };
+          break;
+        }
+      }
+      return {
+        id: p.id,
+        name: p.name,
+        maxPace: p.terms.maxPace,
+        minSafety: p.terms.minSafety,
+        members: Object.keys(p.members)
+          .map((id) => ({ id, ticker: d.firms[id]?.ticker ?? '', breach: flagged.has(id) }))
+          .filter((m) => m.ticker)
+          .sort((a, b) => a.ticker.localeCompare(b.ticker)),
+        lastAudit,
+      };
+    });
 }
 
 /** Valuation by quarter for one firm, starting with the opening value. */

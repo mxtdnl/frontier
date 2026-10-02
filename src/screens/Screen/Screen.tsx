@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { advance, endSession, toggleSummit, type ActionResult, type Seen } from '../../firebase/orchestrator';
+import { advance, endSession, queueAudit, toggleDisclosure, toggleSummit, type ActionResult, type Seen } from '../../firebase/orchestrator';
 import { useRoute } from '../../router';
-import { useFirms, useFirmsPublic, usePacts, usePublic, useRounds, useServerTimeOffset } from '../../state';
-import { useCommitSync, useDecisions, useAutoResolve, useMembers, useMeta, useOrchestrator } from '../../state/facilitator';
+import { useFirms, useFirmsPublic, usePacts, usePublic, useRounds, useServerTimeOffset, useWire } from '../../state';
+import { useCommitSync, useDecisions, useAutoResolve, useLiveWire, useMembers, useMeta, useOrchestrator } from '../../state/facilitator';
 import { CommandLine, Countdown, FKeyBar, Panel, Ticker, TopBar, type CommandLineHandle } from '../../ui/components';
 import { parseCommand } from '../../ui/commands';
 import { fmt, quarterLabel } from '../../ui/format';
@@ -11,10 +11,10 @@ import { useLitRoom } from '../../ui/litRoom';
 import { playReveal } from '../../ui/reveal';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
 import { BoardPanel, TrustPanel } from './BoardView';
-import { boardRows, committedCount, previousTrust, wireItems, type ScreenData } from './model';
-import { BriefingView, FirmView, HelpView, LobbyView, PactsView, TrustView, WireView } from './Views';
+import { boardRows, committedCount, pactRows, previousTrust, wireItems, type ScreenData } from './model';
+import { AuditView, BriefingView, FirmView, HelpView, LobbyView, PactsView, TrustView, WireView } from './Views';
 
-type View = { kind: 'board' | 'trust' | 'pacts' | 'wire' | 'help' } | { kind: 'firm'; ticker: string };
+type View = { kind: 'board' | 'trust' | 'pacts' | 'wire' | 'help' | 'audit' } | { kind: 'firm'; ticker: string };
 
 const PHASE_LABEL = {
   lobby: 'LOBBY',
@@ -50,6 +50,8 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   const firmsPublic = useFirmsPublic(g).data;
   const rounds = useRounds(g).data;
   const pacts = usePacts(g).data;
+  const wireSub = useWire(g);
+  const wire = wireSub.data;
   const members = useMembers(g).data;
   const pub = pubSub.data;
   const meta = metaSub.data;
@@ -71,6 +73,9 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   const busy = useRef(false);
   const seenRef = useRef<Seen | undefined>(undefined);
   seenRef.current = pub ? { phase: pub.phase, round: pub.round } : undefined;
+  const viewRef = useRef<View>(view);
+  viewRef.current = view;
+  const pactIdsRef = useRef<string[]>([]);
 
   const say = useCallback((text: string, ms = 4000) => {
     setNotice(text);
@@ -81,6 +86,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
 
   useAutoResolve(ctx, pub, meta?.settings.autoResolve ?? false, report);
   useCommitSync(g, pub, firms, firmsPublic, decisions);
+  useLiveWire(ctx, pub, firms, pacts, rounds, wire, !wireSub.loading);
 
   /** Runs one orchestrator action at a time, so a repeated key press cannot skip a phase. */
   const run = useCallback(
@@ -109,10 +115,10 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
           setView({ kind: 'pacts' });
           break;
         case 'audit':
-          say('Audit is not connected yet.');
+          setView({ kind: 'audit' });
           break;
         case 'disclosure':
-          say('Disclosure toggle is not connected yet.');
+          run(() => toggleDisclosure(ctx, seenRef.current));
           break;
         case 'summit':
           run(() => toggleSummit(ctx, seenRef.current));
@@ -134,6 +140,14 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
       }
     },
     [ctx, run, say],
+  );
+
+  const queue = useCallback(
+    (pactId: string) => {
+      run(() => queueAudit(ctx, pactId));
+      setView({ kind: 'board' });
+    },
+    [ctx, run],
   );
 
   const submit = useCallback(
@@ -162,6 +176,13 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
         setView({ kind: 'board' });
         return;
       }
+      if (!focused && viewRef.current.kind === 'audit' && /^[1-9]$/.test(e.key) && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        e.preventDefault();
+        const ids = pactIdsRef.current;
+        const id = ids[Number(e.key) - 1];
+        if (id) queue(id);
+        return;
+      }
       const target = e.target as HTMLElement | null;
       const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
       if (!focused && !typing && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
@@ -171,7 +192,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [act]);
+  }, [act, queue]);
 
   // Reveal sequence, once per quarter, only when the page watched the quarter resolve.
   const phase = pub?.phase ?? null;
@@ -194,13 +215,14 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
             firmsPublic,
             rounds,
             pacts,
+            wire,
             memberCounts: Object.values(members).reduce<Record<string, number>>((acc, m) => {
               acc[m.firmId] = (acc[m.firmId] ?? 0) + 1;
               return acc;
             }, {}),
           }
         : null,
-    [pub, meta, firms, firmsPublic, rounds, pacts, members],
+    [pub, meta, firms, firmsPublic, rounds, pacts, wire, members],
   );
 
   if (pubSub.error || metaSub.error) {
@@ -228,9 +250,10 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   const showQuarter = pub.round > 0 && pub.phase !== 'lobby' && pub.phase !== 'briefing';
   const frozen = pub.phase === 'summit' || pub.paused;
   const delta = pub.T - previousTrust(rounds);
-  const wire = wireItems(rounds)
+  const ticker = wireItems(rounds, wire)
     .slice(0, 12)
     .map((h) => h.text);
+  pactIdsRef.current = pactRows(data).slice(0, 9).map((p) => p.id);
 
   let main;
   if (pub.phase === 'lobby') {
@@ -259,6 +282,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
         {view.kind === 'pacts' ? <PactsView data={data} /> : null}
         {view.kind === 'wire' ? <WireView data={data} /> : null}
         {view.kind === 'help' ? <HelpView /> : null}
+        {view.kind === 'audit' ? <AuditView data={data} onQueue={queue} /> : null}
         {view.kind === 'firm' ? <FirmView ticker={view.ticker} data={data} /> : null}
       </div>
     );
@@ -299,6 +323,8 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
               <span>{rows.length} FIRMS</span>
             </>
           ) : null}
+          <span className="sep">|</span>
+          <span>DISCL {pub.disclosure ? 'ON' : 'OFF'}</span>
           <span className="grow topbar-notice" role="status" aria-live="polite">
             {notice}
           </span>
@@ -307,7 +333,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
           {pub.phase === 'summit' ? <div className="scr-banner" role="status">Industry summit in session</div> : null}
           <div style={{ flex: 1, minHeight: 0, display: 'grid' }}>{main}</div>
         </div>
-        <Ticker items={wire.length ? wire : ['Wire quiet.']} />
+        <Ticker items={ticker.length ? ticker : ['Wire quiet.']} />
         <FKeyBar onAction={act} />
         {reveal ? (
           <p className="sr-only" role="status" aria-live="polite">

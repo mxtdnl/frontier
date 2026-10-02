@@ -12,10 +12,12 @@ import {
   updateGame,
 } from '../firebase/api';
 import { getFirebase } from '../firebase/init';
-import { autoResolve, firebaseIO, type ActionResult, type Ctx } from '../firebase/orchestrator';
+import { autoResolve, firebaseIO, publishWire, type ActionResult, type Ctx } from '../firebase/orchestrator';
 import { AUTO_RESOLVE_DELAY_MS } from '../firebase/phases';
 import { rel } from '../firebase/paths';
-import type { DecisionNode, EngineNode, FirmNode, FirmPublicNode, MemberNode, PactPrivateNode, PresenceNode, PublicNode } from '../firebase/schema';
+import type { DecisionNode, EngineNode, FirmNode, FirmPublicNode, MemberNode, PactPrivateNode, PresenceNode, PublicNode, RoundNode, WireNode } from '../firebase/schema';
+import { pendingWire } from '../firebase/wire';
+import type { Pact } from '../engine';
 import { useServerTimeOffset } from './hooks';
 import { useSubscription, type Subscription } from './useSubscription';
 
@@ -105,4 +107,29 @@ export function useCommitSync(
     keys.forEach((k) => sent.current.add(k));
     updateGame(db(), g, patch).catch(() => keys.forEach((k) => sent.current.delete(k)));
   }, [g, pub, firms, firmsPublic, decisions]);
+}
+
+/**
+ * Publishes pact headlines (formed, joined, left) to `wire/` for the whole room. Participants
+ * cannot write there, so an open facilitator window does it. Entries are derived from the
+ * current pacts and keyed deterministically, so a refreshed or duplicate window adds nothing twice.
+ */
+export function useLiveWire(
+  ctx: Ctx,
+  pub: PublicNode | null,
+  firms: Record<string, FirmNode>,
+  pacts: Record<string, Pact>,
+  rounds: Record<string, RoundNode>,
+  wire: Record<string, WireNode>,
+  loaded: boolean,
+): void {
+  const sent = useRef(new Set<string>());
+  useEffect(() => {
+    // Wait for the wire to load, or entries already published would be written again.
+    if (!pub || !loaded || pub.phase === 'lobby' || pub.phase === 'briefing') return;
+    const keys = Object.keys(pendingWire({ pacts, firms, rounds, wire, pub, now: 0 })).filter((k) => !sent.current.has(k));
+    if (keys.length === 0) return;
+    keys.forEach((k) => sent.current.add(k));
+    publishWire(ctx, { pacts, firms, rounds, wire, pub }).catch(() => keys.forEach((k) => sent.current.delete(k)));
+  }, [ctx, pub, firms, pacts, rounds, wire, loaded]);
 }
