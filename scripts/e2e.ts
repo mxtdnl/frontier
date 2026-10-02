@@ -151,11 +151,16 @@ async function scenario(browser: Browser): Promise<void> {
   // Hidden values on the console: masked until held.
   const tauButton = control.getByRole('button', { name: 'Hold to reveal TAU' });
   check((await tauButton.innerText()).includes('•••'), 'tau is masked on the console');
+  // A console notice (for example from REOPEN JOINS) clears after 5 s and shifts the layout; measure after it goes.
+  await control.waitForFunction(() => !document.querySelector('[role=status] .notice'), undefined, { timeout: 15_000 });
   const box = await tauButton.boundingBox();
   if (box) {
     await control.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await control.mouse.down();
-    check((await tauButton.innerText()).includes(tau.toFixed(1)), 'holding the button reveals tau');
+    const shown = await control
+      .waitForFunction((t) => document.querySelector('[aria-label="Hold to reveal TAU"]')?.textContent?.includes(t) ?? false, tau.toFixed(1), { timeout: 5_000 })
+      .then(() => true, () => false);
+    check(shown, 'holding the button reveals tau');
     await control.mouse.up();
     check((await tauButton.innerText()).includes('•••'), 'releasing the button masks tau again');
   } else fail('tau button has no box');
