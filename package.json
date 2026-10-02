@@ -15,6 +15,7 @@
     "shots": "tsx scripts/screenshots.ts",
     "lint:design": "tsx scripts/lint-design.ts",
     "preview": "vite preview",
+    "test:e2e": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/e2e.ts\"",
     "emulators": "firebase emulators:start --config firebase.test.json --only auth,database --project demo-frontier",
     "emulators:rules": "tsx scripts/emulator-rules.ts"
   },

@@ -75,8 +75,14 @@ describe('engine node round trip', () => {
 
 describe('participant-visible nodes', () => {
   it('restores null fields on public', () => {
-    const pub = { phase: 'open', round: 3, deadline: 1000, paused: false, disclosure: false, T: 70, M: 380, collapsed: false, collapseRound: null, joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0 };
+    const pub = { phase: 'open', round: 3, deadline: 1000, paused: false, disclosure: false, T: 70, M: 380, collapsed: false, collapseRound: null, joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0, resumePhase: null, pausedRemainingMs: null };
     expect(fromPublic(storeAndRead(pub))).toEqual(pub);
+  });
+
+  it('keeps the summit return phase and the frozen timer', () => {
+    const pub = { phase: 'summit', round: 2, deadline: null, paused: true, disclosure: false, T: 70, M: 380, collapsed: false, collapseRound: null, joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0, resumePhase: 'open', pausedRemainingMs: 41_000 };
+    expect(fromPublic(storeAndRead(pub))).toEqual(pub);
+    expect(fromPublic(storeAndRead({ ...pub, resumePhase: 'bogus' }))?.resumePhase).toBeNull();
   });
 
   it('restores a pact without members or with one term, keyed by id', () => {

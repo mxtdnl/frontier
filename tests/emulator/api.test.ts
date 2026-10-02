@@ -74,7 +74,7 @@ afterAll(async () => {
 const meta = (uid: string): MetaNode => ({ code: 'KXMT', title: 'API test', createdAt: 1, facilitatorUid: uid, settings: { timerSec: 120, autoResolve: false, revealThreshold: false, litRoom: false } });
 const pub = (over: Partial<PublicNode> = {}): PublicNode => ({
   phase: 'lobby', round: 0, deadline: null, paused: false, disclosure: false, T: 72, M: 400, collapsed: false, collapseRound: null,
-  joinLocked: false, resolvingBy: null, endedAt: null, revealStep: 0, ...over,
+  joinLocked: false, resolvingBy: null, endedAt: null, revealStep: 0, resumePhase: null, pausedRemainingMs: null, ...over,
 });
 
 describe('data layer against the emulator', () => {

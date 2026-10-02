@@ -1,13 +1,22 @@
 import { useState } from 'react';
+import { getFirebase } from '../../firebase/init';
+import { createSession, MAX_FIRMS } from '../../firebase/orchestrator';
 import { navigate } from '../../router';
 import { Panel } from '../../ui/components';
 import { useLitRoom } from '../../ui/litRoom';
+import { FacilitatorGate } from '../Auth/FacilitatorGate';
 
 type EndMode = 'random' | 'fixed' | 'manual';
 const POLICIES = ['cautious', 'standard', 'greedy', 'mimic-leader'] as const;
 
-/** Setup form for the settings in spec §5.4. Static in this build: Create opens the lobby preview. */
+/** Setup form for the settings in spec §5.4. Create writes the session and opens its lobby. */
 export function NewGame() {
+  return <FacilitatorGate>{(uid) => <NewGameForm uid={uid} />}</FacilitatorGate>;
+}
+
+function NewGameForm({ uid }: { uid: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
   const [timer, setTimer] = useState(120);
   const [auto, setAuto] = useState(false);
   const [endMode, setEndMode] = useState<EndMode>('random');
@@ -16,7 +25,7 @@ export function NewGame() {
   const [fixedEnd, setFixedEnd] = useState(12);
   const [disclosure, setDisclosure] = useState(false);
   const [auditP, setAuditP] = useState(0.25);
-  const [bots, setBots] = useState<string[]>([]);
+  const [bots, setBots] = useState<Array<(typeof POLICIES)[number]>>([]);
   const [revealTau, setRevealTau] = useState(false);
   const [lit, setLit] = useState(false);
   const [seedMode, setSeedMode] = useState<'random' | 'fixed'>('random');
@@ -38,7 +47,29 @@ export function NewGame() {
         className="stack"
         onSubmit={(e) => {
           e.preventDefault();
-          if (valid) navigate('#/screen/demo?state=lobby');
+          if (!valid || busy) return;
+          setBusy(true);
+          setError('');
+          createSession(getFirebase().db, uid, {
+            timerSec: timer,
+            autoResolve: auto,
+            endMode,
+            minEnd,
+            maxEnd,
+            fixedEnd,
+            disclosure,
+            autoAuditP: auditP,
+            revealThreshold: revealTau,
+            litRoom: lit,
+            bots,
+            seed: seedMode === 'fixed' ? seed : '',
+          }).then(
+            ({ gameId }) => navigate(`#/screen/${gameId}`),
+            (err: unknown) => {
+              setBusy(false);
+              setError(`The session could not be created${err instanceof Error ? ` (${err.message})` : ''}. Check the connection and try again.`);
+            },
+          );
         }}
       >
         <div className="cols-2">
@@ -127,7 +158,7 @@ export function NewGame() {
                   <span>Bot {i + 1}</span>
                   <select
                     value={p}
-                    onChange={(e) => setBots(bots.map((x, j) => (j === i ? e.target.value : x)))}
+                    onChange={(e) => setBots(bots.map((x, j) => (j === i ? (e.target.value as (typeof POLICIES)[number]) : x)))}
                   >
                     {POLICIES.map((o) => <option key={o} value={o}>{o}</option>)}
                   </select>
@@ -135,14 +166,15 @@ export function NewGame() {
               ))}
             </div>
             <div className="row">
-              <button type="button" className="btn" onClick={() => setBots([...bots, 'standard'])} disabled={bots.length >= 12}>Add bot firm</button>
+              <button type="button" className="btn" onClick={() => setBots([...bots, 'standard'])} disabled={bots.length >= MAX_FIRMS}>Add bot firm</button>
               <button type="button" className="btn" onClick={() => setBots(bots.slice(0, -1))} disabled={bots.length === 0}>Remove last</button>
             </div>
           </div>
         </Panel>
 
         <div>
-          <button type="submit" className="btn btn-signal" disabled={!valid}>Create session</button>
+          <button type="submit" className="btn btn-signal" disabled={!valid || busy}>Create session</button>
+          <div role="alert">{error ? <p className="notice err">{error}</p> : null}</div>
         </div>
       </form>
     </div>

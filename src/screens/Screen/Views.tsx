@@ -1,26 +1,17 @@
-import {
-  FIRMS,
-  HEADLINES,
-  MORATORIUM_HEADLINE,
-  PACTS,
-  ROUND,
-  TRUST,
-  TRUST_HISTORY,
-  valueHistory,
-  BRIEFING_LINES,
-  JOIN_CODE,
-} from '../../mock/fixtures';
 import { COMMAND_HELP } from '../../ui/commands';
 import { DataTable, Delta, Panel, QR, StepSparkline, Tag } from '../../ui/components';
 import { fmt, fmtShare, quarterLabel } from '../../ui/format';
 import { KEY_BINDINGS } from '../../ui/keys';
+import { BRIEFING_LINES } from './briefing';
+import { boardRows, joinUrl, previousTrust, trustSeries, valuationSeries, wireItems, type BoardRow, type ScreenData } from './model';
 
-export function TrustView() {
-  const delta = TRUST.value - TRUST.prev;
+export function TrustView({ data }: { data: ScreenData }) {
+  const series = trustSeries(data.rounds);
+  const delta = data.pub.round === 0 ? 0 : data.pub.T - previousTrust(data.rounds);
   return (
     <Panel title="TRST · PUBLIC TRUST HISTORY">
       <div className="row" style={{ paddingTop: '0.5lh', alignItems: 'flex-end' }}>
-        <div className="big signal">{fmt(TRUST.value)}</div>
+        <div className="big signal">{fmt(data.pub.T)}</div>
         <div>
           <Delta value={delta} /> <span className="dim">QoQ</span>
         </div>
@@ -32,47 +23,55 @@ export function TrustView() {
           <span>0</span>
         </div>
         <StepSparkline
-          series={[{ values: TRUST_HISTORY, label: 'Trust', tone: 'signal' }]}
+          series={[{ values: series, label: 'Trust', tone: 'signal' }]}
           min={0}
           max={100}
           w={130}
           h={16}
-          count={TRUST_HISTORY.length}
+          count={Math.max(series.length, 2)}
           description="Public trust by quarter"
         />
         <div className="chart-x">
-          <span>Q1 Y1</span>
-          <span>{quarterLabel(ROUND)}</span>
+          <span>START</span>
+          <span>{series.length > 1 ? quarterLabel(series.length - 1) : ''}</span>
         </div>
       </div>
     </Panel>
   );
 }
 
-export function PactsView({ emphasis = false }: { emphasis?: boolean }) {
+export function PactsView({ data, emphasis = false }: { data: ScreenData; emphasis?: boolean }) {
+  const tickers = (ids: string[]) => ids.map((id) => data.firms[id]?.ticker ?? '').filter(Boolean).sort().join('  ');
+  const pacts = Object.values(data.pacts).filter((p) => p.status === 'active');
   return (
     <Panel title={emphasis ? 'PACTS · SUMMIT' : 'PACT'} bodyClassName="pad">
-      <DataTable
-        caption="Pacts"
-        tall
-        rows={PACTS}
-        rowKey={(p) => p.id}
-        columns={[
-          { key: 'id', label: 'PACT', w: 8, render: (p) => <Tag pact={p.id} /> },
-          { key: 'pace', label: 'MAXPACE', w: 9, align: 'r', render: (p) => p.maxPace ?? '–' },
-          { key: 'safe', label: 'MINSAFE', w: 10, align: 'r', render: (p) => p.minSafety ?? '–' },
-          { key: 'members', label: 'MEMBERS', w: 0, render: (p) => p.members.join('  ') },
-        ]}
-      />
+      {pacts.length === 0 ? (
+        <p className="dim">No pacts in force.</p>
+      ) : (
+        <DataTable
+          caption="Pacts"
+          tall
+          rows={pacts}
+          rowKey={(p) => p.id}
+          columns={[
+            { key: 'id', label: 'PACT', w: 8, render: (p) => <Tag pact={p.name} /> },
+            { key: 'pace', label: 'MAXPACE', w: 9, align: 'r', render: (p) => p.terms.maxPace ?? '–' },
+            { key: 'safe', label: 'MINSAFE', w: 10, align: 'r', render: (p) => p.terms.minSafety ?? '–' },
+            { key: 'members', label: 'MEMBERS', w: 0, render: (p) => tickers(Object.keys(p.members)) },
+          ]}
+        />
+      )}
     </Panel>
   );
 }
 
-export function WireView() {
+export function WireView({ data }: { data: ScreenData }) {
+  const items = wireItems(data.rounds).slice(0, 14);
   return (
     <Panel title="WIRE · HEADLINE LOG" bodyClassName="pad">
+      {items.length === 0 ? <p className="dim">No headlines yet.</p> : null}
       <ul className="stack" style={{ listStyle: 'none', margin: 0, padding: 0, gap: 0 }}>
-        {[...HEADLINES, { round: 8, text: MORATORIUM_HEADLINE }].slice(0, 14).map((h, i) => (
+        {items.map((h, i) => (
           <li key={i} className="row" style={{ gap: '2ch' }}>
             <span className="dim" style={{ width: '6ch' }}>{quarterLabel(h.round)}</span>
             <span className="wire-c">{h.text}</span>
@@ -83,8 +82,8 @@ export function WireView() {
   );
 }
 
-export function FirmView({ ticker }: { ticker: string }) {
-  const f = FIRMS.find((x) => x.ticker === ticker);
+export function FirmView({ ticker, data }: { ticker: string; data: ScreenData }) {
+  const f: BoardRow | undefined = boardRows(data).find((x) => x.ticker === ticker);
   if (!f) {
     return (
       <Panel title="FIRM" bodyClassName="pad">
@@ -92,7 +91,9 @@ export function FirmView({ ticker }: { ticker: string }) {
       </Panel>
     );
   }
-  const hist = valueHistory(f);
+  const hist = valuationSeries(f.id, data.rounds);
+  const lo = Math.min(...hist);
+  const hi = Math.max(...hist);
   return (
     <Panel title={`FIRM · ${f.ticker}`} bodyClassName="pad">
       <div className="stack">
@@ -105,20 +106,21 @@ export function FirmView({ ticker }: { ticker: string }) {
         </div>
         <div className="chart">
           <div className="chart-y" style={{ height: '14lh' }}>
-            <span>{fmt(Math.max(...hist), 0)}</span>
-            <span>{fmt(Math.min(...hist), 0)}</span>
+            <span>{fmt(hi, 0)}</span>
+            <span>{fmt(lo, 0)}</span>
           </div>
           <StepSparkline
             series={[{ values: hist, label: 'Valuation', tone: 'wire' }]}
-            min={Math.min(...hist)}
-            max={Math.max(...hist)}
+            min={lo}
+            max={hi}
             w={100}
             h={14}
+            count={Math.max(hist.length, 2)}
             description={`${f.ticker} valuation by quarter`}
           />
           <div className="chart-x">
-            <span>{quarterLabel(1)}</span>
-            <span>{quarterLabel(ROUND)}</span>
+            <span>START</span>
+            <span>{hist.length > 1 ? quarterLabel(hist.length - 1) : ''}</span>
           </div>
         </div>
         <div className="row">
@@ -161,8 +163,11 @@ export function HelpView() {
   );
 }
 
-export function LobbyView() {
-  const url = new URL(`#/j/${JOIN_CODE}`, window.location.href).toString();
+export function LobbyView({ code, firms, memberCounts }: { code: string; firms: ScreenData['firms']; memberCounts: Record<string, number> }) {
+  const url = joinUrl(code, window.location.href);
+  const rows = Object.entries(firms)
+    .sort(([, a], [, b]) => a.createdAt - b.createdAt)
+    .map(([id, f]) => ({ id, ...f }));
   return (
     <>
       <Panel title="JOIN" bodyClassName="pad" style={{ width: 'var(--board-w)' }}>
@@ -172,22 +177,23 @@ export function LobbyView() {
           </div>
           <div className="stack">
             <span className="dim">CODE</span>
-            <div className="big signal" aria-label={`Join code ${JOIN_CODE.split('').join(' ')}`}>{JOIN_CODE}</div>
+            <div className="big signal" aria-label={`Join code ${code.split('').join(' ')}`}>{code}</div>
             <span className="dim">ADDRESS</span>
             <span style={{ overflowWrap: 'anywhere' }}>{url}</span>
             <span className="dim" style={{ marginTop: '1lh' }}>Scan the code or enter it on the join page. Form a firm or join one.</span>
           </div>
         </div>
       </Panel>
-      <Panel title="FIRMS" right={`${FIRMS.length} FORMED`} bodyClassName="pad">
+      <Panel title="FIRMS" right={`${rows.length} FORMED`} bodyClassName="pad">
+        {rows.length === 0 ? <p className="dim">No firms formed yet.</p> : null}
         <DataTable
           caption="Firms formed"
-          rows={FIRMS}
-          rowKey={(f) => f.ticker}
+          rows={rows}
+          rowKey={(f) => f.id}
           columns={[
             { key: 't', label: 'TICKER', w: 8, render: (f) => f.ticker },
-            { key: 'n', label: 'FIRM', w: 0, render: (f) => f.name },
-            { key: 'm', label: 'MBRS', w: 6, align: 'r', render: (f) => f.members },
+            { key: 'n', label: 'FIRM', w: 0, render: (f) => <>{f.name} {f.isBot ? <Tag kind="BOT" /> : null}</> },
+            { key: 'm', label: 'MBRS', w: 6, align: 'r', render: (f) => (f.isBot ? <span className="dim">{'–'}</span> : (memberCounts[f.id] ?? 0)) },
           ]}
         />
       </Panel>

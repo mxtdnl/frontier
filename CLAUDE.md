@@ -31,6 +31,7 @@ The source of truth is `docs/spec.md`. When this file and the spec disagree, the
 - `npm run build`: single-file build to `dist/index.html`
 - `npm test`: Vitest
 - `npm run test:rules`: rules tests (requires `firebase emulators:exec`)
+- `npm run test:e2e`: Playwright end-to-end run against the emulators (starts its own emulators and dev server)
 - `npm run calibrate -- --seeds 200`: calibration report to `reports/calibration.md`
 - `npm run bots -- --game <id> --firms 8 --policy mixed`: emulator or live bot clients
 - `firebase emulators:start --only auth,database --project demo-frontier`

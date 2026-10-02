@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { CARDS, FIRMS, HEADLINES, PACE_OPTIONS, TRUST, TRUST_HISTORY, prevProfit, prevRank, prevShare, prevValue } from '../../mock/fixtures';
+import { CARDS, FIRMS, HEADLINES, PACE_OPTIONS, TRUST, TRUST_HISTORY, prevProfit, prevRank, prevShare, prevValue, type MockFirm } from '../../mock/fixtures';
 import {
   CardPicker,
   CommitButton,
@@ -24,6 +24,29 @@ import { fmt, fmtShare } from '../../ui/format';
 import { useLitRoom } from '../../ui/litRoom';
 import { playReveal } from '../../ui/reveal';
 import { boardColumns } from '../Screen/BoardView';
+import type { BoardRow } from '../Screen/model';
+
+const toRow = (f: MockFirm, i: number): BoardRow => ({
+  id: f.ticker,
+  ticker: f.ticker,
+  name: f.name,
+  rank: i + 1,
+  prevIndex: prevRank(f),
+  share: f.share,
+  prevShare: prevShare(f),
+  profit: f.profit,
+  prevProfit: prevProfit(f),
+  value: f.value,
+  prevValue: prevValue(f),
+  dValue: f.dValue,
+  committed: f.committed,
+  auto: f.tags.includes('AUTO'),
+  insolvent: f.tags.includes('INSOLV'),
+  bot: f.tags.includes('BOT'),
+  pacts: f.pacts,
+  breach: f.breach,
+  disclosed: { pace: f.pace as 1 | 2 | 3 | 4, safety: f.safety, expo: f.expo },
+});
 
 /** Every component in every state (spec §16.3), plus the reveal simulator (§16.5). */
 export function Kit() {
@@ -57,7 +80,7 @@ export function Kit() {
   };
 
   const demoDelta = TRUST.value - TRUST.prev;
-  const sample = FIRMS.slice(0, 8);
+  const sample = FIRMS.slice(0, 8).map(toRow);
 
   return (
     <div className="page stack">
@@ -85,8 +108,8 @@ export function Kit() {
               caption="Reveal sample"
               columns={boardColumns(false, revealOn).slice(0, 6)}
               rows={sample}
-              rowKey={(f) => f.ticker}
-              prevIndex={revealOn ? prevRank : undefined}
+              rowKey={(f) => f.id}
+              prevIndex={revealOn ? (f) => f.prevIndex : undefined}
             />
           </div>
         </div>
@@ -211,7 +234,7 @@ export function Kit() {
         </Panel>
       </div>
       <p className="dim">
-        Reveal values come from the sample board. Previous profit {fmt(prevProfit(sample[0]!))}, previous share {fmtShare(prevShare(sample[0]!))}, previous value {fmt(prevValue(sample[0]!))}.
+        Reveal values come from the sample board. Previous profit {fmt(prevProfit(FIRMS[0]!))}, previous share {fmtShare(prevShare(FIRMS[0]!))}, previous value {fmt(prevValue(FIRMS[0]!))}.
       </p>
     </div>
   );

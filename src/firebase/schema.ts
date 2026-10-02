@@ -62,7 +62,13 @@ export interface PublicNode {
   endedAt: number | null;
   /** Results sequence index (§14.4). */
   revealStep: number;
+  /** Phase to return to when a summit ends (`open` or `reveal`); null outside a summit. */
+  resumePhase: ResumePhase | null;
+  /** Time left on the round timer while it is paused or a summit is running; null otherwise. */
+  pausedRemainingMs: number | null;
 }
+
+export type ResumePhase = 'open' | 'reveal';
 
 export interface FirmNode {
   name: string;
@@ -229,6 +235,8 @@ export function fromPublic(v: Raw): PublicNode | null {
     resolvingBy: strOrNull(v.resolvingBy),
     endedAt: numOrNull(v.endedAt),
     revealStep: num(v.revealStep),
+    resumePhase: v.resumePhase === 'open' || v.resumePhase === 'reveal' ? v.resumePhase : null,
+    pausedRemainingMs: numOrNull(v.pausedRemainingMs),
   };
 }
 

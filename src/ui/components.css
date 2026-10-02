@@ -680,6 +680,8 @@
 }
 .field input[type='number'],
 .field input[type='text'],
+.field input[type='email'],
+.field input[type='password'],
 .field select {
   min-height: 44px;
   background: var(--base);
