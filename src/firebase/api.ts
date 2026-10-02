@@ -318,6 +318,9 @@ export async function addBotFirm(db: Database, g: string, firm: Omit<FirmNode, '
 
 export const readFirm = (db: Database, g: string, firmId: string): Promise<FirmNode> => read(db, paths.firm(g, firmId), fromFirm);
 
+export const readMembers = (db: Database, g: string): Promise<Record<string, MemberNode>> =>
+  read(db, paths.members(g), (v) => rec(v, (x) => fromMember(x) as MemberNode));
+
 export const subscribeMembers = (db: Database, g: string, cb: Listener<Record<string, MemberNode>>, onError?: ErrorListener): Unsubscribe =>
   watch(db, paths.members(g), (v) => rec(v, (x) => fromMember(x) as MemberNode), cb, onError);
 

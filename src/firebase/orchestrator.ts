@@ -38,6 +38,7 @@ import {
   lockForResolve,
   pauseTimer,
   resumeTimer,
+  setJoinLock,
   stepResultsStep,
   toBriefing,
   toEnded,
@@ -52,6 +53,7 @@ import {
   type DecisionNode,
   type EngineNode,
   type FirmNode,
+  type MemberNode,
   type MetaNode,
   type PublicNode,
   type ResultsNode,
@@ -66,6 +68,7 @@ export interface OrchestratorIO {
   readMeta(): Promise<MetaNode | null>;
   readEngine(): Promise<EngineNode | null>;
   readFirms(): Promise<Record<string, FirmNode>>;
+  readMembers(): Promise<Record<string, MemberNode>>;
   readDecisions(round: number): Promise<Record<string, DecisionNode>>;
   readPacts(): Promise<Record<string, Pact>>;
   readResults(): Promise<ResultsNode | null>;
@@ -84,6 +87,7 @@ export function firebaseIO(db: Database, g: string): OrchestratorIO {
     readMeta: () => api.readMeta(db, g),
     readEngine: () => api.readEngine(db, g),
     readFirms: () => api.readFirms(db, g),
+    readMembers: () => api.readMembers(db, g),
     readDecisions: (round) => api.readDecisions(db, g, round),
     readPacts: () => api.readPacts(db, g),
     readResults: () => api.readResults(db, g),
@@ -331,6 +335,34 @@ export async function deleteSession(ctx: Ctx): Promise<ActionResult> {
   } catch {
     return fail('The session was not deleted. Check the connection and try again.');
   }
+}
+
+/**
+ * Danger panel (spec §14.2): removes a firm, its PIN and its devices' memberships in one
+ * update. Only in the lobby: the market is built from the firm list at the briefing, and
+ * participants can leave a firm with no members by founding or joining another one.
+ */
+export async function removeFirm(ctx: Ctx, firmId: string): Promise<ActionResult> {
+  const [pub, firms, members] = await Promise.all([ctx.io.readPublic(), ctx.io.readFirms(), ctx.io.readMembers()]);
+  if (!pub) return fail('Session not found. Check the address.');
+  if (pub.phase !== 'lobby') return fail('Firms can be removed only in the lobby, before the briefing starts.');
+  const firm = firms[firmId];
+  if (!firm) return fail('That firm no longer exists. Check the firm list.');
+  const patch: Record<string, unknown> = { [rel.firm(firmId)]: null, [rel.firmSecret(firmId)]: null };
+  for (const [uid, m] of Object.entries(members)) if (m.firmId === firmId) patch[rel.member(uid)] = null;
+  try {
+    await ctx.io.update(patch);
+  } catch {
+    return fail(`${firm.ticker} was not removed. Check the connection and try again.`);
+  }
+  return ok(`${firm.ticker} removed. Its devices can found or join another firm.`);
+}
+
+/** Danger panel (spec §14.2): lock joining once every team has formed, or reopen it, in the lobby. */
+export async function setJoinsLocked(ctx: Ctx, locked: boolean): Promise<ActionResult> {
+  const t = await transition(ctx, setJoinLock(locked));
+  if (!t.ok) return t;
+  return ok(locked ? 'Joining locked. No firm can be founded or joined; devices already in a firm can still reopen it.' : 'Joining reopened.');
 }
 
 /** F8. */
