@@ -12,7 +12,7 @@ import {
   updateGame,
 } from '../firebase/api';
 import { getFirebase } from '../firebase/init';
-import { autoResolve, firebaseIO, publishWire, type ActionResult, type Ctx } from '../firebase/orchestrator';
+import { autoResolve, ensureResults, firebaseIO, publishWire, type ActionResult, type Ctx } from '../firebase/orchestrator';
 import { AUTO_RESOLVE_DELAY_MS } from '../firebase/phases';
 import { rel } from '../firebase/paths';
 import type { DecisionNode, EngineNode, FirmNode, FirmPublicNode, MemberNode, PactPrivateNode, PresenceNode, PublicNode, RoundNode, WireNode } from '../firebase/schema';
@@ -132,4 +132,31 @@ export function useLiveWire(
     keys.forEach((k) => sent.current.add(k));
     publishWire(ctx, { pacts, firms, rounds, wire, pub }).catch(() => keys.forEach((k) => sent.current.delete(k)));
   }, [ctx, pub, firms, pacts, rounds, wire, loaded]);
+}
+
+/**
+ * Writes `/results` when the session has ended and the node is missing. Several windows may
+ * run this: the output is deterministic, so a duplicate write stores identical data. A failed
+ * write is retried a few times; the control console also offers a manual retry.
+ */
+export function useResultsPublisher(ctx: Ctx, phase: PublicNode['phase'] | null, onResult: (r: ActionResult) => void): void {
+  const cb = useRef(onResult);
+  cb.current = onResult;
+  useEffect(() => {
+    if (phase !== 'ended') return undefined;
+    let live = true;
+    let timer = 0;
+    let attempt = 0;
+    const tryOnce = async () => {
+      const r = await ensureResults(ctx);
+      if (!live || r === null) return;
+      cb.current(r);
+      if (!r.ok && ++attempt < 5) timer = window.setTimeout(() => void tryOnce(), 4000 * attempt);
+    };
+    void tryOnce();
+    return () => {
+      live = false;
+      window.clearTimeout(timer);
+    };
+  }, [ctx, phase]);
 }

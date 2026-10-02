@@ -13,12 +13,13 @@ import {
   subscribeMeta,
   subscribePacts,
   subscribePublic,
+  subscribeResults,
   subscribeRounds,
   subscribeWire,
 } from '../firebase/api';
 import { getFirebase } from '../firebase/init';
 import { subscribeConnected, subscribeServerTimeOffset, trackPresence } from '../firebase/presence';
-import type { DecisionNode, FirmNode, FirmPrivateNode, FirmPublicNode, MemberNode, MetaNode, PublicNode, RoundNode, WireNode } from '../firebase/schema';
+import type { DecisionNode, FirmNode, FirmPrivateNode, FirmPublicNode, MemberNode, MetaNode, PublicNode, ResultsNode, RoundNode, WireNode } from '../firebase/schema';
 import { useSubscription, type Subscription } from './useSubscription';
 
 const db = () => getFirebase().db;
@@ -29,6 +30,10 @@ export const useMeta = (g: string | null): Subscription<MetaNode | null> =>
 
 export const usePublic = (g: string | null): Subscription<PublicNode | null> =>
   useSubscription<PublicNode | null>(g, (cb, err) => subscribePublic(db(), g as string, cb, err), null);
+
+/** Final results. The rules refuse the read until the phase is `ended`, so pass null before then. */
+export const useResults = (g: string | null): Subscription<ResultsNode | null> =>
+  useSubscription<ResultsNode | null>(g, (cb, err) => subscribeResults(db(), g as string, cb, err), null);
 
 export const useFirms = (g: string | null): Subscription<Record<string, FirmNode>> =>
   useSubscription<Record<string, FirmNode>>(g, (cb, err) => subscribeFirms(db(), g as string, cb, err), EMPTY);

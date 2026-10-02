@@ -17,6 +17,7 @@ import {
   createGame,
   emptyPactPrivate,
   hash32,
+  buildResults,
   isFinalRound,
   resolveRound,
   type BotPolicy,
@@ -24,6 +25,7 @@ import {
   type EngineState,
   type FirmInit,
   type GameSettings,
+  type FinalResults,
   type Pact,
 } from '../engine';
 import * as api from './api';
@@ -36,6 +38,7 @@ import {
   lockForResolve,
   pauseTimer,
   resumeTimer,
+  stepResultsStep,
   toBriefing,
   toEnded,
   toggleDisclosureStep,
@@ -51,6 +54,7 @@ import {
   type FirmNode,
   type MetaNode,
   type PublicNode,
+  type ResultsNode,
   type RoundNode,
 } from './schema';
 
@@ -64,6 +68,9 @@ export interface OrchestratorIO {
   readFirms(): Promise<Record<string, FirmNode>>;
   readDecisions(round: number): Promise<Record<string, DecisionNode>>;
   readPacts(): Promise<Record<string, Pact>>;
+  readResults(): Promise<ResultsNode | null>;
+  /** Removes the whole game and frees its join code in one update. */
+  deleteGame(code: string): Promise<void>;
   /** Atomic read-modify-write of `engine/pendingAudits`; `step` returns the new list or undefined to abort. */
   transactPendingAudits(step: (current: string[]) => string[] | undefined): Promise<{ committed: boolean; value: string[] }>;
   /** One atomic multi-path update rooted at `games/{g}` (keys come from `rel`). */
@@ -79,6 +86,8 @@ export function firebaseIO(db: Database, g: string): OrchestratorIO {
     readFirms: () => api.readFirms(db, g),
     readDecisions: (round) => api.readDecisions(db, g, round),
     readPacts: () => api.readPacts(db, g),
+    readResults: () => api.readResults(db, g),
+    deleteGame: (code) => api.deleteGame(db, g, code),
     transactPendingAudits: (step) => api.transactPendingAudits(db, g, step),
     update: (patch) => api.updateGame(db, g, patch),
   };
@@ -256,7 +265,7 @@ export async function advance(ctx: Ctx, seen?: Seen): Promise<ActionResult> {
     case 'summit':
       return fail('The summit is in session. Press F8 to end it before advancing.');
     case 'ended':
-      return fail('The session has ended.');
+      return stepResults(ctx, 1);
   }
 }
 
@@ -269,7 +278,59 @@ export async function endSession(ctx: Ctx, seen?: Seen): Promise<ActionResult> {
   }
   const t = await transition(ctx, toEnded(ctx.now()));
   if (!t.ok) return t;
-  return ok(t.before.phase === 'open' ? 'Session ended. The open quarter was discarded.' : 'Session ended.');
+  const head = t.before.phase === 'open' ? 'Session ended. The open quarter was discarded.' : 'Session ended.';
+  const written = await publishResults(ctx);
+  return ok(written.ok ? `${head} Results are ready.` : `${head} ${written.message}`);
+}
+
+// ── Results (§10, §14.4) ──────────────────────────────────────────────────────
+
+/**
+ * Computes the final results with the engine and writes `/results` in one update. The output
+ * depends only on the engine node and one public setting, so running it again from any
+ * window writes identical data.
+ */
+export async function publishResults(ctx: Ctx): Promise<ActionResult> {
+  try {
+    const [pub, engine, meta] = await Promise.all([ctx.io.readPublic(), ctx.io.readEngine(), ctx.io.readMeta()]);
+    if (!pub || !engine || !meta) return fail('Session data is missing. Reload the page.');
+    if (pub.phase !== 'ended') return fail('Results are written once the session has ended.');
+    if (engine.firms.length === 0) return fail('No firms took part, so there are no results to write.');
+    const results: FinalResults = buildResults(engineStateOf(engine), { revealTau: meta.settings.revealThreshold }, engine.params);
+    await ctx.io.update({ [rel.results()]: results });
+    return ok('Results written.');
+  } catch {
+    return fail('Results were not written. Press RETRY RESULTS on the control console, or reload this page.');
+  }
+}
+
+/** Writes the results only if they are missing; used by any facilitator window that sees an ended session. */
+export async function ensureResults(ctx: Ctx): Promise<ActionResult | null> {
+  try {
+    if ((await ctx.io.readResults()) !== null) return null;
+  } catch {
+    return fail('Results could not be checked. Check the connection.');
+  }
+  return publishResults(ctx);
+}
+
+/** F9 steps the results panels forward; Esc steps back. */
+export async function stepResults(ctx: Ctx, delta: 1 | -1): Promise<ActionResult> {
+  const t = await transition(ctx, stepResultsStep(delta));
+  if (!t.ok) return t;
+  return ok(`Results panel ${t.after.revealStep + 1} of 6.`);
+}
+
+/** Deletes the session record and frees its join code. The caller collects the double confirmation. */
+export async function deleteSession(ctx: Ctx): Promise<ActionResult> {
+  try {
+    const meta = await ctx.io.readMeta();
+    if (!meta) return fail('Session not found. It may already be deleted.');
+    await ctx.io.deleteGame(meta.code);
+    return ok(`Session ${meta.code} deleted. The join code is free again.`);
+  } catch {
+    return fail('The session was not deleted. Check the connection and try again.');
+  }
 }
 
 /** F8. */
