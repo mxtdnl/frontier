@@ -34,6 +34,7 @@ The source of truth is `docs/spec.md`. When this file and the spec disagree, the
 - `npm run calibrate -- --seeds 200`: calibration report to `reports/calibration.md`
 - `npm run bots -- --game <id> --firms 8 --policy mixed`: emulator or live bot clients
 - `firebase emulators:start --only auth,database --project demo-frontier`
+- `npm run emulators`, then `npm run emulators:rules`: emulators for manual or Playwright runs (the CLI cannot load rules itself in the cloud container; see PROGRESS, Session 3)
 
 ## Architecture rules
 

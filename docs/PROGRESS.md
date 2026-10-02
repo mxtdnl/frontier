@@ -126,3 +126,82 @@
 
 **Next steps**
 - Session 3: Firebase data layer and security rules.
+
+## 2026-10-01 — Session 3: Firebase data layer and security rules
+
+**Done**
+- `firebase.json`: the rules file, plus the auth and database emulators. `.firebaserc`: project `frontier-sim`.
+- `src/firebase/config.ts`: the web config, plus the emulator constants (project `demo-frontier`).
+- `src/firebase/init.ts`: connects to the emulators when `VITE_USE_EMULATOR=1`.
+- `src/firebase/paths.ts`: the only place paths are built.
+  - It rejects any key containing `. $ # [ ] /`.
+  - It rejects any join code that is not four letters A–Z without I or O.
+- `src/firebase/schema.ts`:
+  - typed shapes for every §12 node
+  - normalisers that restore `null` fields, empty lists and empty maps, which Firebase drops on write
+  - round-keyed maps that come back as arrays become maps again.
+- `src/firebase/api.ts`: typed read, write and subscribe helpers for every §12 node.
+  - The facilitator-only helpers are grouped under a FACILITATOR heading.
+  - Founding a firm and creating a game with its code are each one multi-path update.
+- `src/firebase/presence.ts`:
+  - onDisconnect presence
+  - a connected flag
+  - the `/.info/serverTimeOffset` subscription
+  - `serverNow` and `remainingMs` helpers.
+- `src/state/` hooks:
+  - `usePublic`, `useFirms`, `useFirmsPublic`, `useRounds` and `usePacts`
+  - `useOwnMember`, `useOwnFirmPrivate` and `useOwnDecision`
+  - `usePresence`, which publishes your own presence and reports the connected state
+  - `useServerTimeOffset`.
+  - No hook reads a facilitator-only node.
+- `database.rules.json` implements every requirement in §13.
+- Tests:
+  - 98 rules tests in `tests/rules`.
+  - 10 tests in `tests/emulator/api.test.ts`. They drive `api.ts` and `presence.ts` through the real Firebase SDK, the auth emulator and the real rules. This includes a full engine-state round trip that compares the raw stored value with the unit-test simulation.
+  - 19 unit tests in `tests/firebase` cover paths, the read-back normalisers and the server-time helpers.
+  - `npm test`: 146 passed. `npm run test:rules`: 108 passed. Typecheck, `lint:copy` and build pass.
+- Mutation check: three rules were weakened by hand (deadline, PIN check, results phase). The rules tests failed in each case, and the rules were restored.
+
+**Choices where the spec is silent (agreed with the owner before coding)**
+1. **Ticker length.** The ticker follows §13 `^[A-Z]{3,6}$`. §12 says 4–6.
+2. **Reading `members/{uid}`.** You can read your own entry and your teammates' entries, so §14.3 can show the committing device's label. You cannot read the list.
+3. **Presence.** Anyone signed in can read `presence/{uid}/online`. Only the facilitator and the user themselves can read `lastSeen`.
+4. **Join codes.**
+   - Anyone signed in can read one code, but cannot list codes.
+   - Only a facilitator can create a code, and only for a game they created.
+   - Codes can be created or deleted, but never changed. This guarantees uniqueness: a combined game-and-code update fails if the code is taken, so Session 4 can retry with a new code.
+   - `facilitators/{uid}` can be read only by that user, and never written from the app.
+5. **Creating a game.** It is allowed only if the game does not exist and `meta/facilitatorUid` is the creator.
+6. **Firms created by participants.**
+   - `isBot` must be false and `createdAt` must equal the server time.
+   - A firm and its PIN cannot be changed after creation.
+7. **Pacts.**
+   - Creating one requires the phase to be `open` or `summit`, the proposer firm as the only initial member, and `status` set to `active`.
+   - Terms need `maxPace` and/or `minSafety`.
+   - Joining stores the current round. Joining and leaving are allowed in any phase.
+8. **The membership label** is optional, with a maximum of 12 characters.
+9. **Decisions** are validated as §13 says. A POACH without a target is allowed; the engine already handles it.
+
+**Spec deviations (with reasons)**
+- **None in the data model.** The `engine` node stores the full engine state plus `params`, `rngNotes` and `cfCache`. §12 lists only some of those fields, but the orchestrator needs the full state.
+
+**Environment notes**
+- **The Firebase CLI ignores `NO_PROXY`.** It sends its own local request to the emulator (127.0.0.1) through the container's outbound proxy, which refuses it with "request blocked: no rule allows host 127.0.0.1". The proxy was not bypassed or changed. Instead:
+  - `firebase.test.json` is an emulator-only config with no rules entry, so the CLI starts the emulators without loading rules.
+  - The rules tests load `database.rules.json` themselves through `@firebase/rules-unit-testing`, into namespace `demo-frontier`.
+  - `scripts/emulator-rules.ts` (`npm run emulators:rules`) loads the rules into `demo-frontier-default-rtdb`, the namespace the app's SDK uses. The emulator test and Session 4's Playwright runs need this.
+  - The real `firebase.json` is unchanged and correct for the live project.
+- The database emulator JAR downloaded without being blocked. Fetching the CLI's message of the day from `firebase-public.firebaseio.com` is blocked (403), and the CLI treats that as non-fatal.
+
+**Open issues**
+- **PIN guessing.** The rules cannot rate-limit writes, so a scripted client could try all 10,000 PINs while joins are open. Joins close at the end of the lobby, so the window is short. Session 9 should assess this (spec §13 relies on the PIN alone).
+- **Dissolved pacts.** A firm can join a dissolved pact. The spec does not say whether this is allowed. The engine ignores it if the orchestrator copies only active pacts, which is a Session 4 decision.
+- **Firm order.** The `order` written by a participant is only a display hint. The facilitator should assign engine order (incident-draw order) from `createdAt` when it creates the engine state (Session 4).
+- **Public settings.** `meta.settings` holds only the public subset (timer, auto-resolve, reveal-threshold flag, lit-room). End mode, end range, seed and the audit probability stay in `engine`.
+- **Pause and summit.** `public` has no field for the phase to return to after a summit, and none for the remaining time while paused. Session 4 must add them (§4, F8). The rules already refuse decisions outside `open`, and whenever the deadline is missing.
+- **CI.** The rules tests are not run in the GitHub Pages workflow, because it has no Java or emulator.
+
+**Next steps**
+- Session 4: facilitator flows and round orchestration.
+  - Use `createGameRecord`, `updateGame` with `rel` paths, and `toPactNode` when writing pacts.
+  - Load rules with `npm run emulators:rules` before Playwright runs.

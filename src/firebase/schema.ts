@@ -1,0 +1,542 @@
+/**
+ * Shapes of every Realtime Database node (spec §12), and normalisers for reading them back.
+ *
+ * The database drops `null` values and empty objects and arrays, and stores arrays as
+ * objects with numeric keys. Every `from*` function below restores the exact shape the
+ * rest of the app expects, so `null` fields, empty lists and empty maps come back.
+ */
+import { PARAMS } from '../engine/params';
+import type { Params } from '../engine/params';
+import type {
+  AttributionRow,
+  AuditBreach,
+  AuditResult,
+  BotPolicy,
+  Card,
+  CounterfactualResult,
+  Decision,
+  DisclosureEntry,
+  EndMode,
+  EngineState,
+  FirmRoundResult,
+  FirmState,
+  Headline,
+  Pace,
+  Pact,
+  PactPrivate,
+  RoundRecord,
+} from '../engine';
+
+export type Phase = 'lobby' | 'briefing' | 'open' | 'resolving' | 'reveal' | 'summit' | 'ended';
+
+/** Settings safe for every participant to read. Hidden settings live only in `engine`. */
+export interface PublicSettings {
+  timerSec: number;
+  autoResolve: boolean;
+  /** Show the τ line on the results screen (§5.4). */
+  revealThreshold: boolean;
+  litRoom: boolean;
+}
+
+export interface MetaNode {
+  code: string;
+  title: string;
+  createdAt: number;
+  facilitatorUid: string;
+  settings: PublicSettings;
+}
+
+export interface PublicNode {
+  phase: Phase;
+  round: number;
+  /** Server timestamp in ms; null when no round is open. */
+  deadline: number | null;
+  paused: boolean;
+  disclosure: boolean;
+  T: number;
+  M: number;
+  collapsed: boolean;
+  collapseRound: number | null;
+  joinLocked: boolean;
+  resolvingBy: string | null;
+  endedAt: number | null;
+  /** Results sequence index (§14.4). */
+  revealStep: number;
+}
+
+export interface FirmNode {
+  name: string;
+  ticker: string;
+  createdAt: number;
+  order: number;
+  isBot: boolean;
+  botPolicy: BotPolicy | null;
+}
+
+export interface FirmSecretNode {
+  pin: string;
+}
+
+export interface FirmPublicNode {
+  share: number;
+  profit: number;
+  valuation: number;
+  rank: number;
+  rankDelta: number;
+  submittedRound: number;
+  auto: boolean;
+  insolvent: boolean;
+  breachUntilRound: number;
+}
+
+export interface FirmPrivateNode {
+  cash: number;
+  cap: number;
+  lastCard: Card;
+  lastPoachTarget: string | null;
+  cumulativeDraw: number;
+  incidents: number;
+  /** round → the firm's own outcome for that quarter. */
+  history: Record<string, FirmRoundResult>;
+}
+
+export interface MemberNode {
+  firmId: string;
+  /** Checked by the rules against `firmSecrets/{firmId}/pin` on every write. */
+  pin: string;
+  /** Optional device initials; empty string when not given. */
+  label: string;
+  joinedAt: number;
+}
+
+export interface PresenceNode {
+  online: boolean;
+  lastSeen: number;
+}
+
+export interface DecisionNode extends Decision {
+  by: string;
+  /** Server timestamp in ms. */
+  at: number;
+}
+
+export interface RoundResultEntry {
+  share: number;
+  profit: number;
+  valuation: number;
+  rank: number;
+}
+
+export interface RoundNode {
+  T: number;
+  dT: number;
+  M: number;
+  incidents: number;
+  headlines: Headline[];
+  audits: AuditResult[];
+  disclosure: Record<string, DisclosureEntry> | null;
+  results: Record<string, RoundResultEntry>;
+}
+
+/** `pacts/{pactId}`; the id is the key, not a stored field. */
+export type PactNode = Omit<Pact, 'id'>;
+
+export type PactPrivateNode = PactPrivate;
+
+/** `engine`: the full engine state plus the §12 extras. Facilitator only. */
+export interface EngineNode extends EngineState {
+  params: Params;
+  rngNotes: string | null;
+  cfCache: CounterfactualResult | null;
+}
+
+export type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
+
+export interface ResultsNode {
+  /** firmId → final figures; the exact fields are fixed in Session 7. */
+  final: Record<string, Record<string, Json>>;
+  counterfactual: CounterfactualResult | null;
+  attribution: AttributionRow[];
+  dataLines: string[];
+}
+
+// ── Normalisers ────────────────────────────────────────────────────────────────
+
+type Raw = unknown;
+
+const isObj = (v: Raw): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** A list stored by the database: an array (possibly with holes), a numeric-keyed object, or absent. */
+export function arr<T>(v: Raw, map: (x: unknown) => T = (x) => x as T): T[] {
+  if (Array.isArray(v)) return v.filter((x) => x !== undefined && x !== null).map(map);
+  if (isObj(v)) {
+    return Object.keys(v)
+      .filter((k) => /^\d+$/.test(k))
+      .sort((a, b) => Number(a) - Number(b))
+      .map((k) => map(v[k]));
+  }
+  return [];
+}
+
+/**
+ * A map stored by the database, or absent. Records keyed by small integers (rounds) can
+ * come back as arrays; the indices become keys again.
+ */
+export function rec<T>(v: Raw, map: (x: unknown, key: string) => T = (x) => x as T): Record<string, T> {
+  const out: Record<string, T> = {};
+  if (Array.isArray(v)) {
+    v.forEach((x, i) => {
+      if (x !== undefined && x !== null) out[String(i)] = map(x, String(i));
+    });
+  } else if (isObj(v)) {
+    for (const [k, x] of Object.entries(v)) if (x !== undefined && x !== null) out[k] = map(x, k);
+  }
+  return out;
+}
+
+const obj = (v: Raw): Record<string, unknown> => (isObj(v) ? v : {});
+const num = (v: Raw, d = 0): number => (typeof v === 'number' ? v : d);
+const numOrNull = (v: Raw): number | null => (typeof v === 'number' ? v : null);
+const str = (v: Raw, d = ''): string => (typeof v === 'string' ? v : d);
+const strOrNull = (v: Raw): string | null => (typeof v === 'string' ? v : null);
+const bool = (v: Raw): boolean => v === true;
+
+export function fromMeta(v: Raw): MetaNode | null {
+  if (!isObj(v)) return null;
+  const s = obj(v.settings);
+  return {
+    code: str(v.code),
+    title: str(v.title),
+    createdAt: num(v.createdAt),
+    facilitatorUid: str(v.facilitatorUid),
+    settings: { timerSec: num(s.timerSec, 120), autoResolve: bool(s.autoResolve), revealThreshold: bool(s.revealThreshold), litRoom: bool(s.litRoom) },
+  };
+}
+
+export function fromPublic(v: Raw): PublicNode | null {
+  if (!isObj(v)) return null;
+  return {
+    phase: str(v.phase, 'lobby') as Phase,
+    round: num(v.round),
+    deadline: numOrNull(v.deadline),
+    paused: bool(v.paused),
+    disclosure: bool(v.disclosure),
+    T: num(v.T),
+    M: num(v.M),
+    collapsed: bool(v.collapsed),
+    collapseRound: numOrNull(v.collapseRound),
+    joinLocked: bool(v.joinLocked),
+    resolvingBy: strOrNull(v.resolvingBy),
+    endedAt: numOrNull(v.endedAt),
+    revealStep: num(v.revealStep),
+  };
+}
+
+export function fromFirm(v: Raw): FirmNode {
+  const o = obj(v);
+  return {
+    name: str(o.name),
+    ticker: str(o.ticker),
+    createdAt: num(o.createdAt),
+    order: num(o.order),
+    isBot: bool(o.isBot),
+    botPolicy: strOrNull(o.botPolicy) as BotPolicy | null,
+  };
+}
+
+export const fromFirms = (v: Raw): Record<string, FirmNode> => rec(v, fromFirm);
+
+export function fromFirmSecret(v: Raw): FirmSecretNode | null {
+  return isObj(v) && typeof v.pin === 'string' ? { pin: v.pin } : null;
+}
+
+export function fromFirmPublic(v: Raw): FirmPublicNode {
+  const o = obj(v);
+  return {
+    share: num(o.share),
+    profit: num(o.profit),
+    valuation: num(o.valuation),
+    rank: num(o.rank),
+    rankDelta: num(o.rankDelta),
+    submittedRound: num(o.submittedRound),
+    auto: bool(o.auto),
+    insolvent: bool(o.insolvent),
+    breachUntilRound: num(o.breachUntilRound),
+  };
+}
+
+export const fromFirmsPublic = (v: Raw): Record<string, FirmPublicNode> => rec(v, fromFirmPublic);
+
+export function fromFirmRoundResult(v: Raw): FirmRoundResult {
+  const o = obj(v);
+  return {
+    pace: num(o.pace, 2) as Pace,
+    safety: num(o.safety),
+    card: str(o.card, 'NONE') as Card,
+    target: strOrNull(o.target),
+    auto: bool(o.auto),
+    expo: num(o.expo),
+    draw: num(o.draw),
+    incident: bool(o.incident),
+    share: num(o.share),
+    revenue: num(o.revenue),
+    cost: num(o.cost),
+    fine: num(o.fine),
+    profit: num(o.profit),
+    cash: num(o.cash),
+    cap: num(o.cap),
+    valuation: num(o.valuation),
+    rank: num(o.rank),
+    rankDelta: num(o.rankDelta),
+    insolvent: bool(o.insolvent),
+  };
+}
+
+export function fromFirmPrivate(v: Raw): FirmPrivateNode | null {
+  if (!isObj(v)) return null;
+  return {
+    cash: num(v.cash),
+    cap: num(v.cap),
+    lastCard: str(v.lastCard, 'NONE') as Card,
+    lastPoachTarget: strOrNull(v.lastPoachTarget),
+    cumulativeDraw: num(v.cumulativeDraw),
+    incidents: num(v.incidents),
+    history: rec(v.history, fromFirmRoundResult),
+  };
+}
+
+export function fromMember(v: Raw): MemberNode | null {
+  if (!isObj(v) || typeof v.firmId !== 'string') return null;
+  return { firmId: v.firmId, pin: str(v.pin), label: str(v.label), joinedAt: num(v.joinedAt) };
+}
+
+export function fromPresence(v: Raw): PresenceNode | null {
+  if (!isObj(v)) return null;
+  return { online: bool(v.online), lastSeen: num(v.lastSeen) };
+}
+
+export function fromDecision(v: Raw): DecisionNode | null {
+  if (!isObj(v)) return null;
+  return {
+    pace: num(v.pace, 2) as Pace,
+    safety: num(v.safety),
+    card: str(v.card, 'NONE') as Card,
+    target: strOrNull(v.target),
+    by: str(v.by),
+    at: num(v.at),
+  };
+}
+
+export const fromDecisions = (v: Raw): Record<string, DecisionNode> =>
+  rec(v, (x) => fromDecision(x) as DecisionNode);
+
+const fromHeadline = (v: Raw): Headline => {
+  const o = obj(v);
+  return { kind: str(o.kind, 'ambient') as Headline['kind'], text: str(o.text) };
+};
+
+const fromBreach = (v: Raw): AuditBreach => {
+  const o = obj(v);
+  return {
+    firmId: str(o.firmId),
+    rounds: arr(o.rounds, (x) => num(x)),
+    count: num(o.count),
+    fine: num(o.fine),
+    waived: bool(o.waived),
+    expelled: bool(o.expelled),
+  };
+};
+
+export const fromAudit = (v: Raw): AuditResult => {
+  const o = obj(v);
+  return {
+    pactId: str(o.pactId),
+    kind: str(o.kind, 'auto') as AuditResult['kind'],
+    rounds: arr(o.rounds, (x) => num(x)),
+    breaches: arr(o.breaches, fromBreach),
+  };
+};
+
+const fromDisclosureEntry = (v: Raw): DisclosureEntry => {
+  const o = obj(v);
+  return { pace: num(o.pace, 2) as Pace, safety: num(o.safety), expo: num(o.expo) };
+};
+
+const fromDisclosure = (v: Raw): Record<string, DisclosureEntry> | null =>
+  isObj(v) || Array.isArray(v) ? rec(v, fromDisclosureEntry) : null;
+
+export function fromRound(v: Raw): RoundNode | null {
+  if (!isObj(v)) return null;
+  return {
+    T: num(v.T),
+    dT: num(v.dT),
+    M: num(v.M),
+    incidents: num(v.incidents),
+    headlines: arr(v.headlines, fromHeadline),
+    audits: arr(v.audits, fromAudit),
+    disclosure: fromDisclosure(v.disclosure),
+    results: rec(v.results, (x) => {
+      const o = obj(x);
+      return { share: num(o.share), profit: num(o.profit), valuation: num(o.valuation), rank: num(o.rank) };
+    }),
+  };
+}
+
+export const fromRounds = (v: Raw): Record<string, RoundNode> => rec(v, (x) => fromRound(x) as RoundNode);
+
+const fromTerms = (v: Raw): Pact['terms'] => {
+  const o = obj(v);
+  return { maxPace: numOrNull(o.maxPace) as Pace | null, minSafety: numOrNull(o.minSafety) };
+};
+
+export function fromPact(v: Raw, id: string): Pact {
+  const o = obj(v);
+  return {
+    id,
+    name: str(o.name),
+    proposer: str(o.proposer),
+    terms: fromTerms(o.terms),
+    members: rec(o.members, (x) => num(x)),
+    createdRound: num(o.createdRound),
+    status: str(o.status, 'active') as Pact['status'],
+  };
+}
+
+export const fromPacts = (v: Raw): Record<string, Pact> => rec(v, (x, k) => fromPact(x, k));
+
+/** The stored form of a pact: the id is the key, so it is dropped from the value. */
+export function toPactNode(p: Pact): PactNode {
+  const { id: _id, ...rest } = p;
+  return rest;
+}
+
+const trueMap = (v: Raw): Record<string, true> => {
+  const out: Record<string, true> = {};
+  for (const [k, x] of Object.entries(rec(v))) if (x === true) out[k] = true;
+  return out;
+};
+
+export function fromPactPrivate(v: Raw): PactPrivateNode {
+  const o = obj(v);
+  return {
+    violations: rec(o.violations, trueMap),
+    detected: rec(o.detected, trueMap),
+    sanctions: rec(o.sanctions, (x) => num(x)),
+    lastAuditRound: num(o.lastAuditRound),
+  };
+}
+
+export const fromPactsPrivate = (v: Raw): Record<string, PactPrivateNode> => rec(v, fromPactPrivate);
+
+function fromFirmState(v: Raw): FirmState {
+  const o = obj(v);
+  return {
+    id: str(o.id),
+    ticker: str(o.ticker),
+    order: num(o.order),
+    isBot: bool(o.isBot),
+    botPolicy: strOrNull(o.botPolicy) as FirmState['botPolicy'],
+    cash: num(o.cash),
+    cap: num(o.cap),
+    lastCard: str(o.lastCard, 'NONE') as Card,
+    lastPoachTarget: strOrNull(o.lastPoachTarget),
+    lastPace: num(o.lastPace, 2) as Pace,
+    lastSafety: num(o.lastSafety),
+    cumulativeDraw: num(o.cumulativeDraw),
+    incidents: num(o.incidents),
+    insolvent: bool(o.insolvent),
+    valuation: num(o.valuation),
+    peakValuation: num(o.peakValuation),
+    rank: num(o.rank),
+    breachUntilRound: num(o.breachUntilRound),
+  };
+}
+
+function fromRoundRecord(v: Raw): RoundRecord {
+  const o = obj(v);
+  return {
+    round: num(o.round),
+    T: num(o.T),
+    dT: num(o.dT),
+    M: num(o.M),
+    collapsed: bool(o.collapsed),
+    incidents: num(o.incidents),
+    headlines: arr(o.headlines, fromHeadline),
+    audits: arr(o.audits, fromAudit),
+    disclosure: fromDisclosure(o.disclosure),
+    firms: rec(o.firms, fromFirmRoundResult),
+    incidentDraws: arr(o.incidentDraws, (x) => num(x)),
+  };
+}
+
+/** Params come back whole: missing keys (never expected) fall back to the defaults. */
+function fromParams(v: Raw): Params {
+  const o = obj(v);
+  const out: Record<string, unknown> = {};
+  for (const [k, d] of Object.entries(PARAMS)) {
+    const x = o[k];
+    if (Array.isArray(d)) out[k] = x === undefined ? d : arr(x, (n) => num(n));
+    else if (isObj(d)) out[k] = { ...d, ...obj(x) };
+    else out[k] = x === undefined ? d : x;
+  }
+  return out as unknown as Params;
+}
+
+function fromCounterfactual(v: Raw): CounterfactualResult | null {
+  if (!isObj(v)) return null;
+  return {
+    rounds: num(v.rounds),
+    industryTotal: num(v.industryTotal),
+    perFirm: num(v.perFirm),
+    byFirm: rec(v.byFirm, (x) => num(x)),
+    trust: arr(v.trust, (x) => num(x)),
+    collapseRound: numOrNull(v.collapseRound),
+    incidentDraws: arr(v.incidentDraws, (r) => arr(r, (x) => num(x))),
+  };
+}
+
+export function fromEngine(v: Raw): EngineNode | null {
+  if (!isObj(v)) return null;
+  return {
+    seed: num(v.seed),
+    label: str(v.label),
+    round: num(v.round),
+    T: num(v.T),
+    M: num(v.M),
+    collapsed: bool(v.collapsed),
+    collapseRound: numOrNull(v.collapseRound),
+    tau: num(v.tau),
+    endMode: str(v.endMode, 'manual') as EndMode,
+    endRound: numOrNull(v.endRound),
+    disclosure: bool(v.disclosure),
+    autoAuditP: num(v.autoAuditP),
+    firms: arr(v.firms, fromFirmState),
+    pacts: arr(v.pacts, (x) => fromPact(x, str(obj(x).id))),
+    pactsPrivate: rec(v.pactsPrivate, fromPactPrivate),
+    pendingAudits: arr(v.pendingAudits, (x) => str(x)),
+    history: arr(v.history, fromRoundRecord),
+    trustBand: num(v.trustBand),
+    params: fromParams(v.params),
+    rngNotes: strOrNull(v.rngNotes),
+    cfCache: fromCounterfactual(v.cfCache),
+  };
+}
+
+/** Splits the engine node back into the pure engine state. */
+export function engineStateOf(e: EngineNode): EngineState {
+  const { params: _p, rngNotes: _r, cfCache: _c, ...state } = e;
+  return state;
+}
+
+export function fromResults(v: Raw): ResultsNode | null {
+  if (!isObj(v)) return null;
+  return {
+    final: rec(v.final, (x) => obj(x) as Record<string, Json>),
+    counterfactual: fromCounterfactual(v.counterfactual),
+    attribution: arr(v.attribution, (x) => {
+      const o = obj(x);
+      return { firmId: str(o.firmId), drawShare: num(o.drawShare), valueShare: num(o.valueShare), cumulativeDraw: num(o.cumulativeDraw), valuation: num(o.valuation) };
+    }),
+    dataLines: arr(v.dataLines, (x) => str(x)),
+  };
+}

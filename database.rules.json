@@ -1,0 +1,194 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "facilitators": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid"
+      }
+    },
+    "codes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('facilitators').child(auth.uid).val() === true && (data.exists() ? !newData.exists() && root.child('games').child(data.val()).child('meta/facilitatorUid').val() === auth.uid : newData.parent().parent().child('games').child(newData.val()).child('meta/facilitatorUid').val() === auth.uid)",
+        ".validate": "$code.matches(/^[A-HJ-NP-Z]{4}$/) && newData.isString() && newData.val().matches(/^[^.#$\\[\\]\\/]{1,64}$/)"
+      }
+    },
+    "games": {
+      "$g": {
+        ".read": "auth != null && root.child('facilitators').child(auth.uid).val() === true && data.child('meta/facilitatorUid').val() === auth.uid",
+        ".write": "auth != null && root.child('facilitators').child(auth.uid).val() === true && (data.child('meta/facilitatorUid').val() === auth.uid || (!data.exists() && newData.child('meta/facilitatorUid').val() === auth.uid))",
+        "meta": {
+          ".read": "auth != null"
+        },
+        "public": {
+          ".read": "auth != null"
+        },
+        "firms": {
+          ".read": "auth != null",
+          "$f": {
+            ".write": "auth != null && !data.exists() && newData.exists() && root.child('games').child($g).child('meta').exists() && root.child('games').child($g).child('public/joinLocked').val() !== true && newData.child('isBot').val() === false && newData.child('createdAt').val() === now && newData.parent().parent().child('firmSecrets').child($f).child('pin').exists() && newData.parent().parent().child('members').child(auth.uid).child('firmId').val() === $f",
+            ".validate": "$f.matches(/^[^.#$\\[\\]\\/]{1,64}$/) && newData.hasChildren(['name', 'ticker', 'createdAt', 'order', 'isBot'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 20"
+            },
+            "ticker": {
+              ".validate": "newData.isString() && newData.val().matches(/^[A-Z]{3,6}$/)"
+            },
+            "createdAt": {
+              ".validate": "newData.isNumber()"
+            },
+            "order": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() % 1 === 0"
+            },
+            "isBot": {
+              ".validate": "newData.isBoolean()"
+            },
+            "botPolicy": {
+              ".validate": "newData.isString() && newData.val().matches(/^(cautious|standard|greedy|mimic-leader)$/)"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "firmSecrets": {
+          "$f": {
+            ".read": "auth != null && root.child('games').child($g).child('members').child(auth.uid).child('firmId').val() === $f",
+            ".write": "auth != null && !data.exists() && !root.child('games').child($g).child('firms').child($f).exists() && newData.parent().parent().child('firms').child($f).exists() && newData.parent().parent().child('members').child(auth.uid).child('firmId').val() === $f",
+            ".validate": "newData.hasChildren(['pin'])",
+            "pin": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "firmsPublic": {
+          ".read": "auth != null"
+        },
+        "firmsPrivate": {
+          "$f": {
+            ".read": "auth != null && root.child('games').child($g).child('members').child(auth.uid).child('firmId').val() === $f"
+          }
+        },
+        "members": {
+          "$uid": {
+            ".read": "auth != null && (auth.uid === $uid || (data.child('firmId').exists() && root.child('games').child($g).child('members').child(auth.uid).child('firmId').val() === data.child('firmId').val()))",
+            ".write": "auth != null && auth.uid === $uid && newData.exists() && root.child('games').child($g).child('meta').exists() && (root.child('games').child($g).child('public/joinLocked').val() !== true || data.child('firmId').val() === newData.child('firmId').val()) && newData.parent().parent().child('firms').child(newData.child('firmId').val()).exists() && newData.child('pin').val() === newData.parent().parent().child('firmSecrets').child(newData.child('firmId').val()).child('pin').val()",
+            ".validate": "newData.hasChildren(['firmId', 'pin', 'joinedAt'])",
+            "firmId": {
+              ".validate": "newData.isString() && newData.val().matches(/^[^.#$\\[\\]\\/]{1,64}$/)"
+            },
+            "pin": {
+              ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+            },
+            "label": {
+              ".validate": "newData.isString() && newData.val().length <= 12"
+            },
+            "joinedAt": {
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "presence": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid && root.child('games').child($g).child('meta').exists()",
+            ".validate": "newData.hasChildren(['online', 'lastSeen'])",
+            "online": {
+              ".read": "auth != null",
+              ".validate": "newData.isBoolean()"
+            },
+            "lastSeen": {
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "decisions": {
+          "$r": {
+            "$f": {
+              ".read": "auth != null && root.child('games').child($g).child('members').child(auth.uid).child('firmId').val() === $f",
+              ".write": "auth != null && newData.exists() && root.child('games').child($g).child('members').child(auth.uid).child('firmId').val() === $f && root.child('games').child($g).child('public/phase').val() === 'open' && $r === '' + root.child('games').child($g).child('public/round').val() && now <= root.child('games').child($g).child('public/deadline').val() + 3000",
+              ".validate": "newData.hasChildren(['pace', 'safety', 'card', 'by', 'at'])",
+              "pace": {
+                ".validate": "newData.isNumber() && (newData.val() === 1 || newData.val() === 2 || newData.val() === 3 || newData.val() === 4)"
+              },
+              "safety": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 30 && newData.val() % 1 === 0"
+              },
+              "card": {
+                ".validate": "newData.isString() && newData.val().matches(/^(NONE|POACH|PUBLISH|LOBBY|BLITZ)$/)"
+              },
+              "target": {
+                ".validate": "newData.isString() && newData.val() !== $f && newData.val().matches(/^[^.#$\\[\\]\\/]{1,64}$/) && root.child('games').child($g).child('firms').child(newData.val()).exists()"
+              },
+              "by": {
+                ".validate": "newData.val() === auth.uid"
+              },
+              "at": {
+                ".validate": "newData.val() === now"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        },
+        "rounds": {
+          ".read": "auth != null"
+        },
+        "pacts": {
+          ".read": "auth != null",
+          "$p": {
+            ".write": "auth != null && !data.exists() && newData.exists() && root.child('games').child($g).child('members').child(auth.uid).child('firmId').val() === newData.child('proposer').val() && (root.child('games').child($g).child('public/phase').val() === 'open' || root.child('games').child($g).child('public/phase').val() === 'summit') && newData.child('createdRound').val() === root.child('games').child($g).child('public/round').val() && newData.child('status').val() === 'active' && newData.child('members').child(newData.child('proposer').val()).val() === root.child('games').child($g).child('public/round').val()",
+            ".validate": "$p.matches(/^[^.#$\\[\\]\\/]{1,64}$/) && newData.hasChildren(['name', 'proposer', 'terms', 'createdRound', 'status'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().matches(/^PACT-[A-Z]{1,3}$/)"
+            },
+            "proposer": {
+              ".validate": "newData.isString() && newData.val().matches(/^[^.#$\\[\\]\\/]{1,64}$/) && root.child('games').child($g).child('firms').child(newData.val()).exists()"
+            },
+            "terms": {
+              ".validate": "newData.child('maxPace').exists() || newData.child('minSafety').exists()",
+              "maxPace": {
+                ".validate": "newData.isNumber() && (newData.val() === 1 || newData.val() === 2 || newData.val() === 3 || newData.val() === 4)"
+              },
+              "minSafety": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 30 && newData.val() % 1 === 0"
+              },
+              "$other": {
+                ".validate": false
+              }
+            },
+            "members": {
+              "$f": {
+                ".write": "auth != null && data.parent().parent().exists() && root.child('games').child($g).child('members').child(auth.uid).child('firmId').val() === $f && (!newData.exists() || newData.val() === root.child('games').child($g).child('public/round').val())",
+                ".validate": "newData.isNumber() && root.child('games').child($g).child('firms').child($f).exists() && (data.parent().parent().exists() || $f === newData.parent().parent().child('proposer').val())"
+              }
+            },
+            "createdRound": {
+              ".validate": "newData.isNumber()"
+            },
+            "status": {
+              ".validate": "newData.isString() && newData.val().matches(/^(active|dissolved)$/)"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "results": {
+          ".read": "auth != null && root.child('games').child($g).child('public/phase').val() === 'ended'"
+        }
+      }
+    }
+  }
+}
