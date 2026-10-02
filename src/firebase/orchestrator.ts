@@ -38,10 +38,12 @@ import {
   resumeTimer,
   toBriefing,
   toEnded,
+  toggleDisclosureStep,
   toOpen,
   type Step,
 } from './phases';
 import { paths, rel } from './paths';
+import { disclosureEntry, pendingWire, type WireInput } from './wire';
 import {
   engineStateOf,
   type DecisionNode,
@@ -62,6 +64,8 @@ export interface OrchestratorIO {
   readFirms(): Promise<Record<string, FirmNode>>;
   readDecisions(round: number): Promise<Record<string, DecisionNode>>;
   readPacts(): Promise<Record<string, Pact>>;
+  /** Atomic read-modify-write of `engine/pendingAudits`; `step` returns the new list or undefined to abort. */
+  transactPendingAudits(step: (current: string[]) => string[] | undefined): Promise<{ committed: boolean; value: string[] }>;
   /** One atomic multi-path update rooted at `games/{g}` (keys come from `rel`). */
   update(patch: Record<string, unknown>): Promise<void>;
 }
@@ -75,6 +79,7 @@ export function firebaseIO(db: Database, g: string): OrchestratorIO {
     readFirms: () => api.readFirms(db, g),
     readDecisions: (round) => api.readDecisions(db, g, round),
     readPacts: () => api.readPacts(db, g),
+    transactPendingAudits: (step) => api.transactPendingAudits(db, g, step),
     update: (patch) => api.updateGame(db, g, patch),
   };
 }
@@ -279,6 +284,58 @@ export async function toggleSummit(ctx: Ctx, seen?: Seen): Promise<ActionResult>
   return ok(entering ? 'Summit in session. The timer is paused.' : 'Summit closed.');
 }
 
+/** F7 (spec §9.3). Flips `public.disclosure` and publishes the matching wire headline. */
+export async function toggleDisclosure(ctx: Ctx, seen?: Seen): Promise<ActionResult> {
+  const pub = await ctx.io.readPublic();
+  if (!pub) return fail('Session not found. Check the address.');
+  const old = stale(seen, pub);
+  if (old) return fail(old);
+  const t = await transition(ctx, toggleDisclosureStep);
+  if (!t.ok) return t;
+  const on = t.after.disclosure;
+  try {
+    const key = `d-${ctx.now()}-${on ? 'on' : 'off'}`;
+    await ctx.io.update({ [rel.wireEntry(key)]: disclosureEntry(on, t.after, ctx.now()) });
+  } catch {
+    return ok(`Disclosure ${on ? 'ON' : 'OFF'}. The wire headline was not published; toggle again to retry.`);
+  }
+  return ok(
+    on
+      ? 'Disclosure ON. PACE, SAFE and EXPO appear from the next resolution.'
+      : 'Disclosure OFF. Nothing is published from the next resolution.',
+  );
+}
+
+/**
+ * F6 (spec §9.2). Queues a manual audit of one pact. It runs at the next resolution with the
+ * automatic audits, so a LOBBY card played that quarter still waives the fine.
+ */
+export async function queueAudit(ctx: Ctx, pactId: string): Promise<ActionResult> {
+  const [pub, pacts] = await Promise.all([ctx.io.readPublic(), ctx.io.readPacts()]);
+  if (!pub) return fail('Session not found. Check the address.');
+  if (pub.phase !== 'open' && pub.phase !== 'reveal' && pub.phase !== 'summit') {
+    return fail(`An audit can be queued while a quarter is open, in reveal or in a summit, not in ${pub.phase.toUpperCase()}.`);
+  }
+  const pact = pacts[pactId];
+  if (!pact) return fail('That pact no longer exists. Check the pact list.');
+  if (pact.status !== 'active') return fail(`${pact.name} has dissolved and cannot be audited.`);
+  const tx = await ctx.io.transactPendingAudits((cur) => (cur.includes(pactId) ? undefined : [...cur, pactId]));
+  if (!tx.committed && tx.value.includes(pactId)) return ok(`${pact.name} audit is already queued for the next resolution.`);
+  if (!tx.committed) return fail('The audit queue changed in another window first. Try again.');
+  return ok(`${pact.name} audit queued. It runs when the quarter resolves.`);
+}
+
+/** Writes any pact headlines that are missing from `wire/` (see wire.ts). Safe to run from several windows. */
+export async function publishWire(ctx: Ctx, input: Omit<WireInput, 'now'>): Promise<number> {
+  const missing = pendingWire({ ...input, now: ctx.now() });
+  const keys = Object.keys(missing);
+  if (keys.length === 0) return 0;
+  const patch: Record<string, unknown> = {};
+  for (const k of keys) patch[rel.wireEntry(k)] = missing[k];
+  await ctx.io.update(patch);
+  return keys.length;
+}
+
 export async function addTime(ctx: Ctx, deltaMs: number): Promise<ActionResult> {
   const t = await transition(ctx, adjustTimer(deltaMs, ctx.now()));
   return t.ok ? ok(`${deltaMs > 0 ? 'Added' : 'Removed'} ${Math.abs(deltaMs) / 1000} s.`) : t;
@@ -410,6 +467,12 @@ async function runResolution(ctx: Ctx, round: number): Promise<ActionResult> {
       for (const [k, v] of Object.entries(pubFields)) patch[rel.firmPublicField(f.id, k)] = v;
       // A firm that committed, or a bot that acted by policy, counts as submitted for this quarter.
       if (decisions[f.id] || f.isBot) patch[rel.firmPublicField(f.id, 'submittedRound')] = round;
+    }
+
+    // Why a requested card was dropped (§6.3 step 2): private to the firm, stored beside its history.
+    for (const f of next.firms) {
+      const mine = out.notices.filter((n) => n.firmId === f.id).map((n) => ({ kind: n.kind, card: n.card }));
+      patch[rel.firmPrivateNotices(f.id, round)] = mine.length ? mine : null;
     }
 
     for (const [id, pp] of Object.entries(next.pactsPrivate)) patch[rel.pactPrivate(id)] = pp;

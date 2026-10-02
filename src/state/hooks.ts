@@ -14,10 +14,11 @@ import {
   subscribePacts,
   subscribePublic,
   subscribeRounds,
+  subscribeWire,
 } from '../firebase/api';
 import { getFirebase } from '../firebase/init';
 import { subscribeConnected, subscribeServerTimeOffset, trackPresence } from '../firebase/presence';
-import type { DecisionNode, FirmNode, FirmPrivateNode, FirmPublicNode, MemberNode, MetaNode, PublicNode, RoundNode } from '../firebase/schema';
+import type { DecisionNode, FirmNode, FirmPrivateNode, FirmPublicNode, MemberNode, MetaNode, PublicNode, RoundNode, WireNode } from '../firebase/schema';
 import { useSubscription, type Subscription } from './useSubscription';
 
 const db = () => getFirebase().db;
@@ -37,6 +38,10 @@ export const useFirmsPublic = (g: string | null): Subscription<Record<string, Fi
 
 export const useRounds = (g: string | null): Subscription<Record<string, RoundNode>> =>
   useSubscription<Record<string, RoundNode>>(g, (cb, err) => subscribeRounds(db(), g as string, cb, err), EMPTY);
+
+/** Headlines published outside resolution: pact events and the disclosure toggle. */
+export const useWire = (g: string | null): Subscription<Record<string, WireNode>> =>
+  useSubscription<Record<string, WireNode>>(g, (cb, err) => subscribeWire(db(), g as string, cb, err), EMPTY);
 
 export const usePacts = (g: string | null): Subscription<Record<string, Pact>> =>
   useSubscription<Record<string, Pact>>(g, (cb, err) => subscribePacts(db(), g as string, cb, err), EMPTY);

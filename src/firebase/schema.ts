@@ -22,6 +22,7 @@ import type {
   FirmState,
   Headline,
   Pace,
+  NoticeKind,
   Pact,
   PactPrivate,
   RoundRecord,
@@ -95,6 +96,12 @@ export interface FirmPublicNode {
   breachUntilRound: number;
 }
 
+/** A private notice stored for a firm: why a card it requested was dropped (§6.3 step 2). */
+export interface NoticeEntry {
+  kind: NoticeKind;
+  card: Card;
+}
+
 export interface FirmPrivateNode {
   cash: number;
   cap: number;
@@ -104,6 +111,27 @@ export interface FirmPrivateNode {
   incidents: number;
   /** round → the firm's own outcome for that quarter. */
   history: Record<string, FirmRoundResult>;
+  /** round → notices for that quarter's resolution. Absent quarters had none. */
+  notices: Record<string, NoticeEntry[]>;
+}
+
+/**
+ * `wire/{key}`: a headline published outside resolution (pact formed, joined or left,
+ * disclosure toggled). Written only by the facilitator window.
+ */
+export interface WireNode {
+  /** Server time in ms when published. */
+  at: number;
+  /** Quarter shown on the label: the quarter open or just resolved when it happened. */
+  round: number;
+  /** Position among resolved headlines: `round - 0.5` before that quarter resolved, `round` after. */
+  seq: number;
+  kind: Headline['kind'];
+  text: string;
+  /** Pact events only: the pact, the firm and the quarter the firm joined. Used to avoid duplicates. */
+  pact: string | null;
+  firm: string | null;
+  joined: number | null;
 }
 
 export interface MemberNode {
@@ -310,8 +338,37 @@ export function fromFirmPrivate(v: Raw): FirmPrivateNode | null {
     cumulativeDraw: num(v.cumulativeDraw),
     incidents: num(v.incidents),
     history: rec(v.history, fromFirmRoundResult),
+    notices: rec(v.notices, (x) => arr(x, fromNotice)),
   };
 }
+
+const fromNotice = (v: Raw): NoticeEntry => {
+  const o = obj(v);
+  return { kind: str(o.kind, 'card-cooldown') as NoticeKind, card: str(o.card, 'NONE') as Card };
+};
+
+export function fromWireEntry(v: Raw): WireNode | null {
+  if (!isObj(v) || typeof v.text !== 'string') return null;
+  return {
+    at: num(v.at),
+    round: num(v.round),
+    seq: num(v.seq, num(v.round)),
+    kind: str(v.kind, 'ambient') as Headline['kind'],
+    text: v.text,
+    pact: strOrNull(v.pact),
+    firm: strOrNull(v.firm),
+    joined: numOrNull(v.joined),
+  };
+}
+
+export const fromWire = (v: Raw): Record<string, WireNode> => {
+  const out: Record<string, WireNode> = {};
+  for (const [k, x] of Object.entries(obj(v))) {
+    const e = fromWireEntry(x);
+    if (e) out[k] = e;
+  }
+  return out;
+};
 
 export function fromMember(v: Raw): MemberNode | null {
   if (!isObj(v) || typeof v.firmId !== 'string') return null;

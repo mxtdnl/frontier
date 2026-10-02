@@ -44,13 +44,13 @@ describe('facilitator check', () => {
 
 describe('public nodes', () => {
   it('lets any signed-in user read public, firms, firmsPublic, rounds, pacts and meta', async () => {
-    for (const p of ['public', 'firms', 'firmsPublic', 'rounds', 'pacts', 'meta']) {
+    for (const p of ['public', 'firms', 'firmsPublic', 'rounds', 'pacts', 'meta', 'wire']) {
       await assertSucceeds(get('uX', g(p)));
     }
   });
 
   it('denies signed-out users everything', async () => {
-    for (const p of ['public', 'firms', 'firmsPublic', 'rounds', 'pacts', 'meta']) {
+    for (const p of ['public', 'firms', 'firmsPublic', 'rounds', 'pacts', 'meta', 'wire']) {
       await assertFails(anon().ref(g(p)).get());
     }
     await assertFails(anon().ref('codes/KXMT').get());

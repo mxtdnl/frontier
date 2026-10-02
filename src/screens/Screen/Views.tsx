@@ -3,7 +3,7 @@ import { DataTable, Delta, Panel, QR, StepSparkline, Tag } from '../../ui/compon
 import { fmt, fmtShare, quarterLabel } from '../../ui/format';
 import { KEY_BINDINGS } from '../../ui/keys';
 import { BRIEFING_LINES } from './briefing';
-import { boardRows, joinUrl, previousTrust, trustSeries, valuationSeries, wireItems, type BoardRow, type ScreenData } from './model';
+import { boardRows, joinUrl, pactRows, previousTrust, trustSeries, valuationSeries, wireItems, type BoardRow, type PactRow, type ScreenData } from './model';
 
 export function TrustView({ data }: { data: ScreenData }) {
   const series = trustSeries(data.rounds);
@@ -41,23 +41,36 @@ export function TrustView({ data }: { data: ScreenData }) {
 }
 
 export function PactsView({ data, emphasis = false }: { data: ScreenData; emphasis?: boolean }) {
-  const tickers = (ids: string[]) => ids.map((id) => data.firms[id]?.ticker ?? '').filter(Boolean).sort().join('  ');
-  const pacts = Object.values(data.pacts).filter((p) => p.status === 'active');
+  const rows = pactRows(data);
   return (
     <Panel title={emphasis ? 'PACTS · SUMMIT' : 'PACT'} bodyClassName="pad">
-      {pacts.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="dim">No pacts in force.</p>
       ) : (
         <DataTable
           caption="Pacts"
           tall
-          rows={pacts}
+          rows={rows}
           rowKey={(p) => p.id}
           columns={[
             { key: 'id', label: 'PACT', w: 8, render: (p) => <Tag pact={p.name} /> },
-            { key: 'pace', label: 'MAXPACE', w: 9, align: 'r', render: (p) => p.terms.maxPace ?? '–' },
-            { key: 'safe', label: 'MINSAFE', w: 10, align: 'r', render: (p) => p.terms.minSafety ?? '–' },
-            { key: 'members', label: 'MEMBERS', w: 0, render: (p) => tickers(Object.keys(p.members)) },
+            { key: 'pace', label: 'MAXPACE', w: 9, align: 'r', render: (p) => p.maxPace ?? '–' },
+            { key: 'safe', label: 'MINSAFE', w: 10, align: 'r', render: (p) => p.minSafety ?? '–' },
+            { key: 'audit', label: 'AUDIT', w: 22, render: (p) => <AuditCell audit={p.lastAudit} /> },
+            {
+              key: 'members',
+              label: 'MEMBERS',
+              w: 0,
+              render: (p) => (
+                <>
+                  {p.members.map((m) => (
+                    <span key={m.id} style={{ marginRight: '2ch' }}>
+                      {m.ticker} {m.breach ? <Tag kind="BREACH" /> : null}
+                    </span>
+                  ))}
+                </>
+              ),
+            },
           ]}
         />
       )}
@@ -65,15 +78,50 @@ export function PactsView({ data, emphasis = false }: { data: ScreenData; emphas
   );
 }
 
+function AuditCell({ audit }: { audit: PactRow['lastAudit'] }) {
+  if (!audit) return <span className="dim">none yet</span>;
+  const result = audit.breaches === 0 ? 'clean' : `${audit.breaches} breach${audit.breaches === 1 ? '' : 'es'}`;
+  return <>{quarterLabel(audit.round)} {audit.kind === 'manual' ? 'MAN' : 'AUTO'} · {result}</>;
+}
+
+interface AuditViewProps {
+  data: ScreenData;
+  /** Pact ids already queued are not known to the projector; the notice confirms each press. */
+  onQueue: (pactId: string) => void;
+}
+
+/** F6: choose a pact to audit. Press the number, or select the row. */
+export function AuditView({ data, onQueue }: AuditViewProps) {
+  const rows = pactRows(data).slice(0, 9);
+  return (
+    <Panel title="AUDIT · SELECT PACT" bodyClassName="pad">
+      {rows.length === 0 ? (
+        <p className="dim">No pacts in force to audit. Esc returns to the board.</p>
+      ) : (
+        <div className="stack">
+          <p className="dim">Press the number of the pact to queue an audit. It runs when the quarter resolves. Esc returns to the board.</p>
+          {rows.map((p, i) => (
+            <button key={p.id} type="button" className="btn" style={{ justifyContent: 'flex-start', textAlign: 'left' }} onClick={() => onQueue(p.id)}>
+              <span className="signal" style={{ width: '3ch', display: 'inline-block' }}>{i + 1}</span>
+              <span style={{ width: '9ch', display: 'inline-block' }}>{p.name}</span>
+              <span className="dim">{p.members.map((m) => m.ticker).join(' ')}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 export function WireView({ data }: { data: ScreenData }) {
-  const items = wireItems(data.rounds).slice(0, 14);
+  const items = wireItems(data.rounds, data.wire).slice(0, 14);
   return (
     <Panel title="WIRE · HEADLINE LOG" bodyClassName="pad">
       {items.length === 0 ? <p className="dim">No headlines yet.</p> : null}
       <ul className="stack" style={{ listStyle: 'none', margin: 0, padding: 0, gap: 0 }}>
         {items.map((h, i) => (
           <li key={i} className="row" style={{ gap: '2ch' }}>
-            <span className="dim" style={{ width: '6ch' }}>{quarterLabel(h.round)}</span>
+            <span className="dim" style={{ width: '6ch' }}>{h.round > 0 ? quarterLabel(h.round) : 'PRE'}</span>
             <span className="wire-c">{h.text}</span>
           </li>
         ))}

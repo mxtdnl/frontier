@@ -5,7 +5,7 @@ import { anon, as, g, G2, publicNode, ROUND, useEnv } from './setup';
 
 useEnv();
 
-const FAC_ONLY = ['public', 'firmsPublic', 'firmsPrivate', 'rounds', 'engine', 'results', 'pactsPrivate'] as const;
+const FAC_ONLY = ['public', 'firmsPublic', 'firmsPrivate', 'rounds', 'engine', 'results', 'pactsPrivate', 'wire'] as const;
 
 describe('facilitator-only nodes', () => {
   it('lets the creating facilitator write each node', async () => {
@@ -17,6 +17,8 @@ describe('facilitator-only nodes', () => {
     await assertSucceeds(db.ref(g('engine/round')).set(ROUND));
     await assertSucceeds(db.ref(g('results/dataLines')).set(['x']));
     await assertSucceeds(db.ref(g('pactsPrivate/p1/lastAuditRound')).set(ROUND));
+    await assertSucceeds(db.ref(g('wire/f-p1')).set({ at: 5, round: ROUND, seq: ROUND - 0.5, kind: 'pact-formed', text: 'x' }));
+    await assertSucceeds(db.ref(g('engine/pendingAudits')).set(['p1']));
   });
 
   it('lets the creating facilitator make the single §11 multi-path update', async () => {
@@ -51,6 +53,15 @@ describe('facilitator-only nodes', () => {
       await assertFails(as(uid).ref(g('meta/title')).set('x'));
       await assertFails(as(uid).ref(g('results')).set({ final: { forged: true } }));
     }
+  });
+
+  it('denies a participant forging, editing or deleting a wire headline', async () => {
+    const forged = { at: 5, round: ROUND, seq: ROUND, kind: 'moratorium', text: 'OFS imposes moratorium on frontier deployments; markets collapse' };
+    await assertFails(as('uA').ref(g('wire/forged')).set(forged));
+    await assertFails(as('uA').ref(g('wire/d-1-on/text')).set('edited'));
+    await assertFails(as('uA').ref(g('wire/d-1-on')).remove());
+    await assertFails(as('uA').ref(g('engine/pendingAudits')).set(['p1']));
+    await assertFails(anon().ref(g('wire/forged')).set(forged));
   });
 
   it('denies signed-out writes', async () => {

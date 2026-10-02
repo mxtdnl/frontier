@@ -11,11 +11,11 @@ import {
   type Card,
   type ExposureLabel,
   type FirmRoundResult,
-  type Headline,
   type Pace,
   type Pact,
 } from '../../engine';
-import type { DecisionNode, FirmNode, PublicNode, RoundNode } from '../../firebase/schema';
+import type { DecisionNode, FirmNode, NoticeEntry, PublicNode, RoundNode, WireNode } from '../../firebase/schema';
+import { mergeWire } from '../../firebase/wire';
 import { quarterLabel } from '../../ui/format';
 
 export const PACE_OPTIONS = [
@@ -120,14 +120,32 @@ export function bookRows(history: Record<string, FirmRoundResult>): BookRow[] {
     .sort((a, b) => a.round - b.round);
 }
 
+const CARD_NAME: Record<Card, string> = { NONE: 'No card', POACH: 'POACH', PUBLISH: 'PUBLISH', LOBBY: 'LOBBY', BLITZ: 'BLITZ' };
+
+/** Why a requested card was dropped (spec §6.3 step 2). The card did not run and cost nothing. */
+export function cardNoticeText(n: NoticeEntry): string {
+  const name = CARD_NAME[n.card];
+  switch (n.kind) {
+    case 'card-insolvent':
+      return `${name} was not played. Insolvent firms cannot play cards.`;
+    case 'card-cooldown':
+      return `${name} was not played. The same card cannot repeat in consecutive quarters.`;
+    case 'card-target':
+      return `${name} was not played. It needs a valid target firm.`;
+    case 'card-target-repeat':
+      return `${name} was not played. The target cannot be the same two quarters running.`;
+  }
+}
+
 /** Notices on the quarter result card. Only the firm's own outcome and audits naming it. */
 export function resultNotices(
   result: FirmRoundResult,
   audits: ReadonlyArray<AuditResult>,
   pacts: Record<string, Pact>,
   firmId: string,
+  cards: ReadonlyArray<NoticeEntry> = [],
 ): string[] {
-  const out: string[] = [];
+  const out: string[] = cards.map((n) => cardNoticeText(n));
   if (result.auto) out.push('No decision was received. Last quarter’s settings were applied.');
   if (result.incident) out.push('Incident reported against the firm. Revenue was reduced this quarter.');
   if (result.insolvent) out.push('Insolvent. Action cards are unavailable until cash is positive.');
@@ -149,18 +167,9 @@ export interface WireItem {
   text: string;
 }
 
-/** Headlines from every resolved quarter, newest quarter first. */
-export function wireItems(rounds: Record<string, RoundNode>): WireItem[] {
-  const out: WireItem[] = [];
-  const nums = Object.keys(rounds)
-    .map(Number)
-    .filter((n) => Number.isInteger(n) && n > 0)
-    .sort((a, b) => b - a);
-  for (const n of nums) {
-    const hs: ReadonlyArray<Headline> = rounds[String(n)]?.headlines ?? [];
-    for (const h of hs) out.push({ round: n, label: quarterLabel(n), text: h.text });
-  }
-  return out;
+/** Resolved headlines and live events (pacts, disclosure), newest first. */
+export function wireItems(rounds: Record<string, RoundNode>, wire: Record<string, WireNode> = {}): WireItem[] {
+  return mergeWire(rounds, wire).map((h) => ({ round: h.round, label: h.round > 0 ? quarterLabel(h.round) : 'PRE', text: h.text }));
 }
 
 /** Share change in percentage points against the previous quarter; null when unknown. */

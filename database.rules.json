@@ -145,6 +145,9 @@
         "rounds": {
           ".read": "auth != null"
         },
+        "wire": {
+          ".read": "auth != null"
+        },
         "pacts": {
           ".read": "auth != null",
           "$p": {

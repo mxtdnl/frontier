@@ -13,7 +13,7 @@ export function storeAndRead(v: unknown): unknown {
 function store(v: unknown): unknown {
   if (v === null || v === undefined) return null;
   if (typeof v !== 'object') return v;
-  const entries = Array.isArray(v) ? v.map((x, i) => [String(i), x] as const) : Object.entries(v);
+  const entries = Array.isArray(v) ? Array.from(v, (x, i) => [String(i), x] as const) : Object.entries(v);
   const out: Record<string, unknown> = {};
   for (const [k, x] of entries) {
     const s = store(x);

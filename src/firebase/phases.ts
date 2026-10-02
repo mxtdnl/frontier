@@ -128,3 +128,9 @@ export function displayRemainingMs(p: PublicNode, serverNow: number): number | n
   if (p.phase === 'summit' || p.paused) return p.pausedRemainingMs;
   return p.deadline === null ? null : Math.max(0, p.deadline - serverNow);
 }
+
+/** F7: disclosure may be toggled in any phase until the session ends (spec §9.3). */
+export const toggleDisclosureStep: Step = (p) => {
+  if (p.phase === 'ended') return 'The session has ended. Disclosure can no longer change.';
+  return { ...p, disclosure: !p.disclosure };
+};
