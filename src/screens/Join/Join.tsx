@@ -21,10 +21,10 @@ import {
 
 function Message({ children }: { children: ReactNode }) {
   return (
-    <div className="page stack" style={{ maxWidth: '60ch' }}>
+    <main className="page stack" style={{ maxWidth: '60ch' }}>
       <p className="notice" role="status">{children}</p>
       <a className="link-block" href="#/">BACK</a>
-    </div>
+    </main>
   );
 }
 
@@ -72,7 +72,7 @@ function JoinFlow({ uid, initialCode }: { uid: string; initialCode: string }) {
     return <Choose uid={uid} code={session.code} g={session.gameId} onChangeCode={() => setSession(null)} />;
   }
   return (
-    <div className="page stack" style={{ maxWidth: '60ch' }}>
+    <main className="page stack" style={{ maxWidth: '60ch' }}>
       <h1 className="signal">JOIN A SESSION</h1>
       <form className="stack" onSubmit={(e) => void confirm(e)} noValidate>
         <div className="field">
@@ -97,7 +97,7 @@ function JoinFlow({ uid, initialCode }: { uid: string; initialCode: string }) {
         <button type="submit" className="btn btn-signal btn-block" disabled={busy}>Continue</button>
       </form>
       <a className="link-block" href="#/">BACK</a>
-    </div>
+    </main>
   );
 }
 
@@ -121,19 +121,19 @@ function Choose({ uid, code, g, onChangeCode }: { uid: string; code: string; g: 
 
   if (founded) {
     return (
-      <div className="page stack" style={{ maxWidth: '60ch' }}>
+      <main className="page stack" style={{ maxWidth: '60ch' }}>
         <h1 className="signal">{founded.ticker} FOUNDED</h1>
         <Panel title="TEAM PIN" bodyClassName="pad">
           <p className="big signal" aria-label={`PIN ${founded.pin.split('').join(' ')}`}>{founded.pin}</p>
           <p>Teammates join {founded.name} with this PIN. It is also shown on the DESK tab.</p>
         </Panel>
         <button type="button" className="btn btn-signal btn-block" onClick={() => navigate(`#/play/${g}`)}>Open the desk</button>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="page stack" style={{ maxWidth: '60ch' }}>
+    <main className="page stack" style={{ maxWidth: '60ch' }}>
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <h1 className="signal">{code}</h1>
         <button type="button" className="btn" onClick={onChangeCode}>Change code</button>
@@ -168,7 +168,7 @@ function Choose({ uid, code, g, onChangeCode }: { uid: string; code: string; g: 
       ) : (
         <JoinForm g={g} uid={uid} code={code} firms={firms} onBack={() => setMode('choose')} />
       )}
-    </div>
+    </main>
   );
 }
 

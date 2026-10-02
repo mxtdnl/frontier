@@ -285,7 +285,8 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
         </div>
       </nav>
 
-      <main className="play-main" id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>
+      <main className="play-main">
+        <div className="play-panel" id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>
         {tab === 'DESK' ? (
           view === 'ended' ? (
             <OwnResultsCard
@@ -345,6 +346,7 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
           />
         ) : null}
         {tab === 'WIRE' ? <Wire items={wireItems(roundsSub.data, wireSub.data)} /> : null}
+        </div>
       </main>
     </div>
   );

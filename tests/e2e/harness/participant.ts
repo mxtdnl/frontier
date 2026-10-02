@@ -26,6 +26,8 @@ const harness = {
   },
   join: (g: string, firmId: string, pin: string, label: string) => api.joinFirm(db, g, uid, firmId, pin, label),
   submit: (g: string, round: number, firmId: string, d: Decision) => api.submitDecision(db, g, round, firmId, uid, d),
+  proposePact: (g: string, round: number, firmId: string, name: string, maxPace: number) =>
+    api.proposePact(db, g, round, firmId, name, { maxPace: maxPace as 1 | 2 | 3 | 4, minSafety: null }),
   async readPublic(g: string) {
     return api.readPublic(db, g);
   },

@@ -19,7 +19,7 @@ export function Index() {
   };
 
   return (
-    <div className="page stack" style={{ maxWidth: '60ch' }}>
+    <main className="page stack" style={{ maxWidth: '60ch' }}>
       <h1 className="signal">FRONTIER</h1>
       <form className="stack" onSubmit={submit} noValidate aria-label="Join a session">
         <div className="field">
@@ -50,6 +50,6 @@ export function Index() {
         </p>
       ) : null}
       <p><a className="link-block" href="#/new">FACILITATOR SIGN-IN</a></p>
-    </div>
+    </main>
   );
 }

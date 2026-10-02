@@ -82,7 +82,8 @@ export function BoardPanel({ rows, disclosure, reveal }: BoardProps) {
     <Panel title="BOARD" right={`${committedCount(rows)}/${rows.length} CMT`}>
       <DataTable
         caption="Firm board"
-        tall
+        // Two-line rows fit up to 12 firms; 13 to 16 firms (the supported maximum) use one line so no row is clipped.
+        tall={rows.length <= 12}
         columns={boardColumns(disclosure, reveal)}
         rows={rows}
         rowKey={(f) => f.id}

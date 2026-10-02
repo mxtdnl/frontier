@@ -387,3 +387,50 @@
 
 **Next steps**
 - Session 8: bots tool, end-to-end tests, hardening, runbook.
+
+## 2026-10-02 — Session 8: rehearsal, end-to-end tests, hardening, launch
+
+**Done**
+- **Bot clients** (`tools/bots.ts`, `tools/bots/`, `npm run bots -- --game <id or code> --firms 8 --policy mixed`): anonymous participants that found firms in the lobby and commit by policy (cautious, standard, greedy, mimic-leader, mixed) after random delays, through the real data layer and rules. Options: `--delay 1-6`, `--seed`, `--found-only`, `--join-pacts` (restrained bots join any active pact). Per-bot seeded randomness, so a run repeats. Emulator only (see deviations).
+- **Rehearsal run** (`npm run test:e2e:rehearsal`, `scripts/e2e-rehearsal.ts`): facilitator (projector and console) plus 8 bot clients plus 1 scripted human, 14 quarters, fixed seed 5. It covers a summit with a pact (human and four bots join), two manual audits (quarters 5 and 8, both publish a breach), disclosure on for quarters 4 to 9 and off again (columns appear and go), a forced moratorium in quarter 10, the counterfactual, all six results panels and the human's results card. Stored results are compared with a fresh engine computation. 123 checks.
+- **30-quarter run** (`npm run test:e2e:long`): 15 bot clients plus 1 human (16 firms, the maximum), manual mode, F9 only. The session ends by itself after quarter 30, no quarter 31 exists, results hold 480 DATA lines. 117 checks.
+- **Hardening run** (`npm run test:e2e:hardening`, 44 checks): refresh mid-round; refresh while a resolution is stuck; three windows pressing F9 together resolve and open each quarter exactly once (also when opening the next quarter); two consoles pressing Retry together resolve once; clock skew (projectors 7 minutes fast and slow, phones 10 minutes fast and slow: the countdown follows the server and commits are accepted, stored with server time); rejoin after joining closed (same device back in, a different firm, a new device and a new firm all refused).
+- **Shared test helpers** (`scripts/lib/e2e-kit.ts`) now hold what `scripts/e2e.ts` had inline. Every e2e page fails the run on any request to a host outside the local machine.
+- **Replica** (`scripts/lib/rehearsal-model.ts`, `tests/tools/rehearsal-model.test.ts`): an engine-only copy of the rehearsal. A unit test checks that seed 5 ends in a moratorium between quarters 8 and 11.
+- **Lighthouse** (`npm run test:a11y`, `scripts/lighthouse.ts`): a real participant joins through the UI; Lighthouse snapshots 15 states (landing, join ×3, lobby, briefing, DESK open and committed, card picker, BOOK, PACTS, WIRE, summit, reveal, results card) at 390 and 1440 px. First run: 96 to 98 (one failing audit, "no main landmark"). After the fix, all 30 snapshots score 100.
+- **Build audit** (`npm run audit:build`, `scripts/audit-build.ts`): builds, serves `dist/index.html` under `/frontier/`, loads every route with outside traffic blocked. Checks no outside script, stylesheet, font or image tag, and that every host contacted is Firebase.
+- **`docs/RUNBOOK.md`**: facilitator guide in plain English (Firebase set-up, pre-class checklist, creating a session, key map, console, what to do when something goes wrong, debrief flow, solo rehearsal with bot firms on the live site).
+
+**Defects found by the new tests, and fixed**
+1. **Results panels clipped at 9 or more firms** (COUNTERFACTUAL, ATTRIBUTION, FINAL BOARD). Panels 3 and 4 now flow into two columns above 8 firms; panel 1 uses one-line rows above 8.
+2. **Projector board clipped at 13 to 16 firms** (14 of 16 rows visible at 1280×720). Above 12 firms the board uses one-line rows.
+3. **No main landmark** on `#/`, `#/j/…` and `#/play/…` (the tab panel's role replaced the landmark). `<main>` now wraps each; the tab panel sits inside it.
+4. **Silent key press on the projector** while the previous action finishes (Session 5 open issue). It now shows "Working on the last key. Press again in a moment."
+
+**§18 acceptance criteria**
+1. Calibration C1 to C4 pass for N = 4, 6, 8, 10, 12 at 200 seeds (rerun this session; `reports/calibration.md` unchanged and committed). PASS.
+2. Rules tests: 142 pass (`npm run test:rules`), covering participants' reads and writes, and late decisions. PASS.
+3. Full rehearsal, 8 bots plus 1 human, 14 quarters with summit, two audits, disclosure toggle, collapse and counterfactual. PASS (the "2 human test devices" are one scripted human here; see deviations).
+4. 30-quarter manual run ends automatically. PASS.
+5. Participant UI at 360×640, 390×844, 1440×900 and projector at 1280×720 and 1920×1080: checks for clipping, horizontal scroll, 44 px targets and 14 px text pass in `npm run test:e2e` and the new runs, including 16 firms. PASS.
+6. Copy: `npm run lint:copy` passes (49 files). PASS.
+7. Lighthouse accessibility on `#/play`: 100 in every state at both widths. PASS.
+8. Built page, no requests other than Firebase: PASS with a limit stated below.
+
+**Spec deviations and limits (with reasons)**
+1. **Scripted human.** Criterion 3 says "2 human test devices". The rehearsal uses one scripted human who commits through the data layer, not through the UI, because the UI paths are already covered in `npm run test:e2e` (3-quarter phones and desktop run). The results card is read through the real participant screen.
+2. **Bots tool is emulator-only.** `--live` is not implemented: the container cannot reach the live database, so it could not be tested. Live rehearsal uses the in-app bot firms (RUNBOOK section 8).
+3. **Bot clients' mimic-leader** reads the published disclosure snapshot and rank (all a participant can read) and falls back to pace 3 and safety 8, as §7 says. The in-app version reads the engine state, with identical rules.
+4. **§18.8 evidence.** With the live Firebase config, the built page cannot sign in from the container, so the build audit sees only the first sign-in request (`identitytoolkit.googleapis.com`). The database and token hosts are allowed by name in the audit. A second check covers the app's own code: in every e2e run (dev server, emulators) any request to a non-local host fails the run, and none occurred. Not observed: a live session against the real Firebase hosts.
+5. **GitHub Pages.** `.github/workflows/pages.yml` is unchanged. GitHub's own run history shows its deploy succeeded for the last five merges (run 7 on merge of Session 7). Whether this pull request deploys is known only after merging. The workflow runs typecheck, unit tests and the build, not the emulator suites (no Java or emulators there).
+
+**Open issues**
+- `npm audit` reports 4 high-severity findings in production dependencies, all through `firebase` → Firestore → `@grpc/grpc-js` (Firestore is not used or bundled). The suggested fix downgrades Firebase to version 9, a breaking change, so it is left for the owner.
+- The facilitator pages (`#/new`, `#/control`, `#/screen`, `#/results`) were not Lighthouse-audited; criterion 7 names `#/play`.
+- **Scale beyond 16 firms.** Session 8's clipping fixes are tuned for the spec maximum of 16 firms and do not scale to 40–50. The owner wants to scale to 40–50 participants. The plan, with proposed fixes and the questions to settle first (participants versus firms, connection limit, calibration), is **Session 10** in `docs/SESSIONS.md`.
+- A device that was not in the lobby cannot be added once joining closes (spec §13, unchanged).
+- Anonymous sign-in must be enabled in the Firebase console (Session 5 item, in the RUNBOOK).
+- The pending Session 6 database rules change (the `wire` block) still needs pasting into the Firebase console if not already done.
+
+**Next steps**
+- Session 9: independent audit.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { FinalResults } from '../../engine';
 import { stepResults, type ActionResult } from '../../firebase/orchestrator';
 import { RESULT_PANEL_COUNT } from '../../firebase/phases';
@@ -163,6 +163,19 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   );
 }
 
+/**
+ * Per-firm bar rows (panels 3 and 4). Up to 8 firms stack in one column; above that they flow down the left column and then
+ * the right, so a class of 16 firms still fits the projector (spec §14.1) without clipping.
+ */
+function FirmRows({ count, children }: { count: number; children: ReactNode }) {
+  if (count <= 8) return <>{children}</>;
+  return (
+    <div style={{ display: 'grid', gridAutoFlow: 'column', gridTemplateRows: `repeat(${Math.ceil(count / 2)}, auto)`, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: '4ch' }}>
+      {children}
+    </div>
+  );
+}
+
 export function FinalBoard({ r }: { r: FinalResults }) {
   const firms = rankedFirms(r);
   const top = Math.max(1, ...firms.map((f) => Math.max(f.valuation, f.peakValuation)));
@@ -177,7 +190,7 @@ export function FinalBoard({ r }: { r: FinalResults }) {
           <span style={{ width: '10ch', textAlign: 'right' }}>PEAK</span>
         </div>
         {firms.map((f) => (
-          <div key={f.firmId} style={{ display: 'flex', alignItems: 'center', height: '2lh' }}>
+          <div key={f.firmId} style={{ display: 'flex', alignItems: 'center', height: firms.length > 8 ? '1lh' : '2lh' }}>
             <span style={{ width: '4ch' }}>{f.rank}</span>
             <span style={{ width: '8ch' }} >{f.ticker}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -273,12 +286,14 @@ export function Counterfactual({ r }: { r: FinalResults }) {
         </div>
         <div className="stack" style={{ gap: 0 }}>
           <div className="dim row" style={{ flexWrap: 'nowrap' }}><span style={{ width: '8ch' }}>FIRM</span><span>SUST = sustainable path (blue) · ACT = actual (signal)</span></div>
+          <FirmRows count={firms.length}>
           {firms.map((f) => (
             <div key={f.firmId} className="stack" style={{ gap: 0 }}>
               <HBar label={f.ticker} value={barFraction(f.counterfactual, top)} tone="wire" text={`${fmt(f.counterfactual, 0)} SUST`} textW={12} describe={`${f.ticker} sustainable path ${fmt(f.counterfactual, 0)}`} />
               <HBar label="" value={barFraction(f.valuation, top)} tone="signal" text={`${fmt(f.valuation, 0)} ACT`} textW={12} describe={`${f.ticker} actual ${fmt(f.valuation, 0)}`} />
             </div>
           ))}
+          </FirmRows>
         </div>
       </div>
     </Panel>
@@ -290,6 +305,7 @@ export function Attribution({ r }: { r: FinalResults }) {
     <Panel title="ATTRIBUTION · share of depletion vs share of value" bodyClassName="pad">
       <div className="stack" style={{ gap: 0 }}>
         <div className="dim row" style={{ flexWrap: 'nowrap' }}><span style={{ width: '8ch' }}>FIRM</span><span>DEPL = share of depletion (red) · VAL = share of value (signal)</span></div>
+        <FirmRows count={r.attribution.length}>
         {r.attribution.map((a) => {
           const t = tickerOf(r, a.firmId);
           return (
@@ -299,6 +315,7 @@ export function Attribution({ r }: { r: FinalResults }) {
             </div>
           );
         })}
+        </FirmRows>
       </div>
     </Panel>
   );
