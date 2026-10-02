@@ -259,3 +259,46 @@
 
 **Next steps**
 - Session 5: participant join and control centre.
+
+## 2026-10-02 — Session 5: participant join and control centre
+
+**Done**
+- **Landing (`#/`)**: a session-code field, a resume link for the last session on this device, and the facilitator sign-in link. It uses no Firebase, so it loads instantly. The old developer links (kit, static previews) are gone from the page; `#/kit` still works by address.
+- **Join flow (`#/j/:code`)**: anonymous sign-in, then the participant confirms or types the code.
+  - **Found a firm**: name of 2–20 characters, ticker of 3–6 letters A–Z (forced to capitals; a ticker already in the session is refused), optional device initials with a warning not to enter a full name. A 4-digit PIN is generated and shown in large type before founding, and again afterwards.
+  - **Join a firm**: pick from the list of human firms (bots are not listed), enter the PIN. A wrong PIN or a closed session gets a plain explanation.
+  - A device that is already in a firm sees "Open the desk" first, and may switch firm until joining closes.
+  - After the briefing starts, an open form is replaced by "Joining is closed".
+- **Control centre (`#/play/:gameId`)**, live on the public nodes and the firm's own private node only.
+  - Header: ticker, quarter, server-time countdown (frozen while paused or in a summit), cash, last profit.
+  - DESK: pace, safety, card picker with the POACH target list. The cooldown, repeat-target and insolvency rules are written inline. Estimated cost and the public exposure label come from the engine (`estimatedCost`, `exposureOf`, `exposureLabel`).
+  - Commit and recommit until close. The status line reads "Committed hh:mm:ss · edit until close · device XX". A teammate's commit shows their device initials, and their settings load on your desk. Unsent edits are flagged "changes not committed".
+  - Locked states: lobby, briefing (shows the briefing lines), paused, closed after the deadline, resolving, summit.
+  - Reveal: quarter result card (revenue, costs, profit, share, share change, valuation, rank change), notices (AUTO, incident, insolvency, audits that name the firm) and the quarter's headlines.
+  - BOOK: own history table and step sparkline. WIRE: headlines from every quarter. PACTS: existing pacts, read only; the tab is selected automatically when a summit starts. Ended: own rank and valuation, and "Watch the board".
+  - TEAM panel on the DESK shows the firm's PIN for teammates.
+  - Offline: a banner after 2 s without a connection, commit paused, automatic reconnection.
+- **Tests**
+  - `tests/ui/join-validate.test.ts` and `tests/ui/play-model.test.ts` (26 tests): input rules, §6.4 defaults, card cooldown and target rules, estimate and label, view by phase and deadline, history, notices, wire. `npm test`: 214 passed. `npm run test:rules`: 120 passed (rules unchanged).
+  - `npm run test:e2e` (`scripts/e2e.ts`) now ends with a participant run on a fresh 3-quarter session. Real browsers: phone A (390×844), phone B (second device of the same firm), desktop C (1440×900, keyboard only from the desk on). It covers code validation, founding, wrong then right PIN, duplicate ticker, closed joining, commit and recommit from two devices, a keyboard-only commit (Tab, arrow keys, Enter), a reload restoring the firm, the resume link, reveal, BOOK, WIRE, PACTS, summit lock, POACH target rules, the card cooldown, offline and reconnect, the locked state after the deadline, the ended state, and that a non-member cannot read `engine`, other firms' private data or decisions, pact private records, members or PINs. Screenshots at 360×640, 390×844 and 1440×900 check horizontal scroll, 44 px targets and 14 px text. I reviewed them against §16.4 and the grid: no gradients, glow, rounded corners or emoji; columns sit on whole `ch` widths.
+  - `npm run shots` no longer includes `#/play` (it needs the database); the e2e run replaces it.
+
+**Spec deviations and choices (with reasons)**
+1. **Copy**: "Join a session" and "Found the firm" replace the spec's "Join a game", because `lint:copy` bans "game" in screens.
+2. **Rejoin on the same device** is restored by Firebase's persistent anonymous user (same `members/{uid}` entry), not by stored data. The only item the app stores on the device is the last session's code and id, for the resume link. The PIN is never stored.
+3. **Facilitator browser guard**: a browser still signed in as the facilitator cannot be used as a participant, because anonymous sign-in would replace that session. The page says to use a private window or another browser.
+4. **Device initials** are limited to 4 characters in the form; the rules allow 12.
+5. **Share change** shows "–" for the first quarter, because no earlier share is recorded.
+6. The card-validity rules on the desk mirror the engine's (`allowedCards`): the card played last quarter and every non-NONE card when insolvent.
+
+**Open issues**
+- **Anonymous sign-in must be enabled** in the Firebase console (Authentication → Sign-in method → Anonymous). Without it the participant pages show an explanatory message. This is a manual owner step.
+- **No rejoin from a different browser or after clearing site data once joining closes.** The rules treat only the same user as a rejoin (spec §13). A teammate's second device must join during the lobby.
+- **Card notices.** Participants are not told why a card was dropped (§6.3 step 2), because the engine's notices are not stored (Session 4 open issue). Session 6 owns this.
+- **Ended card** shows rank and valuation only. The counterfactual figures arrive in Session 7.
+- **Projector key presses during an action.** `#/screen` silently ignores a key pressed while the previous action is still finishing. The e2e run flaked on this once (F9 right after a reveal) and now waits 600 ms. Session 8 could show a "working" notice or queue the key.
+- **Committed tick** still needs an open facilitator window (Session 4).
+- **Lighthouse accessibility** has not been run (Session 8).
+
+**Next steps**
+- Session 6: pacts (propose, join, leave), audits, cards end to end, disclosure and summit wiring.

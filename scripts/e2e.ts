@@ -5,12 +5,16 @@
  *  - a facilitator browser context (sign-in gate, #/new, #/screen, #/control)
  *  - one browser context per scripted participant (tests/e2e/harness), each with its own
  *    anonymous sign-in, founding, joining and committing through the real data layer.
+ * Session 5 adds real participant browsers (phone and desktop sizes, one keyboard-only) that
+ * join through the UI and play a 3-quarter session.
  * Screenshots go to shots/e2e-*.png. Exits non-zero on any failed check.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import { PARAMS, estimatedCost } from '../src/engine';
+import { fmt } from '../src/ui/format';
 import { APP_NAMESPACE, adminSet, loadRules } from './emulator-rules';
 
 const PORT = 5199;
@@ -171,8 +175,9 @@ async function main(): Promise<void> {
 async function scenario(browser: Browser): Promise<void> {
   const watch = (page: Page, who: string): Page => {
     page.on('console', (m) => {
-      // The browser logs the auth server's 400 for the deliberate wrong-password attempt.
-      if (m.type() === 'error' && !m.location().url.includes('accounts:signInWithPassword')) fail(`${who}: console error: ${m.text()} (${m.location().url})`);
+      // The browser logs the auth server's 400 for the deliberate wrong-password attempt, and failed
+      // connections while a participant is deliberately taken offline.
+      if (m.type() === 'error' && !m.location().url.includes('accounts:signInWithPassword') && !m.text().includes('ERR_INTERNET_DISCONNECTED')) fail(`${who}: console error: ${m.text()} (${m.location().url})`);
     });
     page.on('pageerror', (e) => fail(`${who}: page error: ${e.message}`));
     return page;
@@ -337,6 +342,7 @@ async function scenario(browser: Browser): Promise<void> {
   await h(p2.page, 'submit', g, 2, beta.firmId, { pace: 2, safety: 12, card: 'PUBLISH', target: null });
   await fac.keyboard.press('F9');
   await waitText(fac, /REVEAL/, 'quarter 2 resolves', 15_000, '.scr');
+  await fac.waitForTimeout(600); // the projector ignores a key pressed while the previous action is still finishing
 
   // ── 7. Quarter 3: two facilitator windows press F9 together ────────────────
   await fac.keyboard.press('F9');
@@ -434,6 +440,365 @@ async function scenario(browser: Browser): Promise<void> {
   await waitText(fac, /REVEAL/, 'Retry completes the quarter', 15_000, '.scr');
   check((await adminGet<{ round: number }>(`games/${g2}/engine`)).round === 2, 'the retried quarter was resolved once');
   check(!/Resolution incomplete/.test(await c2.locator('body').innerText()), 'the retry state clears');
+
+  await participantScenario(browser, fac, facCtx, watch, participant);
+}
+
+
+// ── Session 5: participants ───────────────────────────────────────────────────
+
+/** Participant page: no horizontal scroll, every control at least 44 px, no text under 14 px. */
+async function checkPhone(page: Page, label: string): Promise<void> {
+  const r = await page.evaluate(() => {
+    const small: string[] = [];
+    document.querySelectorAll<HTMLElement>('button, input, [role=tab], [role=radio], select, a').forEach((el) => {
+      const b = el.getBoundingClientRect();
+      if (b.width === 0 || b.height === 0) return;
+      if (el.matches('input[type=range]')) return; // the slider thumb is the target; its track is 44 px tall in the wrapper
+      const box = el.matches('input[type=radio], input[type=checkbox]') ? (el.closest('label') ?? el).getBoundingClientRect() : b;
+      if (box.height < 43.5 || box.width < 43.5) small.push(`${el.tagName}:${(el.textContent ?? '').trim().slice(0, 16)} ${b.width.toFixed(0)}x${b.height.toFixed(0)}`);
+    });
+    const tiny: string[] = [];
+    document.querySelectorAll<HTMLElement>('main *, header *, .page *').forEach((el) => {
+      if (el.children.length === 0 && (el.textContent ?? '').trim()) {
+        const fs = parseFloat(getComputedStyle(el).fontSize);
+        if (fs < 13.5) tiny.push(`${el.tagName}:${(el.textContent ?? '').trim().slice(0, 16)} ${fs}px`);
+      }
+    });
+    return { overflowX: document.documentElement.scrollWidth > window.innerWidth + 1, small, tiny };
+  });
+  if (r.overflowX) fail(`${label}: horizontal scroll`);
+  if (r.small.length) fail(`${label}: targets under 44px: ${r.small.join(' | ')}`);
+  if (r.tiny.length) fail(`${label}: text under 14px: ${r.tiny.join(' | ')}`);
+}
+
+const SIZES = [[360, 640], [390, 844], [1440, 900]] as const;
+
+/** Captures a participant page at the three required sizes and runs the layout checks. */
+async function snapPlay(page: Page, name: string): Promise<void> {
+  const base = page.viewportSize() ?? { width: 390, height: 844 };
+  for (const [w, hgt] of SIZES) {
+    await page.setViewportSize({ width: w, height: hgt });
+    await page.waitForTimeout(150);
+    await shot(page, name);
+    await checkPhone(page, `${name} ${w}x${hgt}`);
+  }
+  await page.setViewportSize(base);
+}
+
+/** Presses Tab until the focused element matches `selector`. Keyboard-only navigation. */
+async function tabTo(page: Page, selector: string, what: string, text = '', max = 80): Promise<boolean> {
+  for (let i = 0; i < max; i++) {
+    if (await page.evaluate(([sel, t]) => (document.activeElement?.matches(sel as string) ?? false) && (document.activeElement?.textContent ?? '').includes(t as string), [selector, text])) return true;
+    await page.keyboard.press('Tab');
+  }
+  fail(`keyboard: could not reach ${what}`);
+  return false;
+}
+
+async function participantScenario(
+  browser: Browser,
+  fac: Page,
+  facCtx: BrowserContext,
+  watch: (page: Page, who: string) => Page,
+  harnessParticipant: (who: string) => Promise<{ ctx: BrowserContext; page: Page }>,
+): Promise<void> {
+  console.log('--- Session 5: participants ---');
+  // The projector ignores a key pressed while its previous action is still finishing, so settle first.
+  const key = async (page: Page, k: string): Promise<void> => {
+    await page.waitForTimeout(600);
+    await page.keyboard.press(k);
+  };
+  // ── Create a 3-quarter session with two bots and a 60 s timer ──
+  await fac.goto(`${BASE}#/new`);
+  await waitText(fac, /NEW SESSION/, 'participant run: the session form loads');
+  await fac.getByLabel('Round timer (s)').fill('60');
+  await fac.getByLabel('Fixed quarter').check();
+  await fac.getByLabel('Quarter', { exact: true }).fill('3');
+  await fac.getByLabel('Fixed, for rehearsal').check();
+  await fac.getByLabel('Seed value').fill('11');
+  await fac.getByRole('button', { name: 'Add bot firm' }).click();
+  await fac.getByRole('button', { name: 'Add bot firm' }).click();
+  await fac.getByRole('button', { name: 'Create session' }).click();
+  await fac.waitForURL(/#\/screen\/[^/?]+/);
+  const g = /#\/screen\/([^/?]+)/.exec(fac.url())?.[1] ?? '';
+  await waitText(fac, /LOBBY/, 'participant run: the lobby loads', 15_000, '.scr');
+  const code = (await fac.locator('.scr .big.signal').first().innerText()).trim();
+  const control = watch(await facCtx.newPage(), 'participant-run control');
+  await control.setViewportSize({ width: 1440, height: 900 });
+  await control.goto(`${BASE}#/control/${g}`);
+  await waitText(control, /CONTROL/, 'participant run: the console opens');
+
+  // ── Phone A: landing, code entry, confirm, found a firm ──
+  const ctxA = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const A = watch(await ctxA.newPage(), 'phone A');
+  await A.goto(`${BASE}#/`);
+  await waitText(A, /Session code/, 'landing shows the code field');
+  check(/FACILITATOR SIGN-IN/.test(await A.locator('body').innerText()), 'landing offers the facilitator sign-in');
+  await snapPlay(A, 'landing');
+  await A.getByLabel('Session code').fill('KXMI');
+  await A.getByRole('button', { name: 'Join a session' }).click();
+  await waitText(A, /four letters, A to Z without I or O/, 'an invalid code is explained');
+  await A.getByLabel('Session code').fill(code.toLowerCase());
+  await A.getByRole('button', { name: 'Join a session' }).click();
+  await A.waitForURL(new RegExp(`#/j/${code}`));
+  await A.getByRole('button', { name: 'Continue' }).waitFor();
+  check((await A.getByLabel('Session code').inputValue()) === code, 'the typed code carries over to the join page');
+  await A.getByLabel('Session code').fill('ZZZZ');
+  await A.getByRole('button', { name: 'Continue' }).click();
+  await waitText(A, /No session has this code/, 'an unknown code is explained');
+  await A.getByLabel('Session code').fill(code);
+  await A.getByRole('button', { name: 'Continue' }).click();
+  await A.getByRole('button', { name: 'Found a firm' }).waitFor();
+  await snapPlay(A, 'join-choose');
+  await A.getByRole('button', { name: 'Found a firm' }).click();
+  await A.getByRole('button', { name: 'Found the firm' }).click();
+  await waitText(A, /needs 2 to 20 characters/, 'a missing firm name is explained');
+  await waitText(A, /needs 3 to 6 letters/, 'a missing ticker is explained');
+  await A.getByLabel(/Firm name/).fill('Alpha Works');
+  await A.getByLabel(/Ticker/).fill('al1ph');
+  check((await A.getByLabel(/Ticker/).inputValue()) === 'ALPH', 'the ticker keeps A–Z only, in capitals');
+  await A.getByLabel(/Device initials/).fill('ab');
+  const pinShown = (await A.locator('.big.signal').innerText()).trim();
+  check(/^[0-9]{4}$/.test(pinShown), `a 4-digit PIN is shown before founding (${pinShown})`);
+  check(/full name/i.test(await A.locator('body').innerText()), 'the initials field warns against full names');
+  await snapPlay(A, 'join-found');
+  await A.getByRole('button', { name: 'Found the firm' }).click();
+  await waitText(A, /ALPH FOUNDED/, 'founding confirms the firm');
+  check((await A.locator('.big.signal').innerText()).trim() === pinShown, 'the PIN stays the same after founding');
+  await snapPlay(A, 'join-founded');
+  await A.getByRole('button', { name: 'Open the desk' }).click();
+  await A.waitForURL(/#\/play\//);
+  await waitText(A, /has not opened/, 'the desk waits in the lobby');
+  const firmA = Object.entries((await adminGet<Record<string, { ticker: string; isBot: boolean }>>(`games/${g}/firms`)) ?? {}).find(([, f]) => f.ticker === 'ALPH')?.[0] ?? '';
+  check((await adminGet<{ pin: string }>(`games/${g}/firmSecrets/${firmA}`)).pin === pinShown, 'the PIN shown is the PIN stored');
+  check((await A.locator('.panel', { hasText: 'TEAM' }).innerText()).includes(pinShown), 'the PIN is shown again on the DESK');
+
+  // ── Phone B: joins by direct address, wrong PIN then right PIN ──
+  const ctxB = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const B = watch(await ctxB.newPage(), 'phone B');
+  await B.goto(`${BASE}#/j/${code}`);
+  check((await B.getByLabel('Session code').inputValue()) === code, 'the join address prefills the code');
+  await B.getByRole('button', { name: 'Continue' }).click();
+  await B.getByRole('button', { name: 'Join a firm' }).click();
+  await B.getByRole('button', { name: 'Join the firm' }).click();
+  await waitText(B, /Select a firm to join/, 'joining without a firm is explained');
+  await B.getByRole('radio', { name: /ALPH/ }).check();
+  await B.getByLabel(/Firm PIN/).fill(pinShown === '0000' ? '1111' : '0000');
+  await B.getByLabel(/Device initials/).fill('ef');
+  await snapPlay(B, 'join-firm');
+  await B.getByRole('button', { name: 'Join the firm' }).click();
+  await waitText(B, /PIN was not accepted/, 'a wrong PIN is refused and explained');
+  await B.getByLabel(/Firm PIN/).fill(pinShown);
+  await B.getByRole('button', { name: 'Join the firm' }).click();
+  await B.waitForURL(/#\/play\//);
+  await waitText(B, /has not opened/, 'a correct PIN joins the firm');
+
+  // ── Desktop C: founds a second firm and uses the keyboard only from the desk on ──
+  const ctxC = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const C = watch(await ctxC.newPage(), 'desktop C');
+  await C.goto(`${BASE}#/j/${code}`);
+  await C.getByRole('button', { name: 'Continue' }).click();
+  await C.getByRole('button', { name: 'Found a firm' }).click();
+  await C.getByLabel(/Firm name/).fill('Cedar Labs');
+  await C.getByLabel(/Ticker/).fill('CEDR');
+  await C.getByLabel(/Device initials/).fill('gh');
+  await C.getByRole('button', { name: 'Found the firm' }).click();
+  await C.getByRole('button', { name: 'Open the desk' }).click();
+  await waitText(C, /has not opened/, 'a second firm is founded');
+  // A ticker already in use is refused.
+  const ctxD = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const D = watch(await ctxD.newPage(), 'phone D');
+  await D.goto(`${BASE}#/j/${code}`);
+  await D.getByRole('button', { name: 'Continue' }).click();
+  await D.getByRole('button', { name: 'Found a firm' }).click();
+  await D.getByLabel(/Firm name/).fill('Another Alpha');
+  await D.getByLabel(/Ticker/).fill('ALPH');
+  await D.getByRole('button', { name: 'Found the firm' }).click();
+  await waitText(D, /already uses this ticker/, 'a duplicate ticker is refused');
+
+  // ── Briefing: late joins are closed ──
+  await key(fac, 'F9');
+  await waitText(fac, /BRIEFING/, 'participant run: F9 opens the briefing', 15_000, '.scr');
+  await waitText(A, /Total market revenue tracks public trust/, 'participants see the briefing');
+  await waitText(D, /Joining is closed/, 'an open founding form is replaced by the closed notice when the briefing starts');
+  await D.reload();
+  await D.getByRole('button', { name: 'Continue' }).click();
+  await waitText(D, /Joining is closed/, 'a late visitor is told joining is closed');
+  await ctxD.close();
+
+  // ── Quarter 1 ──
+  await key(fac, 'Shift+A');
+  await waitText(A, /T-\d\d:\d\d/, 'the countdown runs on the phone', 15_000);
+  await waitText(A, /Q1 Y1/, 'the header shows the quarter');
+  const botTickers = Object.values((await adminGet<Record<string, { ticker: string; isBot: boolean }>>(`games/${g}/firms`)) ?? {}).filter((f) => f.isBot).map((f) => f.ticker);
+
+  await A.getByRole('radio', { name: /Aggressive/ }).click();
+  for (let i = 0; i < 3; i++) await A.getByRole('button', { name: 'Safety spend: increase' }).click();
+  await A.getByRole('button', { name: /^Card:/ }).click();
+  await A.getByRole('radio', { name: /PUBLISH/ }).click();
+  await A.getByRole('button', { name: 'Done' }).click();
+  const cost1 = fmt(estimatedCost(3, 13, 'PUBLISH', PARAMS));
+  check(/Estimated cost this quarter\s*\n?\s*/.test(await A.locator('[aria-label="Estimate"]').innerText()) && (await A.locator('[aria-label="Estimate"]').innerText()).includes(cost1), `the estimated cost is ${cost1}`);
+  check(/LOW|MED|HIGH|SEVERE/.test(await A.locator('[aria-label="Estimate"]').innerText()), 'the public exposure label is shown');
+  check(/same card cannot repeat[\s\S]*Insolvent firms cannot play cards/.test(await A.locator('[aria-label="Card"]').innerText()), 'the cooldown and insolvency rules are shown inline');
+  await snapPlay(A, 'play-open');
+  await A.getByRole('button', { name: 'COMMIT' }).click();
+  await waitText(A, /Committed \d\d:\d\d:\d\d · edit until close · device AB/, 'commit shows the time and the committing device');
+  await waitText(B, /Committed \d\d:\d\d:\d\d · edit until close · device AB/, 'a teammate sees which device committed');
+  check((await B.getByRole('radio', { name: /Aggressive/ }).getAttribute('aria-checked')) === 'true', 'a teammate’s desk adopts the committed pace');
+  await B.getByRole('radio', { name: /Breakneck/ }).click();
+  await waitText(B, /changes not committed/, 'an edited desk says changes are not committed');
+  await B.getByRole('button', { name: 'Recommit' }).click();
+  await waitText(B, /device EF(?![\s\S]*changes not committed)/, 'recommit replaces the decision from the second device');
+  await waitText(A, /device EF/, 'the first device sees the recommit');
+  const dec1 = await adminGet<{ pace: number; safety: number; card: string }>(`games/${g}/decisions/1/${firmA}`);
+  check(dec1.pace === 4 && dec1.safety === 13 && dec1.card === 'PUBLISH', 'the stored decision is the recommitted one');
+
+  // Keyboard-only commit on desktop C.
+  await C.keyboard.press('Tab');
+  await tabTo(C, '[aria-label="Deployment pace"] [role=radio][aria-checked="true"]', 'the pace selector');
+  await C.keyboard.press('ArrowRight');
+  await tabTo(C, 'input[type=range][aria-label="Safety spend"]', 'the safety slider');
+  await C.keyboard.press('ArrowRight');
+  await C.keyboard.press('ArrowRight');
+  await tabTo(C, '.card-trigger', 'the card picker');
+  await C.keyboard.press('Enter');
+  await tabTo(C, '.card-opt[aria-checked="false"]', 'the BLITZ card', 'BLITZ');
+  await C.keyboard.press('Enter');
+  await tabTo(C, '.sheet-body .btn-signal', 'the Done button');
+  await C.keyboard.press('Enter');
+  await tabTo(C, '.commit-bar .btn-signal', 'the commit button');
+  await C.keyboard.press('Enter');
+  await waitText(C, /Committed \d\d:\d\d:\d\d · edit until close · device GH/, 'a keyboard-only commit works');
+  const firmC = Object.entries((await adminGet<Record<string, { ticker: string }>>(`games/${g}/firms`)) ?? {}).find(([, f]) => f.ticker === 'CEDR')?.[0] ?? '';
+  const decC = await adminGet<{ pace: number; safety: number; card: string }>(`games/${g}/decisions/1/${firmC}`);
+  check(decC.pace === 3 && decC.safety === 12 && decC.card === 'BLITZ', 'the keyboard-only decision has pace 3, safety 12, BLITZ');
+  await tabTo(C, '[role=tab][aria-selected="true"]', 'the tab bar');
+  await C.keyboard.press('ArrowRight');
+  await waitText(C, /No quarters resolved yet/, 'arrow keys move between tabs');
+  await C.keyboard.press('Home');
+  await waitText(C, /Estimated cost this quarter/, 'Home returns to the desk');
+  await snapPlay(C, 'play-desktop-open');
+
+  // Reload keeps membership (same device, same anonymous user).
+  await A.reload();
+  await waitText(A, /Committed \d\d:\d\d:\d\d[\s\S]*device EF/, 'a reload restores the firm and its committed decision');
+  const A2 = watch(await ctxA.newPage(), 'phone A (new tab)');
+  await A2.goto(`${BASE}#/`);
+  check(await A2.getByRole('link', { name: /RESUME LAST SESSION/ }).isVisible(), 'the landing page offers to resume the last session');
+  await A2.getByRole('link', { name: /RESUME LAST SESSION/ }).click();
+  await waitText(A2, /ALPH/, 'resuming returns to the same firm');
+  await A2.close();
+
+  // ── Reveal 1 ──
+  await key(fac, 'F9');
+  await waitText(A, /Q1 Y1 RESULT/, 'the result card appears at the reveal', 15_000);
+  const resultText = await A.locator('main').innerText();
+  check(/Revenue[\s\S]*Costs[\s\S]*Profit[\s\S]*Valuation/.test(resultText) && /RANK \d/.test(resultText), 'the result card shows revenue, costs, profit, valuation and rank');
+  check(/NOTICES/.test(resultText), 'the result card has a notices panel');
+  await snapPlay(A, 'play-reveal');
+  await A.getByRole('tab', { name: 'BOOK' }).click();
+  await waitText(A, /Q1 Y1/, 'BOOK lists the quarter');
+  check((await A.locator('main svg').count()) >= 1, 'BOOK draws the step sparkline');
+  await snapPlay(A, 'play-book');
+  await A.getByRole('tab', { name: 'WIRE' }).click();
+  check((await A.locator('ul[aria-label="Wire"] li').count()) >= 2, 'WIRE lists the quarter’s headlines');
+  await snapPlay(A, 'play-wire');
+  await A.getByRole('tab', { name: 'PACTS' }).click();
+  await waitText(A, /No pacts have been formed/, 'PACTS shows existing pacts read only');
+  await snapPlay(A, 'play-pacts');
+  await A.getByRole('tab', { name: 'DESK' }).click();
+  const priv1 = await adminGet<{ cash: number }>(`games/${g}/firmsPrivate/${firmA}`);
+  check((await A.locator('.play-head').innerText()).includes(fmt(priv1.cash)), 'the header shows the firm’s cash');
+
+  // ── Quarter 2: summit freezes the desk, then POACH ──
+  await key(fac, 'F9');
+  await waitText(A, /Q2 Y1[\s\S]*T-/, 'quarter 2 opens on the phone', 15_000);
+  const defaultsText = await A.locator('[aria-label="Pace"]').innerText();
+  check(/4/.test(defaultsText) && (await A.getByRole('radio', { name: /Breakneck/ }).getAttribute('aria-checked')) === 'true', 'the desk defaults to last quarter’s applied pace');
+  await key(fac, 'F8');
+  await waitText(A, /Industry summit in session/, 'the summit banner shows', 15_000);
+  check((await A.getByRole('tab', { name: 'PACTS' }).getAttribute('aria-selected')) === 'true', 'the summit selects the PACTS tab');
+  await snapPlay(A, 'play-summit');
+  await A.getByRole('tab', { name: 'DESK' }).click();
+  check(await A.getByRole('button', { name: 'LOCKED' }).isDisabled(), 'the desk is locked during the summit');
+  await key(fac, 'F8');
+  await waitText(A, /^(?![\s\S]*Industry summit in session)[\s\S]*T-\d\d:\d\d/, 'leaving the summit clears the banner and restores the countdown', 15_000);
+  await A.getByRole('button', { name: /^Card:/ }).click();
+  await A.getByRole('radio', { name: /POACH/ }).click();
+  await A.getByRole('button', { name: 'Done' }).click({ force: true, trial: true }).catch(() => undefined);
+  check(await A.getByRole('button', { name: 'Done' }).isDisabled(), 'POACH without a target cannot be confirmed');
+  const target = botTickers[0] ?? 'ARCN';
+  await A.getByRole('radio', { name: target }).click();
+  await A.getByRole('button', { name: 'Done' }).click();
+  await snapPlay(A, 'play-poach');
+  await A.getByRole('button', { name: /Recommit|COMMIT/ }).click();
+  await waitText(A, /Committed/, 'POACH with a target commits');
+  const dec2 = await adminGet<{ card: string; target: string | null }>(`games/${g}/decisions/2/${firmA}`);
+  check(dec2.card === 'POACH' && dec2.target !== null && dec2.target !== firmA, 'the stored POACH has a target other than the own firm');
+  await key(fac, 'F9');
+  await waitText(A, /Q2 Y1 RESULT/, 'quarter 2 resolves', 15_000);
+
+  // ── Quarter 3: cooldowns, offline, locked after the deadline ──
+  await key(fac, 'F9');
+  await waitText(A, /Q3 Y1[\s\S]*T-/, 'quarter 3 opens', 15_000);
+  await A.getByRole('button', { name: /^Card:/ }).click();
+  check((await A.getByRole('radio', { name: /POACH/ }).getAttribute('aria-disabled')) === 'true', 'the card played last quarter is not selectable');
+  check(/Played last quarter/.test(await A.locator('dialog').innerText()), 'the sheet says why the card is unavailable');
+  await A.getByRole('radio', { name: /LOBBY/ }).click();
+  await A.getByRole('button', { name: 'Done' }).click();
+
+  // Offline state and automatic reconnection.
+  await ctxA.setOffline(true);
+  const sawOffline = await waitText(A, /Offline\. Reconnecting automatically/, 'the offline banner appears', 30_000);
+  if (sawOffline) {
+    check(await A.getByRole('button', { name: /COMMIT|Recommit/ }).isDisabled(), 'committing is paused while offline');
+    await snapPlay(A, 'play-offline');
+  }
+  await ctxA.setOffline(false);
+  await waitText(A, /^(?![\s\S]*Offline\. Reconnecting)[\s\S]*/, 'the offline banner clears after reconnecting', 30_000);
+  await A.getByRole('button', { name: /COMMIT|Recommit/ }).click();
+  await waitText(A, /Committed/, 'a commit goes through after reconnecting');
+
+  // Close the quarter: -30 s twice on the console puts the deadline at now.
+  await control.getByRole('button', { name: '−30 s' }).click();
+  await control.getByRole('button', { name: '−30 s' }).click();
+  await waitText(A, /Quarter closed/, 'the desk shows the closed state after the deadline', 15_000);
+  check(await A.getByRole('button', { name: 'LOCKED' }).isDisabled(), 'the commit button is locked after the deadline');
+  await snapPlay(A, 'play-locked');
+  await key(fac, 'F9');
+  await waitText(A, /Q3 Y1 RESULT/, 'quarter 3 resolves', 15_000);
+  await key(fac, 'F9');
+  await waitText(A, /ENDED/, 'the session ends', 15_000);
+  await waitText(A, /Watch the board/, 'the ended state points to the board');
+  await snapPlay(A, 'play-ended');
+  await waitText(B, /Watch the board/, 'a teammate sees the ended state');
+
+  // ── Privacy ──
+  const probe = await harnessParticipant('privacy probe');
+  const privateReads: Array<[string, string]> = [
+    ['engine', `games/${g}/engine`],
+    ['another firm’s private data', `games/${g}/firmsPrivate/${firmA}`],
+    ['another firm’s decision', `games/${g}/decisions/1/${firmA}`],
+    ['the pact private records', `games/${g}/pactsPrivate`],
+    ['the member list', `games/${g}/members`],
+    ['the firm PINs', `games/${g}/firmSecrets`],
+  ];
+  for (const [what, path] of privateReads) check((await h(probe.page, 'tryRead', path)) !== null, `a non-member cannot read ${what}`);
+  for (const [who, page] of [['A', A], ['B', B], ['C', C]] as const) {
+    const text = await page.locator('body').innerText();
+    check(!/\bTAU\b|\bτ\b|endRound|end round/i.test(text), `participant ${who} never shows a hidden parameter`);
+  }
+
+  // Console at phone width during the loop.
+  await control.setViewportSize({ width: 390, height: 844 });
+  await shot(control, 'participant-run-control');
+  check(!(await control.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), 'the console has no horizontal scroll at 390x844');
+  await control.setViewportSize({ width: 1440, height: 900 });
+  await shot(control, 'participant-run-control');
+  await probe.ctx.close();
+  for (const c of [ctxA, ctxB, ctxC]) await c.close();
 }
 
 void main().catch((e: unknown) => {

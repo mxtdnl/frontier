@@ -1,6 +1,6 @@
 /**
  * Screenshots the static screens and states at the required sizes and runs layout checks.
- * The live facilitator routes are covered by scripts/e2e.ts.
+ * The live routes (facilitator and participant) are covered by scripts/e2e.ts.
  * Usage: npm run build && npm run shots
  * Output: shots/<route>-<state>-<w>x<h>.png and a printed list of any failed checks.
  */
@@ -77,29 +77,6 @@ async function checkProjector(page: Page, label: string): Promise<void> {
   if (r.clipped.length) fail(`${label}: clipped ${r.clipped.join(' | ')}`);
 }
 
-/** Participant page: no horizontal scroll, all controls at least 44 px, none smaller than 14 px text. */
-async function checkPlay(page: Page, label: string): Promise<void> {
-  const r = await page.evaluate(() => {
-    const small: string[] = [];
-    document.querySelectorAll<HTMLElement>('button, input, [role=tab], [role=radio], select, a').forEach((el) => {
-      const b = el.getBoundingClientRect();
-      if (b.width === 0 || b.height === 0) return;
-      if (b.height < 43.5 || b.width < 43.5) small.push(`${el.tagName}:${(el.textContent ?? '').trim().slice(0, 16)} ${b.width.toFixed(0)}x${b.height.toFixed(0)}`);
-    });
-    const tiny: string[] = [];
-    document.querySelectorAll<HTMLElement>('main *, header *').forEach((el) => {
-      if (el.children.length === 0 && (el.textContent ?? '').trim()) {
-        const fs = parseFloat(getComputedStyle(el).fontSize);
-        if (fs < 13.5) tiny.push(`${el.tagName}:${(el.textContent ?? '').trim().slice(0, 16)} ${fs}px`);
-      }
-    });
-    return { overflowX: document.documentElement.scrollWidth > window.innerWidth + 1, small, tiny };
-  });
-  if (r.overflowX) fail(`${label}: horizontal scroll`);
-  if (r.small.length) fail(`${label}: targets under 44px: ${r.small.join(' | ')}`);
-  if (r.tiny.length) fail(`${label}: text under 14px: ${r.tiny.join(' | ')}`);
-}
-
 async function main(): Promise<void> {
   mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch({ executablePath: EXEC, args: ['--no-sandbox'] });
@@ -128,32 +105,6 @@ async function main(): Promise<void> {
     }
     await open(page, '#/results/demo?panel=2');
     await shot(page, 'results-2-no-tau');
-    await page.context().close();
-  }
-
-  // ---- Participant ----
-  for (const [w, h] of PHONE) {
-    const page = await newPage(w, h);
-    for (const s of ['open', 'committed', 'reveal', 'summit', 'ended']) {
-      await open(page, `#/play/demo?state=${s}`);
-      await shot(page, `play-${s}-DESK`);
-      await checkPlay(page, `play ${s} ${w}x${h}`);
-      for (const tab of ['BOOK', 'PACTS', 'WIRE']) {
-        await page.getByRole('tab', { name: tab }).click();
-        await shot(page, `play-${s}-${tab}`);
-        await checkPlay(page, `play ${s} ${tab} ${w}x${h}`);
-      }
-    }
-    // Card sheet with POACH.
-    await open(page, '#/play/demo?state=open');
-    await page.getByRole('button', { name: /^Card:/ }).click();
-    await page.getByRole('radio', { name: /POACH/ }).click();
-    await shot(page, 'play-card-sheet');
-    await checkPlay(page, `play card sheet ${w}x${h}`);
-    await page.getByRole('radio', { name: 'ARCN' }).click();
-    await page.getByRole('button', { name: 'Done' }).click();
-    await page.getByRole('button', { name: 'COMMIT' }).click();
-    await shot(page, 'play-after-commit');
     await page.context().close();
   }
 

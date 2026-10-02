@@ -1,73 +1,149 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import {
-  BOOK,
-  CARDS,
-  FIRMS,
-  HEADLINES,
-  OWN,
-  OWN_RESULT,
-  PACE_OPTIONS,
-  PACTS,
-  RESULTS,
-  ROUND,
-  exposureLabel,
-  mockEstimatedCost,
-  mockExposure,
-} from '../../mock/fixtures';
+import { readFirmSecret, submitDecision } from '../../firebase/api';
+import { getFirebase } from '../../firebase/init';
+import { isPermissionDenied, rememberSession, useParticipantAuth } from '../../firebase/participant';
 import { useRoute } from '../../router';
 import {
-  CardPicker,
-  CommitButton,
-  Countdown,
-  DataTable,
-  Delta,
-  Segmented4,
-  SafetySlider,
-  StepSparkline,
-  Tag,
-} from '../../ui/components';
-import { fmt, fmtTime, quarterLabel } from '../../ui/format';
+  useFirms,
+  useFirmsPublic,
+  useMeta,
+  useOwnDecision,
+  useOwnFirmPrivate,
+  useOwnMember,
+  usePacts,
+  usePresence,
+  usePublic,
+  useRounds,
+  useServerTimeOffset,
+} from '../../state';
+import { Countdown, Delta } from '../../ui/components';
+import { fmt, quarterLabel } from '../../ui/format';
+import { Desk } from './Desk';
+import {
+  bookRows,
+  initialDraft,
+  legalDraft,
+  playView,
+  poachTargets,
+  wireItems,
+  type Draft,
+} from './model';
+import { Book, EndedCard, PactList, RevealCard, Wire } from './Panels';
+import { useHeldFor, useServerNow } from './useServerNow';
 
-export const PLAY_STATES = ['open', 'committed', 'reveal', 'summit', 'ended'] as const;
-type PlayState = (typeof PLAY_STATES)[number];
 type Tab = 'DESK' | 'BOOK' | 'PACTS' | 'WIRE';
 const TABS: Tab[] = ['DESK', 'BOOK', 'PACTS', 'WIRE'];
+const SAFE_ID = /^[^.#$[\]/\x00-\x1f\x7f]{1,64}$/;
 
-function readState(raw: string | null): PlayState {
-  return (PLAY_STATES as ReadonlyArray<string>).includes(raw ?? '') ? (raw as PlayState) : 'open';
+function Message({ children, link }: { children: string; link?: { href: string; text: string } }) {
+  return (
+    <div className="page stack">
+      <p className="notice" role="status">{children}</p>
+      {link ? <a className="link-block" href={link.href}>{link.text}</a> : null}
+    </div>
+  );
 }
 
+/** `#/play/:gameId`: the participant control centre. */
 export function Play() {
   const route = useRoute();
-  const initial = readState(route.query.get('state'));
-  const [state, setState] = useState<PlayState>(initial);
-  const [tab, setTab] = useState<Tab>(initial === 'summit' ? 'PACTS' : 'DESK');
-  const [pace, setPace] = useState<number>(OWN.pace);
-  const [safety, setSafety] = useState<number>(OWN.safety);
-  const [card, setCard] = useState<string>('NONE');
-  const [target, setTarget] = useState<string | null>(null);
-  const [sheet, setSheet] = useState(false);
-  const [committedAt, setCommittedAt] = useState<Date | null>(initial === 'committed' ? new Date(2026, 0, 1, 14, 2, 11) : null);
-  const deadline = useMemo(() => Date.now() + 107_000, []);
+  const g = route.segments[1] ?? '';
+  const auth = useParticipantAuth();
+  if (!SAFE_ID.test(g)) return <Message link={{ href: '#/', text: 'JOIN' }}>This address has no session. Enter the join code on the landing page.</Message>;
+  if (auth.kind === 'loading') return <Message>Signing in.</Message>;
+  if (auth.kind === 'error') return <Message>{auth.message}</Message>;
+  if (auth.kind === 'facilitator-browser') {
+    return (
+      <Message>
+        This browser is signed in as the facilitator. Open the participant address in a private window or another browser.
+      </Message>
+    );
+  }
+  return <PlayLive g={g} uid={auth.uid} />;
+}
 
-  // The URL selects the state; local actions (commit) move between open and committed.
-  const key = route.query.get('state');
+function PlayLive({ g, uid }: { g: string; uid: string }) {
+  const pubSub = usePublic(g);
+  const metaSub = useMeta(g);
+  const member = useOwnMember(g, uid);
+  const firmId = member.data?.firmId ?? null;
+  const firmsSub = useFirms(g);
+  const fpubSub = useFirmsPublic(g);
+  const priv = useOwnFirmPrivate(g, firmId);
+  const roundsSub = useRounds(g);
+  const pactsSub = usePacts(g);
+  const offset = useServerTimeOffset();
+  const { connected } = usePresence(g, uid);
+  const offline = useHeldFor(!connected, 2000);
+
+  const pub = pubSub.data;
+  const round = pub?.round ?? 0;
+  const decisionSub = useOwnDecision(g, round, firmId);
+  const decision = decisionSub.data;
+  const byMember = useOwnMember(g, decision?.by ?? null);
+
+  const code = metaSub.data?.code;
   useEffect(() => {
-    const s = readState(key);
-    setState(s);
-    setTab(s === 'summit' ? 'PACTS' : 'DESK');
-    setCommittedAt(s === 'committed' ? new Date(2026, 0, 1, 14, 2, 11) : null);
-  }, [key]);
+    if (code && member.data) rememberSession({ code, gameId: g });
+  }, [code, g, member.data]);
 
-  const commit = () => {
-    setCommittedAt(new Date());
-    setState('committed');
+  const [pin, setPin] = useState<string | null>(null);
+  useEffect(() => {
+    if (!firmId) return;
+    let live = true;
+    readFirmSecret(getFirebase().db, g, firmId).then(
+      (s) => live && setPin(s?.pin ?? null),
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [g, firmId]);
+
+  const firms = firmsSub.data;
+  const history = priv.data?.history ?? {};
+  const book = useMemo(() => bookRows(history), [history]);
+  const insolvent = firmId ? (fpubSub.data[firmId]?.insolvent ?? false) : false;
+  const lastCard = priv.data?.lastCard ?? null;
+  const lastTargetId = priv.data?.lastPoachTarget ?? null;
+  const lastTargetTicker = lastTargetId ? (firms[lastTargetId]?.ticker ?? null) : null;
+  const targets = useMemo(() => (firmId ? poachTargets(firms, firmId) : []), [firms, firmId]);
+
+  const nowMs = useServerNow(offset, pub?.phase === 'open');
+  const view = pub ? playView(pub, nowMs) : 'lobby';
+
+  // The desk draft is seeded once per quarter from this firm's committed decision or the §6.4
+  // defaults. A teammate's commit replaces it. Local edits stay until the next quarter.
+  const [draft, setDraftState] = useState<Draft | null>(null);
+  const seeded = useRef<number | null>(null);
+  const ready = !!pub && !!firmId && !priv.loading && !decisionSub.loading && !firmsSub.loading;
+  useEffect(() => {
+    if (!ready || seeded.current === round) return;
+    seeded.current = round;
+    const prev = history[String(round - 1)] ?? null;
+    setDraftState(legalDraft(initialDraft(decision, prev), lastCard, lastTargetId, insolvent));
+  }, [ready, round, decision, history, lastCard, lastTargetId, insolvent]);
+  const teammateAt = decision && decision.by !== uid ? decision.at : null;
+  useEffect(() => {
+    if (teammateAt === null || !decision) return;
+    setDraftState(initialDraft(decision, null));
+    // Adopt a teammate's commit once per commit.
+  }, [teammateAt]);
+
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const setDraft = (d: Draft) => {
+    setError('');
+    setDraftState(d);
   };
 
-  const showEnded = state === 'ended';
-  const showReveal = state === 'reveal';
-  const own = FIRMS.find((f) => f.ticker === OWN.ticker);
-  const ownRank = FIRMS.findIndex((f) => f.ticker === OWN.ticker) + 1;
+  const [tab, setTab] = useState<Tab>('DESK');
+  const prevView = useRef(view);
+  useEffect(() => {
+    if (view === 'summit' && prevView.current !== 'summit') setTab('PACTS');
+    if (view !== 'summit' && prevView.current === 'summit') setTab('DESK');
+    prevView.current = view;
+  }, [view]);
 
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const tabKey = (i: number, e: KeyboardEvent) => {
@@ -82,29 +158,78 @@ export function Play() {
     tabRefs.current[next]?.focus();
   };
 
+  if (pubSub.error || member.error) {
+    return <Message link={{ href: '#/', text: 'JOIN' }}>The session could not be read. Check the address and the connection, then reload.</Message>;
+  }
+  if (pubSub.loading || member.loading || metaSub.loading) return <Message>Loading the session.</Message>;
+  if (!pub || !metaSub.data) return <Message link={{ href: '#/', text: 'JOIN' }}>This session does not exist or has been deleted. Check the join code.</Message>;
+  if (!firmId || !member.data) {
+    return (
+      <Message link={{ href: `#/j/${metaSub.data.code}`, text: 'JOIN OR FOUND A FIRM' }}>
+        This device has no firm in this session. Join an existing firm with its PIN or found a new one.
+      </Message>
+    );
+  }
+  const firm = firms[firmId];
+  if (!firm || !draft) return <Message>Loading the firm.</Message>;
+
+  const commit = async () => {
+    if (sending) return;
+    setSending(true);
+    setError('');
+    try {
+      await submitDecision(getFirebase().db, g, round, firmId, uid, {
+        pace: draft.pace,
+        safety: draft.safety,
+        card: draft.card,
+        target: draft.card === 'POACH' ? draft.target : null,
+      });
+    } catch (e) {
+      setError(
+        isPermissionDenied(e)
+          ? 'The quarter closed or the timer stopped before this decision arrived. A decision already committed this quarter stands.'
+          : 'The decision was not sent. Check the connection, then commit again.',
+      );
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const lastRow = book[book.length - 1];
+  const committedBy = decision
+    ? decision.by === uid
+      ? `device ${member.data.label || 'this device'}`
+      : `device ${byMember.data?.label || 'a teammate'}`
+    : '';
+  const ownPublic = fpubSub.data[firmId];
+  const roundNode = roundsSub.data[String(round)];
+
   return (
     <div className="play">
       <header className="play-head">
+        {offline ? <div className="banner" role="alert">Offline. Reconnecting automatically. Committing is paused until the connection returns.</div> : null}
         <div className="topbar" style={{ height: 'auto', padding: '0.5lh 1ch', flexWrap: 'wrap', gap: '0 2ch' }}>
-          <span>{OWN.ticker}</span>
-          <span>{quarterLabel(ROUND)}</span>
+          <span>{firm.ticker}</span>
+          <span>{round > 0 ? quarterLabel(round) : 'PRE-OPEN'}</span>
           <span>
-            {state === 'open' || state === 'committed' ? (
-              <>T-<Countdown deadline={deadline} /></>
-            ) : state === 'summit' ? (
-              'PAUSED'
-            ) : state === 'ended' ? (
+            {view === 'open' && pub.deadline !== null ? (
+              <>T-<Countdown deadline={pub.deadline} offset={offset} /></>
+            ) : view === 'paused' || view === 'summit' ? (
+              pub.pausedRemainingMs !== null ? <>PAUSED T-<Countdown deadline={0} frozenMs={pub.pausedRemainingMs} /></> : 'PAUSED'
+            ) : view === 'ended' ? (
               'ENDED'
+            ) : view === 'lobby' || view === 'briefing' ? (
+              'WAITING'
             ) : (
               'CLOSED'
             )}
           </span>
         </div>
         <div className="row" style={{ padding: '0.5lh 1ch', borderBottom: 'var(--rule-w) solid var(--rule)', gap: '0 3ch' }}>
-          <span><span className="dim">CASH</span> {fmt(OWN.cash)}</span>
-          <span><span className="dim">PROFIT</span> <Delta value={OWN.lastProfit} /></span>
+          <span><span className="dim">CASH</span> {priv.data ? fmt(priv.data.cash) : '–'}</span>
+          <span><span className="dim">PROFIT</span> {lastRow ? <Delta value={lastRow.profit} /> : '–'}</span>
         </div>
-        {state === 'summit' ? <div className="banner" role="status">Industry summit in session. Pacts are open.</div> : null}
+        {view === 'summit' ? <div className="banner" role="status">Industry summit in session. Pacts are open.</div> : null}
       </header>
 
       <nav className="play-tabs" aria-label="Sections">
@@ -132,227 +257,57 @@ export function Play() {
 
       <main className="play-main" id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>
         {tab === 'DESK' ? (
-          showEnded ? (
-            <EndedCard />
-          ) : showReveal ? (
-            <RevealCard rank={ownRank} dShare={own ? own.dShare : 0} />
-          ) : (
-            <Desk
-              locked={state === 'summit'}
-              committedAt={state === 'committed' ? committedAt : null}
-              pace={pace}
-              setPace={setPace}
-              safety={safety}
-              setSafety={setSafety}
-              card={card}
-              target={target}
-              setCard={(c, t) => {
-                setCard(c);
-                setTarget(t);
-              }}
-              sheet={sheet}
-              setSheet={setSheet}
-              onCommit={commit}
+          view === 'ended' ? (
+            <EndedCard ticker={firm.ticker} rank={ownPublic?.rank ?? lastRow?.rank ?? null} valuation={ownPublic?.valuation ?? lastRow?.valuation ?? null} />
+          ) : view === 'reveal' ? (
+            <RevealCard
+              round={round}
+              history={history}
+              audits={roundNode?.audits ?? []}
+              headlines={roundNode?.headlines ?? []}
+              pacts={pactsSub.data}
+              firmId={firmId}
             />
+          ) : (
+            <>
+              <Desk
+                view={view}
+                draft={draft}
+                setDraft={setDraft}
+                lastCard={lastCard}
+                lastTargetTicker={lastTargetTicker}
+                insolvent={insolvent}
+                targets={targets}
+                decision={decision}
+                committedBy={committedBy}
+                sending={sending}
+                offline={offline}
+                error={error}
+                onCommit={() => void commit()}
+              />
+              <TeamPanel name={firm.name} ticker={firm.ticker} pin={pin} />
+            </>
           )
         ) : null}
-        {tab === 'BOOK' ? <Book /> : null}
-        {tab === 'PACTS' ? <PactList emphasis={state === 'summit'} /> : null}
-        {tab === 'WIRE' ? <Wire /> : null}
+        {tab === 'BOOK' ? <Book rows={book} /> : null}
+        {tab === 'PACTS' ? <PactList pacts={pactsSub.data} firms={firms} ownFirmId={firmId} emphasis={view === 'summit'} /> : null}
+        {tab === 'WIRE' ? <Wire items={wireItems(roundsSub.data)} /> : null}
       </main>
     </div>
   );
 }
 
-interface DeskProps {
-  locked: boolean;
-  committedAt: Date | null;
-  pace: number;
-  setPace: (n: number) => void;
-  safety: number;
-  setSafety: (n: number) => void;
-  card: string;
-  target: string | null;
-  setCard: (c: string, t: string | null) => void;
-  sheet: boolean;
-  setSheet: (b: boolean) => void;
-  onCommit: () => void;
-}
-
-function Desk(p: DeskProps) {
-  const cost = mockEstimatedCost(p.pace, p.safety, p.card);
-  const expo = exposureLabel(mockExposure(p.pace, p.safety));
-  const targets = FIRMS.filter((f) => f.ticker !== OWN.ticker).map((f) => ({ ticker: f.ticker, name: f.name }));
+function TeamPanel({ name, ticker, pin }: { name: string; ticker: string; pin: string | null }) {
   return (
-    <div className="stack">
-      <section className="stack" style={{ gap: '0.5lh' }} aria-label="Pace">
-        <span className="dim">PACE</span>
-        <Segmented4 label="Deployment pace" options={PACE_OPTIONS} value={p.pace} onChange={p.setPace} disabled={p.locked} />
-      </section>
-      <section className="stack" style={{ gap: '0.5lh' }} aria-label="Safety">
-        <span className="dim">SAFETY · % of reference budget</span>
-        <SafetySlider label="Safety spend" value={p.safety} onChange={p.setSafety} disabled={p.locked} />
-      </section>
-      <section className="stack" style={{ gap: '0.5lh' }} aria-label="Card">
-        <span className="dim">CARD</span>
-        <CardPicker
-          cards={CARDS}
-          value={p.card}
-          target={p.target}
-          onChange={p.setCard}
-          lastCard={OWN.lastCard}
-          lastTarget={OWN.lastTarget}
-          insolvent={OWN.insolvent}
-          targets={targets}
-          open={p.sheet}
-          onOpen={() => p.setSheet(true)}
-          onClose={() => p.setSheet(false)}
-        />
-        <p className="dim">
-          The same card cannot repeat in consecutive quarters. POACH needs a target and not the same target two quarters running. Insolvent firms cannot play cards.
-        </p>
-      </section>
-      <section className="stack" style={{ gap: 0 }} aria-label="Estimate">
-        <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
-          <span className="dim">Estimated cost this quarter</span>
-          <span>{fmt(cost)}</span>
-        </div>
-        <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}>
-          <span className="dim">Public exposure</span>
-          <span>{expo}</span>
-        </div>
-      </section>
-      <div className="stack commit-bar" style={{ gap: '0.5lh' }}>
-        <CommitButton state={p.locked ? 'locked' : p.committedAt ? 'committed' : 'idle'} onCommit={p.onCommit} />
-        <p role="status" aria-live="polite" className="dim">
-          {p.committedAt
-            ? `Committed ${fmtTime(p.committedAt)} · edit until close · device ${OWN.device}`
-            : p.locked
-              ? 'Decisions are paused during the summit.'
-              : 'Not committed. Keeps last quarter’s settings if left open.'}
-        </p>
+    <section className="panel" aria-label="Team">
+      <div className="panel-title"><span>TEAM</span><span>{ticker}</span></div>
+      <div className="panel-body pad">
+        <dl className="kv">
+          <dt>Firm</dt><dd>{name}</dd>
+          <dt>PIN</dt><dd>{pin ?? '–'}</dd>
+        </dl>
+        <p className="dim">Teammates join this firm with the PIN.</p>
       </div>
-    </div>
-  );
-}
-
-function RevealCard({ rank, dShare }: { rank: number; dShare: number }) {
-  return (
-    <div className="stack">
-      <section className="panel" aria-label="Quarter result">
-        <div className="panel-title"><span>{`${quarterLabel(ROUND)} RESULT`}</span><span>RANK {rank}</span></div>
-        <div className="panel-body pad">
-          <dl className="kv">
-            <dt>Revenue</dt><dd>{fmt(OWN_RESULT.revenue)}</dd>
-            <dt>Costs</dt><dd>{fmt(OWN_RESULT.costs)}</dd>
-            <dt>Profit</dt><dd><Delta value={OWN_RESULT.profit} /></dd>
-            <dt>Share chg</dt><dd><Delta value={dShare} suffix=" pp" /></dd>
-            <dt>Valuation</dt><dd>{fmt(OWN_RESULT.value)}</dd>
-          </dl>
-        </div>
-      </section>
-      <section className="panel" aria-label="Notices">
-        <div className="panel-title"><span>NOTICES</span></div>
-        <div className="panel-body pad">
-          {OWN_RESULT.notices.map((n) => <p key={n}>{n}</p>)}
-        </div>
-      </section>
-      <Wire count={4} />
-    </div>
-  );
-}
-
-function EndedCard() {
-  const idx = RESULTS.findIndex((r) => r.ticker === OWN.ticker);
-  const r = RESULTS[idx];
-  const totalDepletion = RESULTS.reduce((a, x) => a + x.depletionShare, 0);
-  if (!r) return null;
-  return (
-    <div className="stack">
-      <section className="panel" aria-label="Final result">
-        <div className="panel-title"><span>{OWN.ticker} FINAL</span><span>RANK {idx + 1}</span></div>
-        <div className="panel-body pad">
-          <dl className="kv">
-            <dt>Valuation</dt><dd>{fmt(r.finalValue)}</dd>
-            <dt>Alt path</dt><dd>{fmt(r.counterfactual)}</dd>
-            <dt>Gap</dt><dd><Delta value={r.finalValue - r.counterfactual} /></dd>
-            <dt>Damage share</dt><dd>{fmt((r.depletionShare / totalDepletion) * 100)}%</dd>
-            <dt>Undetected</dt><dd>{r.undetected}</dd>
-          </dl>
-        </div>
-      </section>
-      <p className="notice">Watch the board for the full results.</p>
-    </div>
-  );
-}
-
-function Book() {
-  const values = BOOK.map((b) => b.value);
-  return (
-    <div className="stack">
-      <div>
-        <span className="dim">VALUATION</span>
-        <StepSparkline
-          series={[{ values, label: 'Valuation', tone: 'signal' }]}
-          min={Math.min(...values) - 10}
-          max={Math.max(...values) + 10}
-          w={36}
-          h={6}
-          description={`Own valuation by quarter, from ${fmt(values[0] ?? 0)} to ${fmt(values[values.length - 1] ?? 0)}`}
-        />
-      </div>
-      <div className="scroll-x">
-        <DataTable
-          caption="Own quarterly results"
-          rows={[...BOOK].reverse()}
-          rowKey={(b) => String(b.round)}
-          columns={[
-            { key: 'q', label: 'QTR', w: 7, render: (b) => quarterLabel(b.round) },
-            { key: 'rev', label: 'REV', w: 7, align: 'r', render: (b) => fmt(b.revenue) },
-            { key: 'cost', label: 'COST', w: 7, align: 'r', render: (b) => fmt(b.costs) },
-            { key: 'pl', label: 'P&L', w: 7, align: 'r', render: (b) => fmt(b.profit) },
-            { key: 'val', label: 'VAL', w: 8, align: 'r', render: (b) => fmt(b.value) },
-            { key: 'rk', label: 'RK', w: 4, align: 'r', render: (b) => b.rank },
-          ]}
-        />
-      </div>
-    </div>
-  );
-}
-
-function PactList({ emphasis }: { emphasis: boolean }) {
-  return (
-    <div className="stack">
-      <p className="dim">
-        {emphasis ? 'Existing pacts. Proposing, joining and leaving arrive in a later build.' : 'Existing pacts. Read only in this build.'}
-      </p>
-      {PACTS.map((p) => (
-        <section key={p.id} className="panel" aria-label={p.id}>
-          <div className="panel-title"><Tag pact={p.id} /><span>{p.members.length} MBRS</span></div>
-          <div className="panel-body pad">
-            <dl className="kv">
-              <dt>Max pace</dt><dd>{p.maxPace ?? '–'}</dd>
-              <dt>Min safety</dt><dd>{p.minSafety ?? '–'}</dd>
-              <dt>Members</dt><dd>{p.members.join(' ')}</dd>
-            </dl>
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-function Wire({ count }: { count?: number }) {
-  const items = count ? HEADLINES.slice(0, count) : HEADLINES;
-  return (
-    <ul className="stack feed" style={{ listStyle: 'none', margin: 0, padding: 0, gap: '0.5lh' }} aria-label="Wire">
-      {items.map((h, i) => (
-        <li key={i}>
-          <span className="dim">{quarterLabel(h.round)}</span>
-          <br />
-          <span className="wire-c">{h.text}</span>
-        </li>
-      ))}
-    </ul>
+    </section>
   );
 }

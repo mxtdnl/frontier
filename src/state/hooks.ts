@@ -10,17 +10,21 @@ import {
   subscribeFirms,
   subscribeFirmsPublic,
   subscribeMember,
+  subscribeMeta,
   subscribePacts,
   subscribePublic,
   subscribeRounds,
 } from '../firebase/api';
 import { getFirebase } from '../firebase/init';
 import { subscribeConnected, subscribeServerTimeOffset, trackPresence } from '../firebase/presence';
-import type { DecisionNode, FirmNode, FirmPrivateNode, FirmPublicNode, MemberNode, PublicNode, RoundNode } from '../firebase/schema';
+import type { DecisionNode, FirmNode, FirmPrivateNode, FirmPublicNode, MemberNode, MetaNode, PublicNode, RoundNode } from '../firebase/schema';
 import { useSubscription, type Subscription } from './useSubscription';
 
 const db = () => getFirebase().db;
 const EMPTY = Object.freeze({}) as Record<string, never>;
+
+export const useMeta = (g: string | null): Subscription<MetaNode | null> =>
+  useSubscription<MetaNode | null>(g, (cb, err) => subscribeMeta(db(), g as string, cb, err), null);
 
 export const usePublic = (g: string | null): Subscription<PublicNode | null> =>
   useSubscription<PublicNode | null>(g, (cb, err) => subscribePublic(db(), g as string, cb, err), null);
