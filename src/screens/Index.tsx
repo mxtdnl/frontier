@@ -46,10 +46,10 @@ export function Index() {
       </form>
       {resume ? (
         <p>
-          <a href={`#/play/${resume.gameId}`}>RESUME LAST SESSION</a> <span className="dim">· {resume.code}</span>
+          <a className="link-block" href={`#/play/${resume.gameId}`}>RESUME LAST SESSION</a> <span className="dim">· {resume.code}</span>
         </p>
       ) : null}
-      <p><a href="#/new">FACILITATOR SIGN-IN</a></p>
+      <p><a className="link-block" href="#/new">FACILITATOR SIGN-IN</a></p>
     </div>
   );
 }

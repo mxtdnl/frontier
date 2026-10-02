@@ -39,7 +39,7 @@ function Message({ children, link }: { children: string; link?: { href: string; 
   return (
     <div className="page stack">
       <p className="notice" role="status">{children}</p>
-      {link ? <a href={link.href}>{link.text}</a> : null}
+      {link ? <a className="link-block" href={link.href}>{link.text}</a> : null}
     </div>
   );
 }

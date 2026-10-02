@@ -23,7 +23,7 @@ function Message({ children }: { children: ReactNode }) {
   return (
     <div className="page stack" style={{ maxWidth: '60ch' }}>
       <p className="notice" role="status">{children}</p>
-      <a href="#/">BACK</a>
+      <a className="link-block" href="#/">BACK</a>
     </div>
   );
 }
@@ -96,7 +96,7 @@ function JoinFlow({ uid, initialCode }: { uid: string; initialCode: string }) {
         {error ? <p id="code-err" className="notice err" role="alert">{error}</p> : null}
         <button type="submit" className="btn btn-signal btn-block" disabled={busy}>Continue</button>
       </form>
-      <a href="#/">BACK</a>
+      <a className="link-block" href="#/">BACK</a>
     </div>
   );
 }
@@ -330,10 +330,10 @@ function JoinForm({ g, uid, code, firms, onBack }: JoinProps) {
       <fieldset className="stack" style={{ gap: 0 }}>
         <legend className="dim">FIRM</legend>
         {list.map((f) => (
-          <div key={f.id} className="field check">
-            <input type="radio" id={`firm-${f.id}`} name="firm" checked={picked === f.id} onChange={() => setPicked(f.id)} />
-            <label htmlFor={`firm-${f.id}`}>{f.ticker} · {f.name}</label>
-          </div>
+          <label key={f.id} className="field check">
+            <input type="radio" name="firm" checked={picked === f.id} onChange={() => setPicked(f.id)} />
+            <span>{f.ticker} · {f.name}</span>
+          </label>
         ))}
       </fieldset>
       {touched && !picked ? <p className="notice err" role="alert">Select a firm to join.</p> : null}

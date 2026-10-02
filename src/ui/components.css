@@ -731,3 +731,10 @@ legend {
   background: var(--signal);
   border-color: var(--signal);
 }
+
+/* Links used as navigation on plain pages keep a 44 px touch target. */
+.link-block {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}

@@ -81,12 +81,12 @@ export function Book({ rows }: { rows: BookRow[] }) {
           rows={[...rows].reverse()}
           rowKey={(b) => String(b.round)}
           columns={[
-            { key: 'q', label: 'QTR', w: 7, render: (b) => quarterLabel(b.round) },
-            { key: 'rev', label: 'REV', w: 7, align: 'r', render: (b) => fmt(b.revenue) },
-            { key: 'cost', label: 'COST', w: 7, align: 'r', render: (b) => fmt(b.cost + b.fine) },
-            { key: 'pl', label: 'P&L', w: 8, align: 'r', render: (b) => fmt(b.profit) },
-            { key: 'val', label: 'VAL', w: 8, align: 'r', render: (b) => fmt(b.valuation) },
-            { key: 'rk', label: 'RK', w: 4, align: 'r', render: (b) => b.rank },
+            { key: 'q', label: 'QTR', w: 6, render: (b) => quarterLabel(b.round) },
+            { key: 'rev', label: 'REV', w: 6, align: 'r', render: (b) => fmt(b.revenue) },
+            { key: 'cost', label: 'COST', w: 6, align: 'r', render: (b) => fmt(b.cost + b.fine) },
+            { key: 'pl', label: 'P&L', w: 7, align: 'r', render: (b) => fmt(b.profit) },
+            { key: 'val', label: 'VAL', w: 7, align: 'r', render: (b) => fmt(b.valuation) },
+            { key: 'rk', label: 'RK', w: 3, align: 'r', render: (b) => b.rank },
           ]}
         />
       </div>
