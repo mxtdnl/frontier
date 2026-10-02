@@ -345,3 +345,45 @@
 
 **Next steps**
 - Session 7: results, counterfactual and export.
+
+## 2026-10-02 — Session 7: results, counterfactual, export
+
+**Done**
+- **Results builder** (`src/engine/results.ts`, pure): `buildResults(state, {revealTau})` returns the final board (rank, valuation, peak), the trust series with the collapse quarter, the counterfactual (`runCounterfactual`), attribution, the pact record (detected and undetected violation-quarters, per firm and per pact), per-firm own figures, and every DATA line. `dataLinesOf(state)` rebuilds the §8.4 lines from the stored history; a test checks they equal the lines `resolveRound` emitted.
+- **Writing `/results`** (`orchestrator.ts`): `publishResults` reads the engine node once and writes `results` in one `update()`. It runs at the end of `endSession`, and any open `#/screen`, `#/results` or `#/control` window runs `ensureResults` whenever the phase is `ended` and the node is missing (retried up to 5 times). The output is deterministic, so two windows write identical data. `#/control` shows "Results are not written yet" with a **Retry results** button if all attempts fail.
+- **`#/results/:gameId`** (facilitator sign-in): six panels from the live `/results` node. F9 steps forward, Esc steps back, and the step is stored in `public.revealStep` (0 to 5), so a reload restores it. Step charts and horizontal bars only.
+  1. FINAL BOARD: bar for final valuation, marker for peak.
+  2. TRUST TRACE: collapse marker; the tau line only when `results.tau` is published.
+  3. COUNTERFACTUAL: INDUSTRY VALUE, SUSTAINABLE, VALUE DESTROYED; trust paths; per-firm bars.
+  4. ATTRIBUTION: share of depletion against share of value.
+  5. PACT RECORD: terms, members, detected, undetected, and which firms.
+  6. DEBRIEF: the five §15.5 prompts.
+- **Projector**: after the session ends, F9 on `#/screen` opens the results screen. F9 on `#/control` steps the panels.
+- **Participant card** (`src/screens/Results/OwnResultsCard.tsx`): final rank, valuation actual vs counterfactual and the difference, exposure share and value share, and own detected and undetected violations. It shows only the firm's own row.
+- **Export** on `#/control`: `DOWNLOAD HISTORY (.json)` (meta, firms, every quarter's record, decisions, pacts with private violation records, results, and the hidden seed, TAU and end quarter) and `DOWNLOAD DATA LINES (.txt)` (one §8.4 line per firm per quarter). Both read the engine node and work in any phase.
+- **Delete session**: press DELETE SESSION, type the join code, press CONFIRM DELETE. It removes `games/{g}` and `codes/{code}` in one update, then returns to `#/new`.
+- **Copy lint**: the non-telegraphing exclusion is still limited to `src/screens/Results/`. The participant card lives there so it may use results vocabulary; Play and Control stay clean.
+- **Tests**
+  - `npm test`: 295 passed (was 255). New: `tests/engine/results.test.ts` (results equal engine outputs for a fixed seed: final board, counterfactual, value destroyed, attribution, trust series, pact record, DATA lines, tau masking, determinism), `tests/firebase/export.test.ts`, `tests/ui/results.test.ts` (panel and card rendering against the builder), and ten results tests in `tests/firebase/orchestrator.test.ts` (write on end, one update, tau and end round masked, F10 mid-quarter, failed write then retry, duplicate windows, panel stepping, delete).
+  - `npm run test:rules`: 142 passed (was 140). The emulator tests now check that participants can read `/results` once ended, cannot write it, and that step and delete work through the real rules.
+  - `npm run test:e2e` passes (237 checks). The 3-quarter participant run now covers the participant card on phones, F9 into the six panels at 1280×720 and 1920×1080 (no clipping), the stored step and Esc, a reload, both downloads (JSON and DATA lines compared with the results), and the double-confirmed delete. Screenshots (`shots/e2e-results-*`, `e2e-play-results-card-*`) reviewed against §16.4 and the grid: no gradients, glow, rounded corners or emoji; columns on whole `ch`.
+
+**Spec deviations and choices (with reasons)**
+1. **`/results` shape.** §12 gives `{final, counterfactual, attribution, dataLines}`. Added `rounds`, `collapseRound`, `tau`, `startTrust`, `trust`, `industry` and `pacts`. The counterfactual is stored without its incident draws (not needed after the run).
+2. **`revealStep` is zero-based** (0 is panel 1).
+3. **Violations are counted in quarters.** Detected means an audit published the quarter; undetected means none did (including quarters older than the 3-quarter audit window).
+4. **Final rank** is the engine's rank at the last resolved quarter. An F10 end discards the open quarter, so results cover resolved quarters only.
+5. **Counterfactual per firm** is the firm's own counterfactual valuation (each firm keeps its own incident draws).
+6. **Value share** counts negative valuations as 0 (Session 2 decision), so every firm in debt gives 0% value shares.
+7. **Results are written in a second step after the phase becomes `ended`**, not in the same update, because the phase change is a `public` transaction. Participants see "Full results are being prepared" until the node exists.
+8. **Delete confirmation** is: arm, type the join code, confirm (two presses plus the typed code).
+9. **Labels.** "Delete session" and "Counterfactual" follow the copy rules (no "game"). The mock results fixtures and the `npm run shots` results screenshots are removed; the e2e run covers `#/results` with live data.
+
+**Open issues**
+- **Results are readable by every signed-in user once ended** (spec §13), so all firms' final figures, per-firm violation counts and the published tau (only if the setting is on) can be read with developer tools. The participant screen shows only the own row. Session 9 should judge whether this is acceptable.
+- A participant device that last joined a deleted session still holds its resume link; opening it says no session exists.
+- If a facilitator window is never open after the session ends, `/results` is not written until one is opened (it self-heals on the next open).
+- Lighthouse accessibility has not been run (Session 8).
+
+**Next steps**
+- Session 8: bots tool, end-to-end tests, hardening, runbook.

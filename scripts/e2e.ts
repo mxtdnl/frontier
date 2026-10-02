@@ -10,7 +10,7 @@
  * Screenshots go to shots/e2e-*.png. Exits non-zero on any failed check.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 import { PARAMS, estimatedCost } from '../src/engine';
@@ -815,6 +815,87 @@ async function participantScenario(
   await snapPlay(A, 'play-ended');
   await waitText(B, /Watch the board/, 'a teammate sees the ended state');
 
+  // ── Session 7: results, export, delete ──
+  console.log('--- Session 7: results ---');
+  type Fin = { ticker: string; rank: number; valuation: number; counterfactual: number; drawShare: number; undetected: number };
+  type Res = { rounds: number; industry: { actual: number; counterfactual: number; destroyed: number }; final: Record<string, Fin>; dataLines: string[] };
+  const res = await adminGet<Res | null>(`games/${g}/results`);
+  check(res !== null && res.rounds === 3, 'results were written once the session ended (3 quarters)');
+  if (res) {
+    check(!/tau|endRound|seed/.test(JSON.stringify(res)), 'the results node holds no hidden value');
+    check(res.dataLines.length === 12, 'results hold 12 DATA lines (3 quarters, 4 firms)');
+    const own = res.final[firmA];
+    check(own !== undefined, 'the results hold a row for firm ALPH');
+    // Participant card: own figures only.
+    await waitText(A, /Counterfactual/, 'phone A shows the actual vs counterfactual card');
+    const textA = await A.locator('body').innerText();
+    check(own !== undefined && textA.includes(`RANK ${own.rank} OF 4`), 'phone A shows its final rank');
+    check(own !== undefined && textA.includes(fmt(own.valuation)) && textA.includes(fmt(own.counterfactual)), 'phone A shows valuation and counterfactual');
+    check(/Exposure share/.test(textA) && /Undetected/.test(textA), 'phone A shows its exposure share and undetected violations');
+    const others = Object.entries(res.final).filter(([id]) => id !== firmA).map(([, f]) => f.ticker);
+    check(others.every((t) => !new RegExp(`\\b${t}\\b`).test(textA)), "phone A does not show another firm's ticker");
+    await snapPlay(A, 'play-results-card');
+    await waitText(B, /Counterfactual/, 'a teammate sees the same results card');
+  }
+
+  // Projector: F9 on the ended board opens the results sequence.
+  await key(fac, 'F9');
+  await waitText(fac, /RESULTS[\s\S]*1\/6[\s\S]*FINAL BOARD/, 'F9 on the ended board opens results panel 1', 15_000, '.scr');
+  if (res) {
+    const text1 = await screenText(fac);
+    check(Object.values(res.final).every((f) => text1.includes(f.ticker) && text1.includes(fmt(f.valuation))), 'panel 1 lists every firm with its final valuation');
+  }
+  await snapProjector(fac, 'results-1');
+  const panels: Array<[number, RegExp, string]> = [
+    [2, /TRUST TRACE/, 'TRUST TRACE'],
+    [3, /COUNTERFACTUAL[\s\S]*VALUE DESTROYED/, 'COUNTERFACTUAL'],
+    [4, /ATTRIBUTION[\s\S]*DEPL/, 'ATTRIBUTION'],
+    [5, /PACT RECORD/, 'PACT RECORD'],
+    [6, /DEBRIEF[\s\S]*Ostrom/, 'DEBRIEF'],
+  ];
+  for (const [n, re, name] of panels) {
+    await key(fac, 'F9');
+    await waitText(fac, new RegExp(`${n}/6`), `F9 steps to results panel ${n} (${name})`, 15_000, '.scr');
+    await waitText(fac, re, `panel ${n} shows ${name}`, 5_000, '.scr');
+    const text = await screenText(fac);
+    if (n === 2) {
+      check(!/Dashed line|tau/i.test(text), 'the trust trace has no tau line while the setting is off');
+      check(/marker: collapse|no collapse/.test(text), 'the trust trace states the collapse marker');
+      // The line itself is drawn from the published value; publish one to check the drawing.
+      await adminSet(`games/${g}/results/tau`, 33);
+      await waitText(fac, /Dashed line: tau, 33/, 'a published tau draws the dashed line', 10_000, '.scr');
+      await adminSet(`games/${g}/results/tau`, null);
+      await waitText(fac, /^(?![\s\S]*Dashed line)[\s\S]*/, 'the dashed line goes when tau is removed', 10_000, '.scr');
+    }
+    if (n === 3 && res) {
+      check(text.replace(/\s+/g, ' ').includes(`INDUSTRY VALUE ${fmt(res.industry.actual, 0)}`), 'panel 3 shows the actual industry value from the results');
+    }
+    if (n === 5) check(/UNDETECTED|No pacts were formed/.test(text), 'panel 5 reveals undetected violations or says no pact formed');
+    await snapProjector(fac, `results-${n}`);
+  }
+  await fac.waitForTimeout(600);
+  await fac.keyboard.press('F9');
+  await waitText(fac, /last results panel/, 'F9 on the last panel stays put and says so', 10_000, '.scr');
+  check((await adminGet<number>(`games/${g}/public/revealStep`)) === 5, 'the results step is stored (panel 6)');
+  await fac.waitForTimeout(600);
+  await fac.keyboard.press('Escape');
+  await waitText(fac, /5\/6[\s\S]*PACT RECORD/, 'Esc steps back to panel 5', 10_000, '.scr');
+  await fac.reload();
+  await waitText(fac, /5\/6[\s\S]*PACT RECORD/, 'a reload restores the results step from the database', 15_000, '.scr');
+
+  // Console: exports.
+  await control.reload();
+  await waitText(control, /EXPORT/, 'the console shows the export panel after the session ends');
+  const [jsonDl] = await Promise.all([control.waitForEvent('download'), control.getByRole('button', { name: /DOWNLOAD HISTORY/ }).click()]);
+  const jsonPath = await jsonDl.path();
+  const exported = JSON.parse(readFileSync(jsonPath, 'utf8')) as { format: string; code: string; history: unknown[]; engine: { tau: number }; results: { rounds: number } | null };
+  check(jsonDl.suggestedFilename() === `frontier-${code}-history.json`, 'the history download is named after the join code');
+  check(exported.format === 'frontier-export' && exported.history.length === 3 && typeof exported.engine.tau === 'number' && exported.results?.rounds === 3, 'the JSON holds 3 quarters, the hidden values and the results');
+  const [txtDl] = await Promise.all([control.waitForEvent('download'), control.getByRole('button', { name: /DOWNLOAD DATA LINES/ }).click()]);
+  const lines = readFileSync(await txtDl.path(), 'utf8').trimEnd().split('\n');
+  check(lines.length === 12 && lines.every((l) => l.startsWith(`DATA|game=${code}|round=`)), 'the text file holds 12 DATA lines in the §8.4 format');
+  check(res !== null && JSON.stringify(lines) === JSON.stringify(res.dataLines), 'the exported DATA lines equal those in the results');
+
   // ── Privacy ──
   const probe = await harnessParticipant('privacy probe');
   const privateReads: Array<[string, string]> = [
@@ -837,6 +918,22 @@ async function participantScenario(
   check(!(await control.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), 'the console has no horizontal scroll at 390x844');
   await control.setViewportSize({ width: 1440, height: 900 });
   await shot(control, 'participant-run-control');
+
+  // ── Delete session: double confirmation ──
+  await control.reload();
+  await control.getByRole('button', { name: 'DELETE SESSION' }).click();
+  await waitText(control, /Confirm deletion of session/, 'the first press asks for confirmation');
+  check(await control.getByRole('button', { name: 'CONFIRM DELETE' }).isDisabled(), 'confirm stays disabled until the join code is typed');
+  await control.getByLabel(/Type [A-Z]{4} to confirm/).fill('ZZZZ');
+  check(await control.getByRole('button', { name: 'CONFIRM DELETE' }).isDisabled(), 'a wrong code keeps confirm disabled');
+  await control.getByRole('button', { name: 'CANCEL' }).click();
+  check((await adminGet<unknown>(`games/${g}/meta`)) !== null, 'cancelling deletes nothing');
+  await control.getByRole('button', { name: 'DELETE SESSION' }).click();
+  await control.getByLabel(/Type [A-Z]{4} to confirm/).fill(code.toLowerCase());
+  await control.getByRole('button', { name: 'CONFIRM DELETE' }).click();
+  await control.waitForURL(/#\/new/, { timeout: 15_000 });
+  check((await adminGet<unknown>(`games/${g}`)) === null, 'the session record is gone');
+  check((await adminGet<unknown>(`codes/${code}`)) === null, 'the join code is free again');
   await probe.ctx.close();
   for (const c of [ctxA, ctxB, ctxC]) await c.close();
 }
