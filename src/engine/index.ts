@@ -19,3 +19,11 @@ export {
 export { runCounterfactual, attribution, compareIndustry, type CounterfactualResult, type AttributionRow } from './counterfactual';
 export { botDecision } from './policies';
 export { exposureLabel, exposureOf, estimatedCost, dataLine } from './data';
+export {
+  buildResults,
+  dataLinesOf,
+  type FinalResults,
+  type FirmFinal,
+  type PactFinal,
+  type CounterfactualSummary,
+} from './results';
