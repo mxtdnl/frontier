@@ -174,3 +174,18 @@ describe('threat: guessing PINs', () => {
     await assertFails(as('uA').ref(g('members/uA')).set({ firmId: 'fB', pin: '2222', joinedAt: NOW }));
   });
 });
+
+describe('open findings (docs/REVIEW.md), documented so a fix flips the test', () => {
+  it('M4: the rules accept a second firm with an existing ticker', async () => {
+    await admin(g('public/joinLocked'), false);
+    await assertSucceeds(
+      as('uX')
+        .ref(g())
+        .update({
+          'firms/fDup': { name: 'Copycat', ticker: 'ARCN', createdAt: NOW, order: 0, isBot: false },
+          'firmSecrets/fDup': { pin: '1234' },
+          'members/uX': { firmId: 'fDup', pin: '1234', joinedAt: NOW },
+        }),
+    );
+  });
+});
