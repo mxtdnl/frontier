@@ -11,6 +11,7 @@ import {
   onValue,
   push,
   ref,
+  runTransaction,
   serverTimestamp,
   set,
   update,
@@ -227,17 +228,49 @@ export const subscribeResults = (db: Database, g: string, cb: Listener<ResultsNo
  * Creates the game and claims its join code in one update. Fails if the code is taken,
  * so the caller can retry with another code.
  */
-export async function createGameRecord(db: Database, g: string, meta: MetaNode, pub: PublicNode): Promise<void> {
-  await update(ref(db), {
+export async function createGameRecord(
+  db: Database,
+  g: string,
+  meta: MetaNode,
+  pub: PublicNode,
+  /** More nodes to create in the same atomic update, keyed by path relative to the game (`rel`). */
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  const patch: Record<string, unknown> = {
     [paths.meta(g)]: meta,
     [paths.public(g)]: pub,
     [paths.code(meta.code)]: g,
-  });
+  };
+  for (const [k, v] of Object.entries(extra)) patch[`${paths.game(g)}/${k}`] = v;
+  await update(ref(db), patch);
 }
 
 /** Deletes the game and frees its join code. */
 export async function deleteGame(db: Database, g: string, code: string): Promise<void> {
   await update(ref(db), { [paths.game(g)]: null, [paths.code(code)]: null });
+}
+
+/**
+ * Atomic read-modify-write of `public` (spec §11 step 1). `step` returns the new node, or
+ * `undefined` to abort. It may run more than once, so it must be pure. When the SDK has no
+ * cached value it is first called with nothing; returning the empty value makes the SDK
+ * fetch the server's copy and call `step` again with it.
+ */
+export async function transactPublic(
+  db: Database,
+  g: string,
+  step: (current: PublicNode) => PublicNode | undefined,
+): Promise<{ committed: boolean; value: PublicNode | null }> {
+  const result = await runTransaction(
+    ref(db, paths.public(g)),
+    (raw: unknown) => {
+      const current = fromPublic(raw);
+      if (current === null) return raw === undefined ? null : raw;
+      return step(current);
+    },
+    { applyLocally: false },
+  );
+  return { committed: result.committed, value: fromPublic(result.snapshot.val()) };
 }
 
 export const updatePublic = (db: Database, g: string, patch: Partial<PublicNode>): Promise<void> =>
