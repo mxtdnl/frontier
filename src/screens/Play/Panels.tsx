@@ -41,26 +41,6 @@ export function RevealCard({ round, history, audits, headlines, pacts, firmId, c
   );
 }
 
-interface EndedProps {
-  ticker: string;
-  rank: number | null;
-  valuation: number | null;
-}
-
-/** Own-firm card once the session has ended. Session 7 adds the counterfactual figures. */
-export function EndedCard({ ticker, rank, valuation }: EndedProps) {
-  return (
-    <div className="stack">
-      <Panel title={`${ticker} FINAL`} right={rank ? `RANK ${rank}` : undefined} bodyClassName="pad">
-        <dl className="kv">
-          <dt>Valuation</dt><dd>{valuation === null ? '–' : fmt(valuation)}</dd>
-        </dl>
-      </Panel>
-      <p className="notice">Watch the board for the full results.</p>
-    </div>
-  );
-}
-
 export function Book({ rows }: { rows: BookRow[] }) {
   if (rows.length === 0) return <p className="notice" role="status">No quarters resolved yet. Results appear here after the first reveal.</p>;
   const values = rows.map((b) => b.valuation);

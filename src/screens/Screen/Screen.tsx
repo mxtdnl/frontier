@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { advance, endSession, queueAudit, toggleDisclosure, toggleSummit, type ActionResult, type Seen } from '../../firebase/orchestrator';
-import { useRoute } from '../../router';
+import { navigate, useRoute } from '../../router';
 import { useFirms, useFirmsPublic, usePacts, usePublic, useRounds, useServerTimeOffset, useWire } from '../../state';
-import { useCommitSync, useDecisions, useAutoResolve, useLiveWire, useMembers, useMeta, useOrchestrator } from '../../state/facilitator';
+import { useCommitSync, useDecisions, useAutoResolve, useLiveWire, useMembers, useMeta, useOrchestrator, useResultsPublisher } from '../../state/facilitator';
 import { CommandLine, Countdown, FKeyBar, Panel, Ticker, TopBar, type CommandLineHandle } from '../../ui/components';
 import { parseCommand } from '../../ui/commands';
 import { fmt, quarterLabel } from '../../ui/format';
@@ -87,6 +87,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   useAutoResolve(ctx, pub, meta?.settings.autoResolve ?? false, report);
   useCommitSync(g, pub, firms, firmsPublic, decisions);
   useLiveWire(ctx, pub, firms, pacts, rounds, wire, !wireSub.loading);
+  useResultsPublisher(ctx, pub?.phase ?? null, report);
 
   /** Runs one orchestrator action at a time, so a repeated key press cannot skip a phase. */
   const run = useCallback(
@@ -124,7 +125,8 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
           run(() => toggleSummit(ctx, seenRef.current));
           break;
         case 'advance':
-          run(() => advance(ctx, seenRef.current));
+          if (seenRef.current?.phase === 'ended') navigate(`#/results/${g}`);
+          else run(() => advance(ctx, seenRef.current));
           break;
         case 'end': {
           const now = Date.now();
@@ -268,7 +270,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
           <PactsView data={data} emphasis />
         ) : pub.phase === 'ended' ? (
           <Panel title="SESSION ENDED" bodyClassName="pad">
-            <p>The session has ended. Final results follow on the results screen.</p>
+            <p>The session has ended. Press F9 for the results screen.</p>
           </Panel>
         ) : (
           <TrustPanel data={data} reveal={reveal} />

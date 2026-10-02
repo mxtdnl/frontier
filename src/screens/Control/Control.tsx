@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   addTime,
   advance,
+  deleteSession,
   endSession,
+  publishResults,
   queueAudit,
   retryResolution,
   setPaused,
@@ -11,8 +13,8 @@ import {
   type ActionResult,
   type Seen,
 } from '../../firebase/orchestrator';
-import { useRoute } from '../../router';
-import { useFirms, useFirmsPublic, usePacts, usePublic, useRounds, useServerTimeOffset, useWire } from '../../state';
+import { navigate, useRoute } from '../../router';
+import { useFirms, useFirmsPublic, usePacts, usePublic, useResults, useRounds, useServerTimeOffset, useWire } from '../../state';
 import {
   useAutoResolve,
   useCommitSync,
@@ -24,6 +26,7 @@ import {
   useOrchestrator,
   usePactsPrivate,
   usePresenceAll,
+  useResultsPublisher,
 } from '../../state/facilitator';
 import type { Pact } from '../../engine';
 import type { FirmNode, RoundNode } from '../../firebase/schema';
@@ -31,6 +34,7 @@ import { Countdown, DataTable, GlyphCheck, Panel, PresenceDot, Tag } from '../..
 import { fmt, fmtTime, quarterLabel } from '../../ui/format';
 import { matchKey } from '../../ui/keys';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
+import { DangerPanel, ExportPanel } from './ExportDanger';
 
 /** Held value, masked until the control is pressed. Hidden values appear only on this route. */
 function HoldReveal({ label, value }: { label: string; value: string }) {
@@ -86,6 +90,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
   const members = useMembers(g).data;
   const presence = usePresenceAll(g).data;
   const engine = useEngine(g).data;
+  const resultsSub = useResults(pubSub.data?.phase === 'ended' ? g : null);
   const pactsPrivate = usePactsPrivate(g).data;
   const pub = pubSub.data;
   const meta = metaSub.data;
@@ -123,6 +128,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
   useAutoResolve(ctx, pub, meta?.settings.autoResolve ?? false, report);
   useCommitSync(g, pub, firms, firmsPublic, decisions);
   useLiveWire(ctx, pub, firms, pacts, rounds, wireSub.data, !wireSub.loading);
+  useResultsPublisher(ctx, pub?.phase ?? null, report);
 
   const run = useCallback(
     (action: () => Promise<ActionResult>) => {
@@ -244,6 +250,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
         <h1 className="signal">CONTROL</h1>
         <span className="dim">{meta.title} · code {meta.code}</span>
         <a href={`#/screen/${g}`}>SCREEN</a>
+        {pub.phase === 'ended' ? <a href={`#/results/${g}`}>RESULTS</a> : null}
       </header>
       <div role="status" aria-live="polite">{notice ? <p className="notice">{notice}</p> : null}</div>
 
@@ -252,6 +259,15 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
           <p>Resolution incomplete — retry. The quarter is held in RESOLVING and nothing was written.</p>
           <button type="button" className="btn btn-signal" onClick={() => run(() => retryResolution(ctx, pub.resolvingBy))}>
             Retry resolution
+          </button>
+        </div>
+      ) : null}
+
+      {pub.phase === 'ended' && !resultsSub.loading && resultsSub.data === null ? (
+        <div className="notice err" role="alert">
+          <p>Results are not written yet. Participants see a waiting message until they are.</p>
+          <button type="button" className="btn btn-signal" disabled={busyNow} onClick={() => run(() => publishResults(ctx))}>
+            Retry results
           </button>
         </div>
       ) : null}
@@ -400,6 +416,20 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
           ))}
         </ul>
       </Panel>
+
+      <ExportPanel g={g} code={meta.code} rounds={engine?.round ?? 0} now={ctx.now} />
+
+      <DangerPanel
+        code={meta.code}
+        disabled={busyNow}
+        onDelete={() =>
+          run(async () => {
+            const r = await deleteSession(ctx);
+            if (r.ok) navigate('#/new');
+            return r;
+          })
+        }
+      />
     </div>
   );
 }
