@@ -163,9 +163,72 @@ function memberValue(firmId: string, pin: string, label: string): Record<string,
   return { firmId, pin, joinedAt: serverTimestamp(), ...(label ? { label } : {}) };
 }
 
-/** Joins (or rejoins) a firm; the rules check the PIN. */
-export async function joinFirm(db: Database, g: string, uid: string, firmId: string, pin: string, label: string): Promise<void> {
-  await set(ref(db, paths.member(g, uid)), memberValue(firmId, pin, label));
+/** True when a write was refused by the database rules. */
+export function isPermissionDenied(e: unknown): boolean {
+  const code = typeof e === 'object' && e !== null && 'code' in e ? String((e as { code: unknown }).code) : '';
+  const msg = e instanceof Error ? e.message : '';
+  return code === 'PERMISSION_DENIED' || code === 'permission-denied' || /permission[_ ]denied/i.test(msg);
+}
+
+/** The rules accept one recorded PIN guess per firm per second (Session 9 review, H2). */
+export const JOIN_THROTTLE_MS = 1000;
+
+/** Thrown when the firm's join slot stayed busy for every attempt. */
+export class JoinBusyError extends Error {
+  constructor() {
+    super('Another device is joining this firm. Wait a few seconds and try again.');
+    this.name = 'JoinBusyError';
+  }
+}
+
+export interface JoinOptions {
+  attempts?: number;
+  sleep?: (ms: number) => Promise<void>;
+}
+
+/**
+ * Joins (or rejoins) a firm; the rules check the PIN.
+ *
+ * A rejoin of the device's own firm is written directly. A new join first records the PIN at
+ * `joinRequests/{firm}/{uid}` together with `joinThrottle/{firm}`, which the rules accept at
+ * most once per firm per second; the membership is then accepted only if its PIN matches both
+ * the recorded one and the firm's. Guessing a PIN therefore takes hours, not seconds.
+ */
+export async function joinFirm(
+  db: Database,
+  g: string,
+  uid: string,
+  firmId: string,
+  pin: string,
+  label: string,
+  opts: JoinOptions = {},
+): Promise<void> {
+  const member = ref(db, paths.member(g, uid));
+  try {
+    await set(member, memberValue(firmId, pin, label));
+    return;
+  } catch (e) {
+    if (!isPermissionDenied(e)) throw e;
+  }
+  const attempts = opts.attempts ?? 8;
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  for (let i = 0; ; i++) {
+    try {
+      await update(ref(db), {
+        [paths.joinRequest(g, firmId, uid)]: { pin, at: serverTimestamp() },
+        [paths.joinThrottle(g, firmId)]: serverTimestamp(),
+      });
+      break;
+    } catch (e) {
+      if (!isPermissionDenied(e)) throw e;
+      // Refused because joining closed (or the session is gone), not because the slot is busy.
+      const pub = await readPublic(db, g);
+      if (!pub || pub.joinLocked) throw e;
+      if (i + 1 >= attempts) throw new JoinBusyError();
+      await sleep(JOIN_THROTTLE_MS + 100 + Math.floor(Math.random() * 400));
+    }
+  }
+  await set(member, memberValue(firmId, pin, label));
 }
 
 /** Own membership, or a teammate's (rules allow both). */

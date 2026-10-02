@@ -163,41 +163,60 @@ describe('firm creation', () => {
 describe('membership join', () => {
   const join = (uid: string, firmId: string, pin: string, extra: Record<string, unknown> = {}) =>
     as(uid).ref(g(`members/${uid}`)).set({ firmId, pin, joinedAt: NOW, ...extra });
+  /** Records a PIN guess (Session 9 review, H2). The throttle is cleared first so tests do not wait 1 s. */
+  const request = async (uid: string, firmId: string, pin: string): Promise<void> => {
+    await admin(g(`joinThrottle/${firmId}`), null);
+    await assertSucceeds(as(uid).ref(g()).update({ [`joinRequests/${firmId}/${uid}`]: { pin, at: NOW }, [`joinThrottle/${firmId}`]: NOW }));
+  };
 
-  it('lets a user join with the correct PIN', async () => {
+  it('lets a user join with the correct PIN after recording it', async () => {
+    await request('uX', 'fA', '1111');
     await assertSucceeds(join('uX', 'fA', '1111', { label: 'GH' }));
   });
 
+  it('denies a join with the correct PIN when no guess was recorded', async () => {
+    await assertFails(join('uX', 'fA', '1111'));
+  });
+
   it('denies a wrong PIN', async () => {
+    await request('uX', 'fA', '2222');
     await assertFails(join('uX', 'fA', '2222'));
+    await request('uX', 'fA', '0000');
     await assertFails(join('uX', 'fA', '0000'));
   });
 
   it('denies joining a firm that does not exist or has no PIN', async () => {
+    await assertFails(as('uX').ref(g()).update({ 'joinRequests/fZ/uX': { pin: '1111', at: NOW }, 'joinThrottle/fZ': NOW }));
     await assertFails(join('uX', 'fZ', '1111'));
+    await request('uX', 'fC', '1111');
     await assertFails(join('uX', 'fC', '1111'));
   });
 
   it('denies a join after joins are locked', async () => {
+    await request('uX', 'fA', '1111');
     await admin(g('public/joinLocked'), true);
     await assertFails(join('uX', 'fA', '1111'));
   });
 
-  it('allows a rejoin of an existing membership after joins are locked', async () => {
+  it('allows a rejoin of an existing membership after joins are locked, without a recorded guess', async () => {
     await admin(g('public/joinLocked'), true);
     await assertSucceeds(join('uA', 'fA', '1111', { label: 'AB' }));
   });
 
   it('denies moving to another firm after joins are locked', async () => {
+    await request('uA', 'fB', '2222');
     await admin(g('public/joinLocked'), true);
     await assertFails(join('uA', 'fB', '2222'));
   });
 
-  it('allows moving to another firm with its PIN before joins are locked', async () => {
+  it('allows moving to another firm with its recorded PIN before joins are locked', async () => {
+    await assertFails(join('uA', 'fB', '2222'));
+    await request('uA', 'fB', '2222');
     await assertSucceeds(join('uA', 'fB', '2222'));
   });
 
   it("denies writing someone else's membership", async () => {
+    await request('uX', 'fA', '1111');
     await assertFails(as('uX').ref(g('members/uA')).set({ firmId: 'fA', pin: '1111', joinedAt: NOW }));
     await assertFails(as('uX').ref(g('members/uY')).set({ firmId: 'fA', pin: '1111', joinedAt: NOW }));
   });
@@ -207,6 +226,7 @@ describe('membership join', () => {
   });
 
   it('denies a label over 12 characters, a future join time and extra fields', async () => {
+    await request('uX', 'fA', '1111');
     await assertFails(join('uX', 'fA', '1111', { label: 'X'.repeat(13) }));
     await assertFails(join('uX', 'fA', '1111', { joinedAt: Date.now() + 3_600_000 }));
     await assertFails(join('uX', 'fA', '1111', { role: 'admin' }));

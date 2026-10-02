@@ -135,6 +135,40 @@ describe('threat: guessing PINs', () => {
     }
   });
 
+  it('records at most one PIN guess per firm per second, whoever makes it', async () => {
+    const guess = (uid: string, pin: string) =>
+      as(uid).ref(g()).update({ [`joinRequests/fA/${uid}`]: { pin, at: NOW }, 'joinThrottle/fA': NOW });
+    await assertSucceeds(guess('uX', '0000'));
+    await assertFails(guess('uX', '0001'));
+    await assertFails(guess('uB', '0002')); // a second account does not get its own slot
+    await admin(g('joinThrottle/fA'), Date.now() - 1500);
+    await assertSucceeds(guess('uX', '0004'));
+  });
+
+  it('only accepts a membership whose PIN matches the recorded guess', async () => {
+    await assertSucceeds(as('uX').ref(g()).update({ 'joinRequests/fA/uX': { pin: '0000', at: NOW }, 'joinThrottle/fA': NOW }));
+    await assertFails(as('uX').ref(g('members/uX')).set({ firmId: 'fA', pin: '1111', joinedAt: NOW }));
+    await assertFails(as('uX').ref(g('members/uX')).set({ firmId: 'fA', pin: '0000', joinedAt: NOW }));
+  });
+
+  it('refuses a guess written without the throttle, the throttle without a guess, or a guess for another user', async () => {
+    await assertFails(as('uX').ref(g('joinRequests/fA/uX')).set({ pin: '1111', at: NOW }));
+    await assertFails(as('uX').ref(g('joinThrottle/fA')).set(NOW));
+    await assertFails(as('uX').ref(g()).update({ 'joinRequests/fA/uB': { pin: '1111', at: NOW }, 'joinThrottle/fA': NOW }));
+    await assertFails(as('uX').ref(g()).update({ 'joinRequests/fA/uX': { pin: '1111', at: Date.now() }, 'joinThrottle/fA': Date.now() }));
+  });
+
+  it('refuses a recorded guess once joins are locked, and hides guesses and the throttle', async () => {
+    await admin(g('public/joinLocked'), true);
+    await assertFails(as('uX').ref(g()).update({ 'joinRequests/fA/uX': { pin: '1111', at: NOW }, 'joinThrottle/fA': NOW }));
+    await admin(g('joinRequests/fA/uB'), { pin: '1111', at: 1 });
+    await admin(g('joinThrottle/fA'), 1);
+    for (const path of ['joinRequests', 'joinRequests/fA/uB', 'joinThrottle', 'joinThrottle/fA']) {
+      await assertFails(as('uX').ref(g(path)).get());
+      await assertFails(as('uB').ref(g(path)).get());
+    }
+  });
+
   it('cannot move a locked-in member to another firm even with its PIN', async () => {
     await admin(g('public/joinLocked'), true);
     await assertFails(as('uA').ref(g('members/uA')).set({ firmId: 'fB', pin: '2222', joinedAt: NOW }));

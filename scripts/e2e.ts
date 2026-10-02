@@ -151,8 +151,10 @@ async function scenario(browser: Browser): Promise<void> {
   // Hidden values on the console: masked until held.
   const tauButton = control.getByRole('button', { name: 'Hold to reveal TAU' });
   check((await tauButton.innerText()).includes('•••'), 'tau is masked on the console');
-  // A console notice (for example from REOPEN JOINS) clears after 5 s and shifts the layout; measure after it goes.
+  // The lobby steps scroll the console down (LOCK JOINS sits near the bottom), and a console notice
+  // clears after 5 s and shifts the layout: measure the button in view, after the notice goes.
   await control.waitForFunction(() => !document.querySelector('[role=status] .notice'), undefined, { timeout: 15_000 });
+  await tauButton.scrollIntoViewIfNeeded();
   const box = await tauButton.boundingBox();
   if (box) {
     await control.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -630,7 +632,9 @@ async function participantScenario(
   await waitText(A, /Committed/, 'a commit goes through after reconnecting');
 
   // Close the quarter: -30 s twice on the console puts the deadline at now.
+  // The console ignores a press while the previous action runs, so wait for each to finish.
   await control.getByRole('button', { name: '−30 s' }).click();
+  await waitText(control, /Removed 30 s/, 'the first −30 s is applied');
   await control.getByRole('button', { name: '−30 s' }).click();
   await waitText(A, /Quarter closed/, 'the desk shows the closed state after the deadline', 15_000);
   check(await A.getByRole('button', { name: 'LOCKED' }).isDisabled(), 'the commit button is locked after the deadline');

@@ -348,7 +348,12 @@ export async function removeFirm(ctx: Ctx, firmId: string): Promise<ActionResult
   if (pub.phase !== 'lobby') return fail('Firms can be removed only in the lobby, before the briefing starts.');
   const firm = firms[firmId];
   if (!firm) return fail('That firm no longer exists. Check the firm list.');
-  const patch: Record<string, unknown> = { [rel.firm(firmId)]: null, [rel.firmSecret(firmId)]: null };
+  const patch: Record<string, unknown> = {
+    [rel.firm(firmId)]: null,
+    [rel.firmSecret(firmId)]: null,
+    [rel.joinRequests(firmId)]: null,
+    [rel.joinThrottle(firmId)]: null,
+  };
   for (const [uid, m] of Object.entries(members)) if (m.firmId === firmId) patch[rel.member(uid)] = null;
   try {
     await ctx.io.update(patch);
