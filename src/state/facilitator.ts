@@ -7,7 +7,6 @@ import {
   subscribeDecisions,
   subscribeEngine,
   subscribeMembers,
-  subscribeMeta,
   subscribePactsPrivate,
   subscribePresenceAll,
   updateGame,
@@ -16,15 +15,14 @@ import { getFirebase } from '../firebase/init';
 import { autoResolve, firebaseIO, type ActionResult, type Ctx } from '../firebase/orchestrator';
 import { AUTO_RESOLVE_DELAY_MS } from '../firebase/phases';
 import { rel } from '../firebase/paths';
-import type { DecisionNode, EngineNode, FirmNode, FirmPublicNode, MemberNode, MetaNode, PactPrivateNode, PresenceNode, PublicNode } from '../firebase/schema';
+import type { DecisionNode, EngineNode, FirmNode, FirmPublicNode, MemberNode, PactPrivateNode, PresenceNode, PublicNode } from '../firebase/schema';
 import { useServerTimeOffset } from './hooks';
 import { useSubscription, type Subscription } from './useSubscription';
 
 const db = () => getFirebase().db;
 const EMPTY = Object.freeze({}) as Record<string, never>;
 
-export const useMeta = (g: string | null): Subscription<MetaNode | null> =>
-  useSubscription<MetaNode | null>(g, (cb, err) => subscribeMeta(db(), g as string, cb, err), null);
+export { useMeta } from './hooks';
 
 export const useMembers = (g: string | null): Subscription<Record<string, MemberNode>> =>
   useSubscription<Record<string, MemberNode>>(g, (cb, err) => subscribeMembers(db(), g as string, cb, err), EMPTY);

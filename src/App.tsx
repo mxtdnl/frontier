@@ -1,6 +1,7 @@
 import { useRoute } from './router';
 import { Control } from './screens/Control/Control';
 import { Index } from './screens/Index';
+import { Join } from './screens/Join/Join';
 import { Kit } from './screens/Kit/Kit';
 import { NewGame } from './screens/NewGame/NewGame';
 import { Play } from './screens/Play/Play';
@@ -14,6 +15,8 @@ export function App() {
       return <Index />;
     case 'screen':
       return <Screen />;
+    case 'j':
+      return <Join />;
     case 'play':
       return <Play />;
     case 'control':
