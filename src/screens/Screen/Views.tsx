@@ -32,8 +32,8 @@ export function TrustView({ data }: { data: ScreenData }) {
           description="Public trust by quarter"
         />
         <div className="chart-x">
-          <span>Q1 Y1</span>
-          <span>{quarterLabel(Math.max(1, series.length - 1))}</span>
+          <span>START</span>
+          <span>{series.length > 1 ? quarterLabel(series.length - 1) : ''}</span>
         </div>
       </div>
     </Panel>
@@ -119,8 +119,8 @@ export function FirmView({ ticker, data }: { ticker: string; data: ScreenData })
             description={`${f.ticker} valuation by quarter`}
           />
           <div className="chart-x">
-            <span>{quarterLabel(1)}</span>
-            <span>{quarterLabel(Math.max(1, hist.length - 1))}</span>
+            <span>START</span>
+            <span>{hist.length > 1 ? quarterLabel(hist.length - 1) : ''}</span>
           </div>
         </div>
         <div className="row">

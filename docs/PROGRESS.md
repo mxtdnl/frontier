@@ -205,3 +205,57 @@
 - Session 4: facilitator flows and round orchestration.
   - Use `createGameRecord`, `updateGame` with `rel` paths, and `toPactNode` when writing pacts.
   - Load rules with `npm run emulators:rules` before Playwright runs.
+
+## 2026-10-02 — Session 4: facilitator flows and round orchestration
+
+**Done**
+- **Sign-in** (`src/firebase/auth.ts`, `src/screens/Auth/FacilitatorGate.tsx`): email and password, then the `/facilitators/{uid}` check. `#/new`, `#/screen/:id` and `#/control/:id` all sit behind it.
+  - A wrong password gets a plain explanation.
+  - An account that is not on the allowlist is told so, and sees its own user ID so the owner knows what to add.
+- **`#/new`** (`createSession`): writes the game, its join code, the hidden `engine` node (τ and end round) and any bot firms in one atomic update.
+  - The code is 4 letters A–Z without I and O. If it is taken, a new code is tried (up to 12 times).
+  - A fixed seed may be a whole number or any text (text is hashed).
+- **Phase machine** (`src/firebase/phases.ts`, pure, one function per transition) and **orchestrator** (`src/firebase/orchestrator.ts`).
+  - Every transition is a transaction on `public`, so a second window that arrives late is refused rather than applied twice.
+  - F9: lobby → briefing → open → resolve → reveal → next open, or ended at the hidden end round or after round 30.
+  - F8: summit from open or reveal, and back.
+  - F10: needs a second press within 3 s; an open quarter is discarded unresolved.
+  - Timer: +30 s, −30 s, pause, resume.
+  - Optional auto-resolve at the deadline.
+- **Resolution (§11)**: lock transaction, one read, engine `resolveRound`, one atomic multi-path `update()`.
+  - If the write fails the phase stays `resolving`, nothing is written, and `#/control` shows "Resolution incomplete — retry".
+  - Retry takes over only the lock holder it saw, so two windows cannot both retry.
+  - Missing decisions take the engine defaults and are flagged AUTO. Bot firms resolve from their policies.
+- **`#/screen`, live**: lobby (code, client-side QR, address, firms with live member counts), briefing, board, trust panel, ticker, F-key bar and command line, all on public nodes. The reveal motion plays once per quarter that the page watches resolve.
+- **`#/control`, live**: session panel (phase, quarter, trust, timer, controls), hold-to-reveal for τ and the end round, firms panel (presence, committed, received time, AUTO forecast, bot policy), pacts with unaudited counts, retry state.
+- **Static preview screens removed** from `#/screen`, `#/control` and `#/new`. `#/kit`, `#/play` and `#/results` still use fixtures until Sessions 5 and 7.
+- **Tests**
+  - `tests/firebase/orchestrator.test.ts` (32): phases, lock, failed write and retry, duplicate windows, defaults, bots, pacts merge, auto-resolve, round 30 stop. Removing the lock fails two of them.
+  - `tests/emulator/orchestrator.test.ts` (12): the same flows through the real SDK and the real rules.
+  - `tests/ui/screen-model.test.ts` (9): board rows, previous values for the reveal, series.
+  - `npm run test:e2e` (`scripts/e2e.ts`): Playwright. The facilitator has its own browser context. Each scripted participant has its own context (`tests/e2e/harness`, served only by the dev server) and signs in anonymously, founds or joins a firm and commits through the real data layer. It covers the sign-in gate, session creation, lobby, a 4-quarter run with summit, pause, two windows pressing F9 together, a refresh mid-round, F10 double press, auto-resolve, the retry state, reduced motion, and the check that τ never appears on the projector or in any participant-readable node. Screenshots go to `shots/e2e-*.png` at 1280×720 and 1920×1080 (console at 390×844 and 1440×900). I reviewed them against §16.4 and the grid; no gradients, glow, rounded corners or emoji, and no clipped panel.
+  - `npm run shots` now covers only the static screens.
+  - Totals: `npm test` 188, `npm run test:rules` 120, e2e passes (run twice in a row).
+
+**Spec deviations and additions (with reasons)**
+1. **Two fields added to `public`: `resumePhase` and `pausedRemainingMs`** (owner approved). §12 has no field for the phase to return to after a summit, nor for the time left while the timer is paused. `database.rules.json` is unchanged: `public` has no validation rules.
+2. **Pausing removes the deadline**, so decisions are refused while the timer is paused (a missing deadline always denies a write, §13). A summit freezes the timer the same way.
+3. **`firmsPrivate` and `pactsPrivate` are not read at resolution.** The `engine` node holds the full state, so it is the one source. The orchestrator writes `firmsPrivate`, `firmsPublic`, `rounds`, `pacts`, `pactsPrivate`, `engine` and `public` each quarter, as §11 lists.
+4. **Live pact membership overrides the engine's copy** at resolution (participants edit it). Pacts created since the last quarter are appended in creation order with an empty private record. A dissolved pact is never reopened.
+5. **The engine is built at the briefing, not at creation**, because firms form in the lobby. `#/new` writes τ and the end round from `createGame` with an empty firm list. The setup stream does not depend on the firm list, and the values are copied across so they cannot change (a test checks this).
+6. **The committed tick on the board is mirrored by the facilitator window.** Participants cannot write `firmsPublic` or read each other's decisions, so an open `#/screen` or `#/control` window writes `firmsPublic/{firm}/submittedRound` as decisions arrive. Bot firms always count as committed. Without an open facilitator window, no tick appears.
+7. **Auto-resolve fires 3.25 s after the deadline**, once the 3 s grace window for late decisions has closed, so no accepted decision is missed.
+8. **F6 (audit) and F7 (disclosure) are not connected**; they show a notice. Session 6 builds them. A disclosure setting chosen at creation does show the PACE, SAFE and EXPO columns from the published snapshot.
+9. **F10 is also accepted from a running summit**, and not before the first quarter opens.
+10. **Copy**: the trust chart's left label reads START (the opening value comes before Q1).
+
+**Open issues**
+- **Participants cannot join on the live site yet.** The join flow is Session 5. Until then the live site is tried with bot firms only (at least two).
+- **Private card notices are not stored.** The engine returns them; §12 has no node for them. Session 6 must decide where they go.
+- **Retry window.** If a window finishes the quarter between another window's read and write, both write identical data (the engine is deterministic). A test covers the usual order.
+- **Two windows of one account share a user ID**, so the lock holder is told apart by a per-window token on retry only.
+- **Auth persistence**: the facilitator stays signed in on that browser until Sign out.
+- **`results` is not written** when a session ends. Session 7 computes it.
+
+**Next steps**
+- Session 5: participant join and control centre.

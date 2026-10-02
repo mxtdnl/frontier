@@ -126,8 +126,8 @@ export function TrustPanel({ data, reveal }: { data: ScreenData; reveal: boolean
           description={`Public trust by quarter, from ${fmt(series[0] ?? PARAMS.T0)} to ${fmt(pub.T)}`}
         />
         <div className="dim" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>Q1 Y1</span>
-          <span>{quarterLabel(Math.max(1, resolved))}</span>
+          <span>START</span>
+          <span>{resolved > 0 ? quarterLabel(resolved) : ''}</span>
         </div>
       </div>
       <div className="stack" style={{ marginTop: '1lh', gap: 0 }}>

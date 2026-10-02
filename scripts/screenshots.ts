@@ -1,5 +1,6 @@
 /**
- * Screenshots every screen and state at the required sizes and runs layout checks.
+ * Screenshots the static screens and states at the required sizes and runs layout checks.
+ * The live facilitator routes are covered by scripts/e2e.ts.
  * Usage: npm run build && npm run shots
  * Output: shots/<route>-<state>-<w>x<h>.png and a printed list of any failed checks.
  */
@@ -117,37 +118,9 @@ async function main(): Promise<void> {
     return page;
   };
 
-  // ---- Projector ----
-  const screenStates = ['lobby', 'briefing', 'open', 'reveal', 'summit', 'disclosure-on', 'disclosure-off'];
+  // ---- Results (static; `#/screen` and `#/control` need a live database and are checked by `npm run test:e2e`) ----
   for (const [w, h] of PROJECTOR) {
     const page = await newPage(w, h);
-    for (const s of screenStates) {
-      await open(page, `#/screen/demo?state=${s}`);
-      if (s === 'reveal') {
-        await page.waitForTimeout(450);
-        await shot(page, 'screen-reveal-mid');
-        await page.waitForTimeout(1300);
-      }
-      await shot(page, `screen-${s}`);
-      await checkProjector(page, `screen ${s} ${w}x${h}`);
-    }
-    for (const v of ['trust', 'pacts', 'wire', 'help']) {
-      await open(page, `#/screen/demo?state=open&view=${v}`);
-      await shot(page, `screen-view-${v}`);
-      await checkProjector(page, `screen view ${v} ${w}x${h}`);
-    }
-    // Command line: type a firm command.
-    await open(page, '#/screen/demo?state=open');
-    await page.keyboard.type('firm arcn');
-    await page.keyboard.press('Enter');
-    await shot(page, 'screen-view-firm');
-    await checkProjector(page, `screen firm ${w}x${h}`);
-    await open(page, '#/screen/demo?state=open&disclosure=on&lit=1');
-    await shot(page, 'screen-lit-disclosure');
-    await checkProjector(page, `screen lit ${w}x${h}`);
-    await open(page, '#/screen/demo?state=reveal&lit=1');
-    await page.waitForTimeout(1500);
-    await checkProjector(page, `screen lit reveal ${w}x${h}`);
     for (let p = 1; p <= 6; p++) {
       await open(page, `#/results/demo?panel=${p}${p === 2 ? '&tau=on' : ''}`);
       await shot(page, `results-${p}`);
@@ -188,8 +161,6 @@ async function main(): Promise<void> {
   for (const [w, h] of [PHONE[1], PHONE[2]] as const) {
     const page = await newPage(w, h);
     for (const [name, hash] of [
-      ['control', '#/control/demo'],
-      ['new', '#/new'],
       ['kit', '#/kit'],
       ['index', '#/'],
     ] as const) {
@@ -198,18 +169,6 @@ async function main(): Promise<void> {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
       if (overflow) fail(`${name} ${w}x${h}: horizontal scroll`);
     }
-    await page.context().close();
-  }
-
-  // ---- Reduced motion ----
-  {
-    const page = await newPage(1920, 1080, true);
-    await open(page, '#/screen/demo?state=reveal');
-    await shot(page, 'screen-reveal-reduced');
-    const n = await page.locator('.ticker-static li').count();
-    if (n !== 3) fail(`reduced motion: expected 3 static headlines, found ${n}`);
-    const anim = await page.evaluate(() => document.getAnimations().length);
-    if (anim > 0) fail(`reduced motion: ${anim} running animations`);
     await page.context().close();
   }
 
