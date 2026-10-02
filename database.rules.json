@@ -76,7 +76,7 @@
         "members": {
           "$uid": {
             ".read": "auth != null && (auth.uid === $uid || (data.child('firmId').exists() && root.child('games').child($g).child('members').child(auth.uid).child('firmId').val() === data.child('firmId').val()))",
-            ".write": "auth != null && auth.uid === $uid && newData.exists() && root.child('games').child($g).child('meta').exists() && (root.child('games').child($g).child('public/joinLocked').val() !== true || data.child('firmId').val() === newData.child('firmId').val()) && newData.parent().parent().child('firms').child(newData.child('firmId').val()).exists() && newData.child('pin').val() === newData.parent().parent().child('firmSecrets').child(newData.child('firmId').val()).child('pin').val()",
+            ".write": "auth != null && auth.uid === $uid && newData.exists() && root.child('games').child($g).child('meta').exists() && (root.child('games').child($g).child('public/joinLocked').val() !== true || data.child('firmId').val() === newData.child('firmId').val()) && newData.parent().parent().child('firms').child(newData.child('firmId').val()).exists() && newData.child('pin').val() === newData.parent().parent().child('firmSecrets').child(newData.child('firmId').val()).child('pin').val() && (!root.child('games').child($g).child('firms').child(newData.child('firmId').val()).exists() || data.child('firmId').val() === newData.child('firmId').val() || root.child('games').child($g).child('joinRequests').child(newData.child('firmId').val()).child(auth.uid).child('pin').val() === newData.child('pin').val())",
             ".validate": "newData.hasChildren(['firmId', 'pin', 'joinedAt'])",
             "firmId": {
               ".validate": "newData.isString() && newData.val().matches(/^[^.#$\\[\\]\\/]{1,64}$/)"
@@ -93,6 +93,29 @@
             "$other": {
               ".validate": false
             }
+          }
+        },
+        "joinRequests": {
+          "$f": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && newData.exists() && root.child('games').child($g).child('joinThrottle').child($f).val() !== now && newData.parent().parent().parent().child('joinThrottle').child($f).val() === now",
+              ".validate": "newData.hasChildren(['pin', 'at'])",
+              "pin": {
+                ".validate": "newData.isString() && newData.val().matches(/^[0-9]{4}$/)"
+              },
+              "at": {
+                ".validate": "newData.val() === now"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          }
+        },
+        "joinThrottle": {
+          "$f": {
+            ".write": "auth != null && newData.val() === now && (!data.exists() || now >= data.val() + 1000) && root.child('games').child($g).child('firms').child($f).exists() && root.child('games').child($g).child('public/joinLocked').val() !== true && newData.parent().parent().child('joinRequests').child($f).child(auth.uid).child('at').val() === now",
+            ".validate": "newData.isNumber()"
           }
         },
         "presence": {

@@ -56,6 +56,10 @@ Do this the day before, then again 15 minutes before class.
 
 **Lobby.** Teams scan the QR code or type the code. One person founds the firm (name, ticker, PIN). Teammates join with the PIN. Firm names appear on the projector with a member count. Wait until every team shows. You need at least 2 firms (bots count).
 
+- **Use at least 6 firms.** With 4 firms, one firm playing flat out can trigger the moratorium on its own in about 1 session in 5 (Session 9 review, finding M1). Add bot firms on `#/new` to reach 6 if the class is small.
+- **Check the console's FIRMS panel before the briefing.** A firm whose PRESENCE reads *none* has no devices: its founder founded or joined another firm. Press **REMOVE** on that row twice within 3 seconds. Otherwise it plays on AUTO defaults all session. REMOVE works only in the lobby.
+- **Press LOCK JOINS** (DANGER panel) as soon as every team has formed. This stops anyone founding extra firms or trying more PINs (Session 9 review, findings H1 and H2). **REOPEN JOINS** undoes it while you are still in the lobby.
+
 **Briefing.** Press **F9**. This locks firm creation: nobody new can join after this point. A new device cannot be added later; a team that missed the lobby must be added by starting a new session. Read the briefing aloud.
 
 **Each quarter.**
@@ -96,7 +100,8 @@ If a key press shows "Working on the last key. Press again in a moment.", the pr
 
 - **Session panel:** phase, quarter, trust, timer, **−30 s**, **+30 s**, **Pause** and **Resume**.
 - **Hold to reveal TAU** and the end quarter: they show only while you hold the button down. Use them privately. Never show the console on the projector.
-- **Firms panel:** who is online, who has committed, when, AUTO forecast, bot policy.
+- **Firms panel:** who is online, who has committed, when, AUTO forecast, bot policy. In the lobby each row also has **REMOVE** (press twice within 3 s).
+- **LOCK JOINS / REOPEN JOINS** (DANGER panel, lobby only): closes or reopens joining before the briefing.
 - **Pacts panel:** unaudited counts, an **AUDIT** button per pact, audit outcomes.
 - **F9 ADVANCE, F10 END, F8 SUMMIT, F7 DISCLOSURE, F6 AUDIT** buttons.
 - **Export:** **DOWNLOAD HISTORY (.json)** and **DOWNLOAD DATA LINES (.txt)**. Download both before you delete the session.
@@ -116,6 +121,10 @@ If a key press shows "Working on the last key. Press again in a moment.", the pr
 | A team did not commit in time | They receive the default decision, marked AUTO, and the quarter proceeds. |
 | You pressed END by mistake | A single press only arms it for 3 seconds. A second press ends the session and cannot be undone. |
 | The wrong person is on the facilitator list | Remove their UID under `facilitators` in the Realtime Database data tab. |
+| A firm you do not recognise, or an unexpected device in a firm, appears in the lobby | Press **REMOVE** on that firm. If a device appears in the wrong firm, remove the firm and ask the team to found it again with a new PIN. Then press **LOCK JOINS**. |
+| More than 16 firms formed, so F9 refuses to start | Press **REMOVE** on the extra firms (start with those whose PRESENCE reads *none*). |
+| A phone says "Another device is joining this firm. Wait a few seconds and try again." | Several teammates joined the same firm in the same second; each join takes its turn, one per second. Ask them to press **Join the firm** again. If it keeps happening, press **LOCK JOINS** once every team has formed. |
+| A wrong PIN always shows "Another device is joining this firm" after about 10 seconds | The Firebase rules are older than the app. Paste the current `database.rules.json` (set-up step 5). |
 | A team cannot join with the PIN | Check that they chose the right firm. The PIN is shown on the founding phone and on its DESK tab. |
 | "Anonymous sign-in is switched off for this project" on a phone | Anonymous sign-in is off. See set-up step 2. |
 | The board lags behind after a network drop | Wait a few seconds. If a tick stays missing, reload the console. Committed ticks need one open projector or console window. |

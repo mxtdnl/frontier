@@ -18,10 +18,12 @@ import {
   publishResults,
   publishWire,
   queueAudit,
+  removeFirm,
   resolveCurrentRound,
   resolveDue,
   retryResolution,
   seedFromText,
+  setJoinsLocked,
   setPaused,
   startBriefing,
   stepResults,
@@ -43,6 +45,7 @@ import {
   fromWire,
   type EngineNode,
   type FirmNode,
+  type MemberNode,
   type PublicNode,
 } from '../../src/firebase/schema';
 import { engineStateOf } from '../../src/firebase/schema';
@@ -135,6 +138,7 @@ function world(o: Opts = {}): World {
     readMeta: async () => fromMeta(storeAndRead(db.meta)),
     readEngine: async () => fromEngine(storeAndRead(db.engine)),
     readFirms: async () => fromFirms(storeAndRead(db.firms)),
+    readMembers: async () => (storeAndRead(db.members) ?? {}) as Record<string, MemberNode>,
     readDecisions: async (r) => fromDecisions(storeAndRead(getAt(db, `decisions/${r}`))),
     readPacts: async () => fromPacts(storeAndRead(db.pacts)),
     readResults: async () => fromResults(storeAndRead(db.results)),
@@ -921,5 +925,78 @@ describe('results (spec §10, §14.4)', () => {
     expect(r.message).toContain('ABCD');
     expect(w.db.public).toBeUndefined();
     expect(w.db.engine).toBeUndefined();
+  });
+});
+
+describe('remove a firm (Danger panel, spec §14.2)', () => {
+  /** A firm left with no members after its founder founded a second firm (Session 9 review, H1). */
+  function withOrphan(): World {
+    const w = world({ humans: 2, bots: ['standard'] });
+    setAt(w.db, 'firms/orphan', { name: 'Left Behind', ticker: 'LEFT', createdAt: 5000, order: 9, isBot: false });
+    setAt(w.db, 'firmSecrets/orphan', { pin: '1234' });
+    setAt(w.db, 'firmSecrets/hum0', { pin: '1111' });
+    setAt(w.db, 'members/u1', { firmId: 'hum0', pin: '1111', joinedAt: 1 });
+    setAt(w.db, 'members/u2', { firmId: 'hum0', pin: '1111', joinedAt: 1 });
+    setAt(w.db, 'members/u3', { firmId: 'hum1', pin: '2222', joinedAt: 1 });
+    return w;
+  }
+
+  it('removes the firm, its PIN and its members in one update during the lobby', async () => {
+    const w = withOrphan();
+    const r = await removeFirm(w.ctx, 'hum0');
+    expect(r).toEqual({ ok: true, message: 'HUMA removed. Its devices can found or join another firm.' });
+    expect(w.updates).toHaveLength(1);
+    expect(getAt(w.db, 'firms/hum0')).toBeUndefined();
+    expect(getAt(w.db, 'firmSecrets/hum0')).toBeUndefined();
+    expect(getAt(w.db, 'members/u1')).toBeUndefined();
+    expect(getAt(w.db, 'members/u2')).toBeUndefined();
+    expect(getAt(w.db, 'members/u3')).toBeDefined();
+    expect(getAt(w.db, 'firms/hum1')).toBeDefined();
+  });
+
+  it('removes a firm with no members, and the session then starts without it', async () => {
+    const w = withOrphan();
+    expect((await removeFirm(w.ctx, 'orphan')).ok).toBe(true);
+    expect((await advance(w.ctx)).ok).toBe(true);
+    expect(w.engine().firms.map((f) => f.id)).toEqual(['bot0', 'hum0', 'hum1']);
+  });
+
+  it('lets a session with more than the maximum firms start once extras are removed', async () => {
+    const w = world({ humans: 17, bots: [] });
+    expect((await advance(w.ctx)).message).toMatch(/17 firms formed; the maximum is 16/);
+    expect((await removeFirm(w.ctx, 'hum16')).ok).toBe(true);
+    expect((await advance(w.ctx)).ok).toBe(true);
+  });
+
+  it('refuses after the lobby, so the market is never rebuilt mid-session', async () => {
+    const w = withOrphan();
+    await toOpen(w);
+    const before = w.updates.length;
+    const r = await removeFirm(w.ctx, 'orphan');
+    expect(r).toEqual({ ok: false, message: 'Firms can be removed only in the lobby, before the briefing starts.' });
+    expect(w.updates.length).toBe(before);
+    expect(getAt(w.db, 'firms/orphan')).toBeDefined();
+  });
+
+  it('reports a firm that is already gone and a failed write', async () => {
+    const w = withOrphan();
+    expect((await removeFirm(w.ctx, 'nope')).message).toBe('That firm no longer exists. Check the firm list.');
+    w.failUpdates.n = 1;
+    expect(await removeFirm(w.ctx, 'orphan')).toEqual({ ok: false, message: 'LEFT was not removed. Check the connection and try again.' });
+    expect(getAt(w.db, 'firms/orphan')).toBeDefined();
+  });
+});
+
+describe('lock joins (Danger panel, spec §14.2)', () => {
+  it('locks and reopens joining in the lobby only', async () => {
+    const w = world();
+    expect((await setJoinsLocked(w.ctx, true)).ok).toBe(true);
+    expect(w.pub()).toMatchObject({ phase: 'lobby', joinLocked: true });
+    expect((await setJoinsLocked(w.ctx, false)).ok).toBe(true);
+    expect(w.pub().joinLocked).toBe(false);
+    await toOpen(w);
+    const r = await setJoinsLocked(w.ctx, false);
+    expect(r).toEqual({ ok: false, message: 'Cannot reopen joining while the session is in phase OPEN.' });
+    expect(w.pub().joinLocked).toBe(true);
   });
 });

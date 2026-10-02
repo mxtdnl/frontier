@@ -94,3 +94,15 @@ This step does not affect C1–C4, because the label is display-only. It is logg
 ### Engine rule change agreed with the owner (not a parameter)
 
 The moratorium cash haircut (§6.3 step 7) applies only to positive cash. Negative cash is unchanged. This was decided before calibration, and all results above include it.
+
+---
+
+## 2026-10-02 — Session 9 (audit; no change)
+
+No parameter was changed.
+
+- **500-seed rerun** (`npm run calibrate -- --seeds 500 --out reports/calibration-500.md`): C1–C4 pass for every N, with the same margins as at 200 seeds. C1's median is quarter 6; C4 is at most 1.0% (N = 4).
+- **Strategy search** (`npx tsx tools/audit-strategies.ts --seeds 100`, `reports/strategy-audit.md`): no dominant strategy. Three balance findings are left for the owner. Each would need a calibration change logged here:
+  - one firm can trigger the moratorium at N ≤ 4 (`docs/REVIEW.md` M1)
+  - POACH dominates the card choice over a whole session (M2)
+  - pact sanctions do not deter a breach (M3).

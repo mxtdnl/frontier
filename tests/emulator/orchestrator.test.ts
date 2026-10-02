@@ -17,6 +17,7 @@ import {
   deleteSession,
   endSession,
   firebaseIO,
+  removeFirm,
   resolveCurrentRound,
   retryResolution,
   stepResults,
@@ -121,6 +122,21 @@ describe('orchestrator against the emulator', () => {
   it('never lets a participant read the engine node', async () => {
     await expect(api.readEngine(p1.db, g)).rejects.toThrow();
     await expect(get(ref(p1.db, paths.engine(g)))).rejects.toThrow();
+  });
+
+  it('removes a firm left without members, and a firm with members, in the lobby (Session 9 review, H1)', async () => {
+    const orphan = await api.foundFirm(p2.db, g, p2.uid, { name: 'Orphan Co', ticker: 'ORPH', pin: '5555', label: 'B', order: 9 });
+    const second = await api.foundFirm(p2.db, g, p2.uid, { name: 'Second Co', ticker: 'SECN', pin: '6666', label: 'B', order: 9 });
+    const firms = await api.readFirms(p1.db, g);
+    expect(firms[orphan]?.ticker).toBe('ORPH'); // founding again leaves the first firm with no members
+    expect((await api.readMember(p2.db, g, p2.uid))?.firmId).toBe(second);
+    expect((await removeFirm(ctx, orphan)).ok).toBe(true);
+    expect((await removeFirm(ctx, second)).ok).toBe(true);
+    const after = await api.readFirms(p1.db, g);
+    expect(after[orphan]).toBeUndefined();
+    expect(after[second]).toBeUndefined();
+    expect(await api.readMember(p2.db, g, p2.uid)).toBeNull();
+    expect((await get(ref(fac.db, paths.firmSecret(g, second)))).exists()).toBe(false);
   });
 
   it('refuses the briefing with fewer than two humans-plus-bots, then proceeds once firms exist', async () => {

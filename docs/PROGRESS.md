@@ -434,3 +434,56 @@
 
 **Next steps**
 - Session 9: independent audit.
+
+## 2026-10-02 — Session 9: independent audit
+
+Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
+
+**Done**
+- **Security**
+  - Each Session 9 threat was attacked against the rules in the emulator (`tests/rules/audit.test.ts`) and against the client code (`tests/ui/hidden-paths.test.ts`). The threats were reading hidden values with developer tools, writing other firms' decisions, late writes, forging results and guessing PINs.
+  - Every read and write is refused as the spec requires, except PIN guessing (H2, now fixed).
+  - τ and the end round never reach `#/screen` or `#/play`:
+    - the participant pages' whole import graph excludes the facilitator hooks and the orchestrator
+    - the projector's own code never subscribes to `engine`
+    - a mutation check confirms the test catches a violation.
+- **H1 fixed.** A device that founds or joins a second firm leaves the first with no members. Such a firm played AUTO all session, and more than 16 firms blocked the start; nothing could remove them. Changes:
+  - `#/control` has **REMOVE** per firm in the lobby (two presses within 3 s)
+  - the DANGER panel has **LOCK JOINS** / **REOPEN JOINS**, lobby only (spec §14.2 named both; neither existed)
+  - code: `removeFirm` and `setJoinsLocked` in the orchestrator, `setJoinLock` in `phases.ts`.
+- **H2 fixed (owner chose the join throttle).** A 4-digit PIN could be guessed in about 9 s on the emulator. Now:
+  - a join first records the guess at `joinRequests/{firm}/{uid}` with a `joinThrottle/{firm}` stamp, which the rules accept once per firm per second
+  - the membership PIN must match both the recorded guess and the firm's PIN
+  - measured: 1.00 recorded guess per second with 20 parallel writers, so about 2.8 hours for all PINs (`scripts/audit-pin.ts`)
+  - founding and rejoining are unchanged; the app retries a busy slot.
+- **Model**
+  - Calibration at 500 seeds: all C1–C4 pass (`reports/calibration-500.md`).
+  - New `tools/audit-strategies.ts` (`reports/strategy-audit.md`) runs four checks: a best-response search over 199 strategies in 4 fields at N = 4, 8 and 12; symmetric play; pact breach; and the worst single-firm moratorium at N = 2–8.
+  - No dominant strategy. Findings M1–M3 are for the owner.
+- **Copy and design**
+  - `lint:copy`, plus a pass over strings from outside `src/screens` and `src/ui`: no violations.
+  - Screenshots at all five sizes reviewed against §16.4 and the grid: no violations. Low items are L6–L8.
+- **Runbook:** use at least 6 firms; check for firms with no devices and REMOVE them; LOCK JOINS once teams form; what the "Another device is joining" message means.
+- **Tests:** `npm test` 316 passed; `npm run test:rules` 160 passed (was 142); `npm run test:e2e` 252 checks passed (was 237); `npm run test:e2e:hardening` 44 passed. Typecheck, `lint:copy` and `lint:design` pass.
+
+**Defects found in the e2e script while adding checks, and fixed**
+- The TAU hold check measured the button while the console was scrolled (after the new LOCK JOINS click) and while a notice was about to clear. It now scrolls the button into view and waits for the notice.
+- The two "−30 s" presses could arrive while the first was still running; the console ignores a press while busy. The script now waits for the first to finish.
+
+**Spec deviations (with reasons)**
+1. **New nodes `joinRequests/{firm}/{uid}: {pin, at}` and `joinThrottle/{firm}: serverTime`** (§12), and a stricter `members/{uid}` rule (§13): the PIN must also match the recorded guess, except when founding or rejoining the same firm. Owner approved this fix for H2. **`database.rules.json` changed; the owner must paste it into the Firebase console.**
+2. **REMOVE works only in the lobby.** The market is built from the firm list at the briefing, and the orchestrator would rebuild it if the count changed later.
+
+**Open issues (owner decisions; see `docs/REVIEW.md`)**
+- M1: one firm can trigger the moratorium alone at N ≤ 4 (17–22% by quarter 14 at N = 4). The runbook recommends at least 6 firms.
+- M2: POACH dominates the card choice over a whole session.
+- M3: pact sanctions do not deter a breach.
+- M4: tickers are not unique in the rules (a test documents it).
+- L1–L10: low items, including other firms' cash and capability being derivable from public profit and valuation.
+- Someone repeatedly writing a firm's join stamp can delay real joins to that firm. The app retries, and LOCK JOINS ends it.
+- Lighthouse (`npm run test:a11y`) was not re-run. The only participant-page change is one error message on the join form.
+- The 14-quarter rehearsal and the 30-quarter run were not re-run. Neither uses the join path, and the engine is unchanged.
+
+**Next steps**
+- Owner: paste `database.rules.json` into the Firebase console, then decide M1–M4.
+- Session 10: scale to 40–50 participants.

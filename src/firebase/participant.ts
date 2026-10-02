@@ -49,11 +49,7 @@ export function useParticipantAuth(): ParticipantAuth {
 }
 
 /** True when a write was refused by the database rules. */
-export function isPermissionDenied(e: unknown): boolean {
-  const code = errorCode(e);
-  const msg = e instanceof Error ? e.message : '';
-  return code === 'PERMISSION_DENIED' || code === 'permission-denied' || /permission[_ ]denied/i.test(msg);
-}
+export { isPermissionDenied } from './api';
 
 // ── Remembered session (device-local; every access is guarded) ────────────────
 

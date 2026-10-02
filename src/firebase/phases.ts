@@ -21,6 +21,17 @@ export const toBriefing: Step = (p) => {
   return { ...p, phase: 'briefing', joinLocked: true };
 };
 
+/**
+ * Danger panel (spec §14.2): locks or reopens joining during the lobby. The briefing always
+ * locks it; it never reopens after that.
+ */
+export const setJoinLock =
+  (locked: boolean): Step =>
+  (p) => {
+    if (p.phase !== 'lobby') return refuse(p, locked ? 'lock joining' : 'reopen joining');
+    return { ...p, joinLocked: locked };
+  };
+
 /** Opens round 1 from the briefing, or round n + 1 from a reveal. */
 export const toOpen =
   (round: number, now: number, timerMs: number): Step =>

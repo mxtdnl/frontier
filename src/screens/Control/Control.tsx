@@ -6,7 +6,9 @@ import {
   endSession,
   publishResults,
   queueAudit,
+  removeFirm,
   retryResolution,
+  setJoinsLocked,
   setPaused,
   toggleDisclosure,
   toggleSummit,
@@ -155,6 +157,23 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
       say('Press END again within 3 s to end the session.');
     }
   }, [ctx, run, say]);
+
+  /** Danger panel: removing a firm in the lobby needs a second press on the same firm within 3 s. */
+  const removeArmed = useRef<{ id: string; at: number } | null>(null);
+  const pressRemove = useCallback(
+    (id: string, ticker: string) => {
+      const now = Date.now();
+      const armed = removeArmed.current;
+      if (armed && armed.id === id && now - armed.at <= END_CONFIRM_MS) {
+        removeArmed.current = null;
+        run(() => removeFirm(ctx, id));
+      } else {
+        removeArmed.current = { id, at: now };
+        say(`Press REMOVE on ${ticker} again within 3 s to remove the firm and sign out its devices.`);
+      }
+    },
+    [ctx, run, say],
+  );
 
   const pactsPanel = useRef<HTMLDivElement>(null);
   const activePactsRef = useRef<Pact[]>([]);
@@ -367,10 +386,27 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
               },
               { key: 'at', label: 'RECEIVED', w: 11, render: (f) => (isOpen && f.decision ? fmtTime(new Date(f.decision.at)) : '–') },
               { key: 'a', label: 'FORECAST', w: 10, render: (f) => (isOpen && !f.decision && !f.bot ? <Tag kind="AUTO" /> : '') },
-              { key: 'b', label: 'BOT POLICY', w: 0, render: (f) => (f.bot ? <><Tag kind="BOT" /> {f.bot}</> : '') },
+              { key: 'b', label: 'BOT POLICY', w: pub.phase === 'lobby' ? 18 : 0, render: (f) => (f.bot ? <><Tag kind="BOT" /> {f.bot}</> : '') },
+              ...(pub.phase === 'lobby'
+                ? [
+                    {
+                      key: 'x',
+                      label: 'DANGER',
+                      w: 0,
+                      render: (f: (typeof rows)[number]) => (
+                        <button type="button" className="btn" disabled={busyNow} onClick={() => pressRemove(f.id, f.ticker)} aria-label={`Remove ${f.ticker}`}>
+                          REMOVE
+                        </button>
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />
         </div>
+        {pub.phase === 'lobby' ? (
+          <p className="dim">A firm with no devices (PRESENCE none) was left when its founder founded or joined another firm. Remove it before the briefing, or it plays on AUTO defaults all session.</p>
+        ) : null}
       </Panel>
 
       <Panel title="PACTS" right={queued.size ? `${queued.size} AUDIT QUEUED` : undefined} bodyClassName="pad">
@@ -422,6 +458,9 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
       <DangerPanel
         code={meta.code}
         disabled={busyNow}
+        joinLocked={pub.joinLocked}
+        lobby={pub.phase === 'lobby'}
+        onJoinLock={(locked) => run(() => setJoinsLocked(ctx, locked))}
         onDelete={() =>
           run(async () => {
             const r = await deleteSession(ctx);

@@ -66,10 +66,14 @@ interface DangerProps {
   code: string;
   disabled: boolean;
   onDelete: () => void;
+  /** Lock joins (spec §14.2): only offered in the lobby. */
+  joinLocked: boolean;
+  lobby: boolean;
+  onJoinLock: (locked: boolean) => void;
 }
 
 /** Delete session: press once to arm, type the join code, then confirm. */
-export function DangerPanel({ code, disabled, onDelete }: DangerProps) {
+export function DangerPanel({ code, disabled, onDelete, joinLocked, lobby, onJoinLock }: DangerProps) {
   const [armed, setArmed] = useState(false);
   const [typed, setTyped] = useState('');
   const match = typed.trim().toUpperCase() === code;
@@ -77,6 +81,18 @@ export function DangerPanel({ code, disabled, onDelete }: DangerProps) {
   return (
     <Panel title="DANGER" bodyClassName="pad">
       <div className="stack">
+        <div className="row">
+          {lobby ? (
+            <button type="button" className="btn" disabled={disabled} aria-pressed={joinLocked} onClick={() => onJoinLock(!joinLocked)}>
+              {joinLocked ? 'REOPEN JOINS' : 'LOCK JOINS'}
+            </button>
+          ) : null}
+          <span className="dim">
+            {joinLocked
+              ? 'Joining is locked. No firm can be founded or joined.'
+              : 'Joining is open. Lock it once every team has formed; the briefing locks it in any case.'}
+          </span>
+        </div>
         {!armed ? (
           <div className="row">
             <button type="button" className="btn" disabled={disabled} onClick={() => setArmed(true)}>

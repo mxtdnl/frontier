@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { foundFirm, generatePin, joinFirm, resolveCode } from '../../firebase/api';
+import { JoinBusyError, foundFirm, generatePin, joinFirm, resolveCode } from '../../firebase/api';
 import { getFirebase } from '../../firebase/init';
 import { isPermissionDenied, rememberSession, useParticipantAuth } from '../../firebase/participant';
 import { navigate, useRoute } from '../../router';
@@ -315,7 +315,9 @@ function JoinForm({ g, uid, code, firms, onBack }: JoinProps) {
       navigate(`#/play/${g}`);
     } catch (err) {
       setError(
-        isPermissionDenied(err)
+        err instanceof JoinBusyError
+          ? err.message
+          : isPermissionDenied(err)
           ? 'The PIN was not accepted, or joining has closed. Check the PIN with a teammate and try again.'
           : 'The join did not go through. Check the connection and try again.',
       );

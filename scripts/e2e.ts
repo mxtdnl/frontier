@@ -106,6 +106,29 @@ async function scenario(browser: Browser): Promise<void> {
   await waitText(control, /CONTROL/, 'the console opens for the same account');
   await waitText(control, /ALPH[\s\S]*BETA/, 'the console lists the firms');
 
+  // Session 9 review, H1: a device that founds twice leaves a firm with no members; REMOVE clears it.
+  const p5 = await participant('participant who founds twice');
+  const p5uid = await h(p5.page, 'signIn');
+  const spare = await h(p5.page, 'found', g, 'Spare Works', 'SPAR', 'GH');
+  const gone = await h(p5.page, 'found', g, 'Gone Works', 'GONE', 'GH');
+  await waitText(fac, /SPAR[\s\S]*GONE/, 'the lobby lists both firms founded by one device', 15_000, '.scr');
+  for (const [firm, ticker] of [[spare, 'SPAR'], [gone, 'GONE']] as const) {
+    await control.getByRole('button', { name: `Remove ${ticker}` }).click();
+    await waitText(control, new RegExp(`Press REMOVE on ${ticker} again`), `the first REMOVE on ${ticker} only arms it`);
+    check((await adminGet(`games/${g}/firms/${firm.firmId}`)) !== null, `${ticker} is still there after one press`);
+    await control.getByRole('button', { name: `Remove ${ticker}` }).click();
+    await waitText(control, new RegExp(`${ticker} removed`), `a second REMOVE removes ${ticker}`);
+  }
+  check((await adminGet(`games/${g}/members/${p5uid}`)) === null, "the removed firm's device is no longer a member");
+  await waitText(fac, /4 FIRMS/, 'the projector drops the removed firms', 15_000, '.scr');
+  await control.getByRole('button', { name: 'LOCK JOINS' }).click();
+  await waitText(control, /Joining locked/, 'LOCK JOINS locks joining in the lobby');
+  check((await adminGet<boolean>(`games/${g}/public/joinLocked`)) === true, 'joinLocked is set by LOCK JOINS');
+  check(await refused(() => h(p5.page, 'found', g, 'Late Spare', 'LSPR', 'GH')), 'no firm can be founded once joins are locked');
+  await control.getByRole('button', { name: 'REOPEN JOINS' }).click();
+  await waitText(control, /Joining reopened/, 'REOPEN JOINS reopens joining in the lobby');
+  check((await adminGet<boolean>(`games/${g}/public/joinLocked`)) === false, 'joinLocked is cleared by REOPEN JOINS');
+
   // ── 4. Phase machine: briefing → quarter 1 ─────────────────────────────────
   await fac.keyboard.press('F9');
   await waitText(fac, /BRIEFING/, 'F9 opens the briefing', 15_000, '.scr');
@@ -128,11 +151,18 @@ async function scenario(browser: Browser): Promise<void> {
   // Hidden values on the console: masked until held.
   const tauButton = control.getByRole('button', { name: 'Hold to reveal TAU' });
   check((await tauButton.innerText()).includes('•••'), 'tau is masked on the console');
+  // The lobby steps scroll the console down (LOCK JOINS sits near the bottom), and a console notice
+  // clears after 5 s and shifts the layout: measure the button in view, after the notice goes.
+  await control.waitForFunction(() => !document.querySelector('[role=status] .notice'), undefined, { timeout: 15_000 });
+  await tauButton.scrollIntoViewIfNeeded();
   const box = await tauButton.boundingBox();
   if (box) {
     await control.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await control.mouse.down();
-    check((await tauButton.innerText()).includes(tau.toFixed(1)), 'holding the button reveals tau');
+    const shown = await control
+      .waitForFunction((t) => document.querySelector('[aria-label="Hold to reveal TAU"]')?.textContent?.includes(t) ?? false, tau.toFixed(1), { timeout: 5_000 })
+      .then(() => true, () => false);
+    check(shown, 'holding the button reveals tau');
     await control.mouse.up();
     check((await tauButton.innerText()).includes('•••'), 'releasing the button masks tau again');
   } else fail('tau button has no box');
@@ -602,7 +632,9 @@ async function participantScenario(
   await waitText(A, /Committed/, 'a commit goes through after reconnecting');
 
   // Close the quarter: -30 s twice on the console puts the deadline at now.
+  // The console ignores a press while the previous action runs, so wait for each to finish.
   await control.getByRole('button', { name: '−30 s' }).click();
+  await waitText(control, /Removed 30 s/, 'the first −30 s is applied');
   await control.getByRole('button', { name: '−30 s' }).click();
   await waitText(A, /Quarter closed/, 'the desk shows the closed state after the deadline', 15_000);
   check(await A.getByRole('button', { name: 'LOCKED' }).isDisabled(), 'the commit button is locked after the deadline');
