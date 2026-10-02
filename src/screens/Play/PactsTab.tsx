@@ -72,7 +72,7 @@ export function PactsTab(p: Props) {
               <span>Maximum pace</span>
             </label>
             <Segmented4
-              label="Maximum pace"
+              label="Maximum pace value"
               options={PACE_OPTIONS}
               value={form.maxPace}
               onChange={(v) => setForm({ ...form, maxPace: v as Pace, limitPace: true })}

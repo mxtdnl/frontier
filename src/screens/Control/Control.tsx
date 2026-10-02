@@ -234,6 +234,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
   };
   const pactRows = Object.values(pacts).filter((p) => p.status === 'active');
   activePactsRef.current = pactRows;
+  const canAudit = pub.phase === 'open' || pub.phase === 'reveal' || pub.phase === 'summit';
   const queued = new Set(engine?.pendingAudits ?? []);
   const auditLog = auditOutcomes(rounds, pacts, firms);
 
@@ -377,7 +378,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
                     queued.has(p.id) ? (
                       <span className="signal">QUEUED</span>
                     ) : (
-                      <button type="button" className="btn" disabled={busyNow} onClick={() => run(() => queueAudit(ctx, p.id))} aria-label={`Audit ${p.name}`}>
+                      <button type="button" className="btn" disabled={busyNow || !canAudit} onClick={() => run(() => queueAudit(ctx, p.id))} aria-label={`Audit ${p.name}`}>
                         AUDIT
                       </button>
                     ),

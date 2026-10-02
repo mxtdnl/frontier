@@ -302,3 +302,46 @@
 
 **Next steps**
 - Session 6: pacts (propose, join, leave), audits, cards end to end, disclosure and summit wiring.
+
+## 2026-10-02 — Session 6: pacts, audits, cards, disclosure, summit
+
+**Done**
+- **PACTS tab** (`src/screens/Play/PactsTab.tsx`, `pacts.ts`):
+  - propose a pact with a maximum pace, a minimum safety spend, or both (auto-named PACT-A, PACT-B…)
+  - join, leave, and view terms and members
+  - a participant writes only their own firm's membership; the rules already enforce this
+  - proposals are open only while a quarter is open or in a summit; joining and leaving are always open
+  - a dissolved pact is shown but cannot be joined from the app.
+- **Projector (`#/screen`)**:
+  - the PACT view lists terms, members, the BREACH tag and the latest published audit per pact
+  - pact tags and BREACH tags on board rows (BREACH lasts 2 quarters from detection)
+  - **F6 / Shift+F** opens an audit picker (press the pact's number)
+  - **F7 / Shift+D** toggles disclosure; the top bar always shows `DISCL ON` or `DISCL OFF`
+  - the PACE, SAFE and EXPO columns appear only while disclosure is on, filled from the round's published snapshot.
+- **Console (`#/control`)**: an AUDIT button per pact (queued audits show `QUEUED`), unaudited counts (unchanged), an AUDIT OUTCOMES panel listing every published automatic and manual audit with fines, waivers and expulsions, and the F7 toggle. F6 queues directly when one pact exists; with several it moves focus to the pact list.
+- **Orchestrator** (`src/firebase/orchestrator.ts`): `toggleDisclosure`, `queueAudit` (a transaction on `engine/pendingAudits`, so two windows cannot lose each other's request) and `publishWire`. Card notices are stored on each resolution.
+- **Wire**: the ticker, the PACT view's headlines and the participants' WIRE tab merge the engine's quarterly headlines with live events, newest first (`mergeWire`).
+- **Card notices**: when a card is dropped at resolution (§6.3 step 2), the reason is stored at `firmsPrivate/{firm}/notices/{round}` and shown on the firm's quarter result card.
+- **Tests**
+  - `npm test`: 255 passed (was 214). New: wire derivation and merge, pact form validation, card notice text, the result card rendering, disclosure columns on and off, projector pact rows, console audit outcomes, and orchestrator-level tests for the audit queue, three-violation sanctions (10%, 25%, 40% with the minimum of 10, expulsion on the third), the LOBBY waiver, POACH target and cooldown rules, and disclosure publication.
+  - `npm run test:rules`: 140 passed (was 120). New `tests/emulator/pacts.test.ts` runs against the real rules and SDK: pact join and leave permissions, a three-violation audit sequence, disclosure on and off, a summit proposal and the live wire. Rules tests cover the new `wire` node. Mutation check: removing the `wire` rule fails three tests; the rule was restored.
+  - `npm run test:e2e` passes. The participant run now proposes a pact from a phone, joins from the desktop, queues an audit with Shift+F, toggles disclosure with Shift+D, and checks the result card, the BREACH tag and the PACE, SAFE and EXPO columns. Screenshots reviewed against §16.4 and the grid; no forbidden styling, and nothing clipped at 360, 390 or 1440 wide.
+
+**Spec deviations and additions (with reasons)**
+1. **New `wire/{key}` node** (owner approved). §12 has no place for headlines published outside resolution (a pact formed, joined or left, the disclosure toggle), and `rounds/{r}` is overwritten at resolution. The node is readable by any signed-in user and written only by the facilitator. **`database.rules.json` gained one block (`"wire": { ".read": "auth != null" }`); the owner must paste the updated rules into the Firebase console.**
+2. **`firmsPrivate/{firm}/notices/{round}`** holds dropped-card notices. No rules change: members already read their own firm's private node and only the facilitator writes it.
+3. **Pact formed headline** is published when the pact is proposed, naming the proposer alone. §15.4 words it for several firms ("{FIRMS} sign voluntary release accord"); with one firm it reads slightly oddly. Later members get a "joins" headline.
+4. **Audit timing** is unchanged from Session 2: an audit queued with F6 runs at the next resolution, together with the automatic audits.
+
+**Open issues**
+- **Live pact headlines need an open facilitator window** (`#/screen` or `#/control`), like the committed ticks. They are derived from the current pacts, so a window opened late publishes what is missing, and two windows never duplicate an entry.
+- **An audit requested during the moment of resolution can be lost.** Queueing is refused while the quarter is RESOLVING, but a request written between the resolution read and write is overwritten. The window is well under a second.
+- **Two firms proposing at the same instant could both be named PACT-C.** The name comes from the pacts the proposer can see. The rules accept any `PACT-A`–`PACT-ZZZ` name.
+- **An expelled firm can rejoin the pact.** The spec is silent. Its sanction count persists, so a further breach is fined at 40% and expels it again.
+- **The rules still accept a membership write on a dissolved pact** (Session 3 open issue). The app does not offer it, and the engine never reopens a dissolved pact.
+- **Disclosure columns show `–` until the next resolution** if the toggle is switched on after a quarter resolved with it off, because the snapshot is published only at resolution (§9.3).
+- **Dropped-card notices** appear only when the client allowed an invalid card to be committed (for example, after a teammate's commit on another device). The desk already blocks repeats, missing targets and insolvent plays.
+- Lighthouse accessibility has not been run (Session 8).
+
+**Next steps**
+- Session 7: results, counterfactual and export.

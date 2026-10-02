@@ -1,5 +1,8 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import type { Pact } from '../../src/engine';
+import { RevealCard } from '../../src/screens/Play/Panels';
 import { cardNoticeText, resultNotices, wireItems } from '../../src/screens/Play/model';
 import { DEFAULT_TERMS_FORM, canPropose, pactAction, sortPacts, termsFromForm, termsText } from '../../src/screens/Play/pacts';
 import type { RoundNode, WireNode } from '../../src/firebase/schema';
@@ -79,5 +82,23 @@ describe('participant wire', () => {
       { k1: live('JOIN during Q2', 2, 1.5, 10), k2: live('JOIN after Q2', 2, 2, 20), k3: live('JOIN during Q3', 3, 2.5, 30) },
     );
     expect(items.map((i) => i.text)).toEqual(['JOIN during Q3', 'JOIN after Q2', 'R2a', 'JOIN during Q2', 'R1a', 'R1b']);
+  });
+});
+
+describe('result card rendering', () => {
+  const history = {
+    '3': { pace: 2, safety: 10, card: 'NONE', target: null, auto: false, expo: 1, draw: 1, incident: false, share: 0.25, revenue: 40, cost: 20, fine: 0, profit: 20, cash: 100, cap: 100, valuation: 200, rank: 2, rankDelta: 0, insolvent: false },
+  } as never;
+  const render = (cardNotices: Array<{ kind: 'card-cooldown' | 'card-target'; card: 'POACH' | 'BLITZ' }>) =>
+    renderToStaticMarkup(createElement(RevealCard, { round: 3, history, audits: [], headlines: [], pacts: {}, firmId: 'a', cardNotices }));
+
+  it('shows a dropped card in the notices panel', () => {
+    const html = render([{ kind: 'card-target', card: 'POACH' }]);
+    expect(html).toContain('POACH was not played. It needs a valid target firm.');
+    expect(html).not.toContain('No notices this quarter.');
+  });
+
+  it('shows no card notice when nothing was dropped', () => {
+    expect(render([])).toContain('No notices this quarter.');
   });
 });

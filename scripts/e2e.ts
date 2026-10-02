@@ -721,6 +721,36 @@ async function participantScenario(
   await waitText(A, /Industry summit in session/, 'the summit banner shows', 15_000);
   check((await A.getByRole('tab', { name: 'PACTS' }).getAttribute('aria-selected')) === 'true', 'the summit selects the PACTS tab');
   await snapPlay(A, 'play-summit');
+
+  // Pacts (Session 6): propose from the phone, join from the desktop, audit and disclose from the projector.
+  await A.getByRole('button', { name: 'PROPOSE A PACT' }).click();
+  await A.getByRole('button', { name: 'SIGN PACT-A' }).click();
+  await waitText(A, /PACT-A[\s\S]*pace 2 or lower/, 'a pact is proposed from the phone during the summit');
+  await waitText(fac, /PACT-A/, 'the projector lists the new pact in the summit view', 15_000, '.scr');
+  await C.getByRole('button', { name: 'JOIN PACT-A' }).click();
+  await waitText(C, /LEAVE PACT-A/, 'a second firm joins the pact from the desktop');
+  await waitText(fac, /ALPH\s+CEDR|CEDR\s+ALPH/, 'the projector shows both members', 15_000, '.scr');
+  await snapPlay(C, 'play-pacts-live');
+  await A.getByRole('tab', { name: 'WIRE' }).click();
+  await waitText(A, /PACT-A/, 'the pact headlines reach the WIRE tab', 20_000);
+  await A.getByRole('tab', { name: 'PACTS' }).click();
+  // Another pact attempt without terms is refused with an explanation.
+  await A.getByRole('button', { name: 'PROPOSE A PACT' }).click();
+  await A.getByRole('checkbox', { name: 'Maximum pace' }).uncheck();
+  await A.getByRole('button', { name: /SIGN PACT-B/ }).click();
+  await waitText(A, /Set a maximum pace, a minimum safety spend, or both/, 'a pact with no terms is explained');
+  await A.getByRole('button', { name: 'CANCEL' }).click();
+  // F6 on the projector queues a manual audit; the console shows it queued.
+  await key(fac, 'Shift+F');
+  await waitText(fac, /AUDIT · SELECT PACT/, 'Shift+F opens the audit picker on the projector', 15_000, '.scr');
+  await shot(fac, 'participant-run-audit');
+  await key(fac, '1');
+  await waitText(fac, /PACT-A audit queued/, 'pressing 1 queues the audit', 15_000, '.scr');
+  await waitText(control, /QUEUED/, 'the console shows the audit queued', 15_000);
+  // F7 / Shift+D turns disclosure on, on the projector and the console.
+  await key(fac, 'Shift+D');
+  await waitText(fac, /DISCL ON/, 'Shift+D turns disclosure on', 15_000, '.scr');
+  await waitText(control, /F7 DISCL ON/, 'the console shows disclosure on', 15_000);
   await A.getByRole('tab', { name: 'DESK' }).click();
   check(await A.getByRole('button', { name: 'LOCKED' }).isDisabled(), 'the desk is locked during the summit');
   await key(fac, 'F8');
@@ -739,6 +769,16 @@ async function participantScenario(
   check(dec2.card === 'POACH' && dec2.target !== null && dec2.target !== firmA, 'the stored POACH has a target other than the own firm');
   await key(fac, 'F9');
   await waitText(A, /Q2 Y1 RESULT/, 'quarter 2 resolves', 15_000);
+  check(/PACT-A audit found a breach\. Fine \d/.test(await A.locator('main').innerText()), 'the result card reports the audit breach and the fine');
+  const board2 = await screenText(fac);
+  check(/PACE\s+SAFE\s+EXPO/.test(board2), 'the board shows PACE, SAFE and EXPO while disclosure is on');
+  check(/BREACH/.test(board2) && /PACT-A/.test(board2), 'the board carries the pact tag and the BREACH tag after the audit');
+  await shot(fac, 'participant-run-disclosure-on');
+  await key(fac, 'Shift+D');
+  await waitText(fac, /DISCL OFF/, 'Shift+D turns disclosure off', 15_000, '.scr');
+  check(!/PACE\s+SAFE\s+EXPO/.test(await screenText(fac)), 'the PACE, SAFE and EXPO columns disappear when disclosure is off');
+  const round2 = await adminGet<{ disclosure?: Record<string, unknown> }>(`games/${g}/rounds/2`);
+  check(Object.keys(round2.disclosure ?? {}).length === 4, 'the quarter 2 snapshot holds all four firms');
 
   // ── Quarter 3: cooldowns, offline, locked after the deadline ──
   await key(fac, 'F9');
