@@ -92,7 +92,10 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   /** Runs one orchestrator action at a time, so a repeated key press cannot skip a phase. */
   const run = useCallback(
     (action: () => Promise<ActionResult>) => {
-      if (busy.current) return;
+      if (busy.current) {
+        say('Working on the last key. Press again in a moment.', 2500);
+        return;
+      }
       busy.current = true;
       action()
         .then(report, () => say('The action failed. Check the connection and press the key again.', 9000))

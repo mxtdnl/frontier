@@ -135,6 +135,12 @@ p {
   flex-direction: column;
   gap: 1lh;
 }
+.play-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1lh;
+  min-height: 100%;
+}
 .play-tabs {
   grid-area: tabs;
 }
