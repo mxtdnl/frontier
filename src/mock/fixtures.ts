@@ -201,45 +201,6 @@ export const OWN_RESULT = {
   notices: ['Audit of PACT-A: DOLM compliant.'],
 };
 
-// ---------- Results ----------
-
-export interface ResultFirm {
-  ticker: string;
-  name: string;
-  finalValue: number;
-  peakValue: number;
-  counterfactual: number;
-  /** Share of total depletion, sums to 1. */
-  depletionShare: number;
-  detected: number;
-  undetected: number;
-}
-export const RESULTS: ReadonlyArray<ResultFirm> = [
-  { ticker: 'ARCN', name: 'Arcturn Labs', finalValue: 188.4, peakValue: 412.6, counterfactual: 466.0, depletionShare: 0.29, detected: 0, undetected: 0 },
-  { ticker: 'FJRD', name: 'Fjordline', finalValue: 171.0, peakValue: 266.3, counterfactual: 301.2, depletionShare: 0.05, detected: 0, undetected: 0 },
-  { ticker: 'DOLM', name: 'Dolmen AI', finalValue: 164.7, peakValue: 329.5, counterfactual: 352.8, depletionShare: 0.08, detected: 0, undetected: 1 },
-  { ticker: 'BRLK', name: 'Brelek Models', finalValue: 140.2, peakValue: 377.9, counterfactual: 398.4, depletionShare: 0.14, detected: 1, undetected: 2 },
-  { ticker: 'CYRA', name: 'Cyra Systems', finalValue: 52.6, peakValue: 351.2, counterfactual: 369.1, depletionShare: 0.12, detected: 0, undetected: 0 },
-  { ticker: 'EMBR', name: 'Ember Compute', finalValue: 41.3, peakValue: 301.0, counterfactual: 288.0, depletionShare: 0.22, detected: 0, undetected: 0 },
-  { ticker: 'GLYN', name: 'Glynn Research', finalValue: 33.0, peakValue: 242.0, counterfactual: 261.9, depletionShare: 0.07, detected: 0, undetected: 0 },
-  { ticker: 'HRTH', name: 'Hearth Systems', finalValue: 22.6, peakValue: 118.5, counterfactual: 140.3, depletionShare: 0.03, detected: 0, undetected: 0 },
-];
-
-/** Full-run trust: actual and the alternative path with the same incident draws. */
-export const TRUST_ACTUAL: ReadonlyArray<number> = [90, 89.2, 86.4, 82.7, 77.8, 68.1, 61.8, 52.4, 41.9, 33.0, 30.2, 28.6, 27.9];
-export const TRUST_ALT: ReadonlyArray<number> = [90, 89.6, 88.1, 86.9, 85.2, 83.4, 82.0, 80.7, 79.5, 78.6, 77.9, 77.4, 77.0];
-/** Index into TRUST_ACTUAL of the moratorium quarter. */
-export const COLLAPSE_INDEX = 9;
-export const TAU = 35;
-
-export const DEBRIEF_PROMPTS: ReadonlyArray<string> = [
-  'When did your firm first notice trust falling, and what did you change?',
-  'Which pacts held and which broke? Was the difference monitoring, sanctions or trust?',
-  'Compare your share of the damage with your share of the value. Is that outcome fair, and who should pay?',
-  'Would disclosure from quarter 1 have changed your decisions? Why?',
-  'Where does this pattern appear in the real AI industry, and which of Ostrom’s design principles would you add to the market?',
-];
-
 // ---------- Control ----------
 
 export interface ControlFirm {

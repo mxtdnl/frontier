@@ -4,15 +4,18 @@
  * The real database is covered in tests/emulator/orchestrator.test.ts.
  */
 import { describe, expect, it } from 'vitest';
-import { PARAMS, createGame, type Pact } from '../../src/engine';
+import { PARAMS, buildResults, createGame, type Pact } from '../../src/engine';
 import {
   INCOMPLETE,
   addTime,
   advance,
   autoResolve,
   buildEngineNode,
+  deleteSession,
   endSession,
+  ensureResults,
   mergePacts,
+  publishResults,
   publishWire,
   queueAudit,
   resolveCurrentRound,
@@ -21,6 +24,7 @@ import {
   seedFromText,
   setPaused,
   startBriefing,
+  stepResults,
   toggleDisclosure,
   toggleSummit,
   type Ctx,
@@ -33,6 +37,7 @@ import {
   fromFirms,
   fromMeta,
   fromPacts,
+  fromResults,
   fromPublic,
   fromRound,
   fromWire,
@@ -132,6 +137,10 @@ function world(o: Opts = {}): World {
     readFirms: async () => fromFirms(storeAndRead(db.firms)),
     readDecisions: async (r) => fromDecisions(storeAndRead(getAt(db, `decisions/${r}`))),
     readPacts: async () => fromPacts(storeAndRead(db.pacts)),
+    readResults: async () => fromResults(storeAndRead(db.results)),
+    async deleteGame() {
+      for (const k of Object.keys(db)) delete db[k];
+    },
     async transactPendingAudits(step) {
       const engine = fromEngine(storeAndRead(db.engine));
       const current = engine?.pendingAudits ?? [];
@@ -233,7 +242,9 @@ describe('phase machine', () => {
     expect((await advance(w.ctx)).ok).toBe(true); // reveal after the end round → ended
     expect(w.pub().phase).toBe('ended');
     expect(w.pub().endedAt).toBe(w.clock.t);
-    expect((await advance(w.ctx)).ok).toBe(false);
+    // F9 on an ended session steps the results panels instead (§14.4).
+    expect((await advance(w.ctx)).ok).toBe(true);
+    expect(w.pub().revealStep).toBe(1);
   });
 
   it('stops after round 30 in manual mode', async () => {
@@ -795,5 +806,120 @@ describe('live wire headlines (spec §5.3)', () => {
     setAt(w.db, 'pacts/p1/members/hum1', null);
     await publishWire(w.ctx, liveInput(w));
     expect(Object.values(wireOf(w)).find((x) => x.kind === 'pact-left')?.seq).toBe(1);
+  });
+});
+
+describe('results (spec §10, §14.4)', () => {
+  async function ended(o: Opts & { revealTau?: boolean } = {}): Promise<World> {
+    const w = world({ endMode: 'fixed', fixedEnd: 3, ...o });
+    if (o.revealTau) setAt(w.db, 'meta/settings/revealThreshold', true);
+    await toOpen(w);
+    for (let r = 1; r <= 3; r++) {
+      if (r > 1) await advance(w.ctx); // open the next quarter
+      for (const id of w.firmIds.filter((f) => f.startsWith('hum'))) commit(w, r, id, { pace: 3, safety: 4 });
+      expect((await advance(w.ctx)).ok).toBe(true); // resolve
+    }
+    expect((await advance(w.ctx)).ok).toBe(true); // reveal after the end round → ended
+    return w;
+  }
+  const stored = (w: World) => fromResults(storeAndRead(w.db.results));
+
+  it('writes /results when the session ends, equal to the engine output for the stored state', async () => {
+    const w = await ended();
+    expect(w.pub().phase).toBe('ended');
+    const expected = buildResults(engineStateOf(w.engine()), { revealTau: false }, PARAMS);
+    expect(stored(w)).toEqual(fromResults(storeAndRead(expected)));
+    expect(stored(w)?.rounds).toBe(3);
+    expect(w.updates.filter((u) => 'results' in u)).toHaveLength(1);
+  });
+
+  it('writes results in one update', async () => {
+    const w = await ended();
+    const patch = w.updates.filter((u) => 'results' in u)[0] as Record<string, unknown>;
+    expect(Object.keys(patch)).toEqual(['results']);
+  });
+
+  it('keeps tau and the end round out of /results unless the reveal setting is on', async () => {
+    const off = await ended();
+    expect(stored(off)?.tau).toBeNull();
+    expect(JSON.stringify(off.db.results)).not.toContain('endRound');
+    const on = await ended({ revealTau: true });
+    expect(stored(on)?.tau).toBe(on.engine().tau);
+    expect(JSON.stringify(on.db.results)).not.toContain('endRound');
+  });
+
+  it('ends mid-quarter with F10: the open quarter is discarded and results cover resolved quarters', async () => {
+    const w = world({ endMode: 'manual' });
+    await toOpen(w);
+    await advance(w.ctx); // resolve 1
+    await advance(w.ctx); // open 2
+    expect((await endSession(w.ctx)).ok).toBe(true);
+    expect(w.pub().phase).toBe('ended');
+    expect(stored(w)?.rounds).toBe(1);
+    expect(stored(w)?.dataLines).toHaveLength(4);
+  });
+
+  it('refuses to write before the session has ended', async () => {
+    const w = world();
+    await toOpen(w);
+    const r = await publishResults(w.ctx);
+    expect(r.ok).toBe(false);
+    expect(w.db.results).toBeUndefined();
+  });
+
+  it('keeps the session ended when the write fails, and a later call writes the same data', async () => {
+    const w = world({ endMode: 'fixed', fixedEnd: 1 });
+    await toOpen(w);
+    await advance(w.ctx); // resolve 1
+    w.failUpdates.n = 1;
+    const end = await advance(w.ctx); // → ended; the results write is refused
+    expect(end.ok).toBe(true);
+    expect(end.message).toContain('Results were not written');
+    expect(w.pub().phase).toBe('ended');
+    expect(w.db.results).toBeUndefined();
+    const retry = await ensureResults(w.ctx);
+    expect(retry?.ok).toBe(true);
+    const again = stored(w);
+    expect(again?.rounds).toBe(1);
+    // Present now: a second window does nothing.
+    expect(await ensureResults(w.ctx)).toBeNull();
+    expect(stored(w)).toEqual(again);
+  });
+
+  it('two windows writing the results store identical data', async () => {
+    const w = await ended();
+    const first = JSON.stringify(w.db.results);
+    expect((await publishResults(w.ctx)).ok).toBe(true);
+    expect(JSON.stringify(w.db.results)).toBe(first);
+  });
+
+  it('steps the results panels with F9 and back, within 1 to 6', async () => {
+    const w = await ended();
+    expect(w.pub().revealStep).toBe(0);
+    for (let i = 1; i <= 5; i++) {
+      expect((await stepResults(w.ctx, 1)).ok).toBe(true);
+      expect(w.pub().revealStep).toBe(i);
+    }
+    const last = await stepResults(w.ctx, 1);
+    expect(last.ok).toBe(false);
+    expect(w.pub().revealStep).toBe(5);
+    expect((await stepResults(w.ctx, -1)).ok).toBe(true);
+    expect(w.pub().revealStep).toBe(4);
+  });
+
+  it('does not step results while the session is running', async () => {
+    const w = world();
+    await toOpen(w);
+    expect((await stepResults(w.ctx, 1)).ok).toBe(false);
+    expect(w.pub().revealStep).toBe(0);
+  });
+
+  it('deletes the session record and reports the freed code', async () => {
+    const w = await ended();
+    const r = await deleteSession(w.ctx);
+    expect(r.ok).toBe(true);
+    expect(r.message).toContain('ABCD');
+    expect(w.db.public).toBeUndefined();
+    expect(w.db.engine).toBeUndefined();
   });
 });

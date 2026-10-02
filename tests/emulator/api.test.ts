@@ -6,13 +6,13 @@ import { deleteApp, initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, createUserWithEmailAndPassword, getAuth, signInAnonymously } from 'firebase/auth';
 import { connectDatabaseEmulator, get, getDatabase, goOffline, ref, set, type Database } from 'firebase/database';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PARAMS, createGame, resolveRound } from '../../src/engine';
+import { PARAMS, buildResults, createGame, resolveRound } from '../../src/engine';
 import * as api from '../../src/firebase/api';
 import { EMULATOR_HOST, EMULATOR_AUTH_PORT, EMULATOR_DATABASE_PORT } from '../../src/firebase/config';
 import { emulatorOptions } from '../../src/firebase/init';
 import { paths } from '../../src/firebase/paths';
 import { subscribeServerTimeOffset, trackPresence } from '../../src/firebase/presence';
-import type { EngineNode, MetaNode, PublicNode } from '../../src/firebase/schema';
+import { fromResults, type EngineNode, type MetaNode, type PublicNode } from '../../src/firebase/schema';
 import { adminSet, loadRules } from '../../scripts/emulator-rules';
 import { storeAndRead } from '../firebase/rtdb';
 
@@ -167,10 +167,21 @@ describe('data layer against the emulator', () => {
   });
 
   it('shows results to participants only once ended, then deletes the game and frees the code', async () => {
-    await api.writeResults(fac.db, G, { final: { [firmId]: { rank: 1 } }, counterfactual: null, attribution: [], dataLines: ['DATA game=KXMT'] });
+    let state = createGame(
+      { label: 'KXMT', endMode: 'fixed', minEnd: 2, maxEnd: 2, fixedEnd: 2, disclosure: false, autoAuditP: 0 },
+      [{ id: firmId, ticker: 'HELX', isBot: false, botPolicy: null }, { id: 'bot1', ticker: 'BOTA', isBot: true, botPolicy: 'standard' }],
+      7,
+      PARAMS,
+    );
+    for (let r = 0; r < 2; r++) state = resolveRound(state, {}, PARAMS).state;
+    const results = buildResults(state, { revealTau: true }, PARAMS);
+    await api.writeResults(fac.db, G, results);
     await expect(api.readResults(p1.db, G)).rejects.toThrow();
     await api.updatePublic(fac.db, G, { phase: 'ended' });
-    expect(await api.readResults(p1.db, G)).toEqual({ final: { [firmId]: { rank: 1 } }, counterfactual: null, attribution: [], dataLines: ['DATA game=KXMT'] });
+    const read = await api.readResults(p1.db, G);
+    expect(read).toEqual(fromResults(storeAndRead(results)));
+    expect(read?.tau).toBe(state.tau);
+    expect(read?.final[firmId]?.ticker).toBe('HELX');
     await api.deleteGame(fac.db, G, 'KXMT');
     expect(await api.resolveCode(p1.db, 'KXMT')).toBeNull();
     expect(await api.readMeta(fac.db, G)).toBeNull();

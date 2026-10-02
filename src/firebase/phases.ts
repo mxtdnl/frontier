@@ -134,3 +134,17 @@ export const toggleDisclosureStep: Step = (p) => {
   if (p.phase === 'ended') return 'The session has ended. Disclosure can no longer change.';
   return { ...p, disclosure: !p.disclosure };
 };
+
+/** Number of results panels (spec §14.4). `revealStep` is the zero-based index of the panel on screen. */
+export const RESULT_PANEL_COUNT = 6;
+
+/** F9 steps the results forward and Esc steps back, once the session has ended. */
+export const stepResultsStep =
+  (delta: 1 | -1): Step =>
+  (p) => {
+    if (p.phase !== 'ended') return 'The results screen is available after the session ends.';
+    const next = p.revealStep + delta;
+    if (next >= RESULT_PANEL_COUNT) return 'This is the last results panel.';
+    if (next < 0) return 'This is the first results panel.';
+    return { ...p, revealStep: next };
+  };

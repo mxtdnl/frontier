@@ -5,7 +5,7 @@
  */
 import { deleteApp, initializeApp, type FirebaseApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { connectDatabaseEmulator, get, getDatabase, goOffline, ref, type Database } from 'firebase/database';
+import { connectDatabaseEmulator, get, getDatabase, goOffline, ref, set, type Database } from 'firebase/database';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import * as api from '../../src/firebase/api';
 import { EMULATOR_AUTH_PORT, EMULATOR_DATABASE_PORT, EMULATOR_HOST } from '../../src/firebase/config';
@@ -14,10 +14,12 @@ import {
   addTime,
   advance,
   createSession,
+  deleteSession,
   endSession,
   firebaseIO,
   resolveCurrentRound,
   retryResolution,
+  stepResults,
   setPaused,
   toggleSummit,
   type Ctx,
@@ -222,12 +224,39 @@ describe('orchestrator against the emulator', () => {
     const pub = await readPub();
     expect(pub?.phase).toBe('ended');
     expect(pub?.endedAt).toBeGreaterThan(0);
-    // Results become readable to participants only now.
-    expect(await api.readResults(p1.db, g)).toBeNull();
+    // The facilitator window wrote the results when the session ended; participants can read them now.
+    const results = await api.readResults(p1.db, g);
+    const engine = await api.readEngine(fac.db, g);
+    expect(results?.rounds).toBe(2);
+    expect(results?.tau).toBeNull();
+    expect(Object.keys(results?.final ?? {})).toHaveLength(4);
+    expect(results?.dataLines).toHaveLength(8);
+    expect(Object.values(results?.final ?? {}).map((f) => f.valuation).sort()).toEqual(engine?.firms.map((f) => f.valuation).sort());
+    const text = JSON.stringify(results);
+    expect(text).not.toContain('endRound');
+    // A participant cannot forge or change them.
+    await expect(set(ref(p1.db, paths.results(g)), { rounds: 99 })).rejects.toThrow();
+    await expect(set(ref(p1.db, `${paths.results(g)}/final`), null)).rejects.toThrow();
   });
 
   it('refuses retry and end on a finished session', async () => {
     expect((await retryResolution(ctx, null)).ok).toBe(false);
     expect((await endSession(ctx)).ok).toBe(false);
+  });
+
+  it('steps the results panels through the real rules', async () => {
+    expect((await stepResults(ctx, 1)).ok).toBe(true);
+    expect((await readPub())?.revealStep).toBe(1);
+    expect((await stepResults(ctx, -1)).ok).toBe(true);
+    expect((await readPub())?.revealStep).toBe(0);
+  });
+
+  it('deletes the session and frees its join code', async () => {
+    const meta = await api.readMeta(fac.db, g);
+    expect(await api.resolveCode(p1.db, meta?.code ?? '')).toBe(g);
+    expect((await deleteSession(ctx)).ok).toBe(true);
+    expect(await api.readMeta(fac.db, g)).toBeNull();
+    expect(await api.resolveCode(p1.db, meta?.code ?? '')).toBeNull();
+    expect((await deleteSession(ctx)).ok).toBe(false);
   });
 });

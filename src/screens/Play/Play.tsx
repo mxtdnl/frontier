@@ -14,6 +14,7 @@ import {
   usePacts,
   usePresence,
   usePublic,
+  useResults,
   useRounds,
   useServerTimeOffset,
   useWire,
@@ -30,7 +31,8 @@ import {
   wireItems,
   type Draft,
 } from './model';
-import { Book, EndedCard, RevealCard, Wire } from './Panels';
+import { OwnResultsCard } from '../Results/OwnResultsCard';
+import { Book, RevealCard, Wire } from './Panels';
 import { PactsTab } from './PactsTab';
 import { useHeldFor, useServerNow } from './useServerNow';
 
@@ -81,6 +83,7 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
   const offline = useHeldFor(!connected, 2000);
 
   const pub = pubSub.data;
+  const resultsSub = useResults(pub?.phase === 'ended' ? g : null);
   const round = pub?.round ?? 0;
   const decisionSub = useOwnDecision(g, round, firmId);
   const decision = decisionSub.data;
@@ -285,7 +288,14 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
       <main className="play-main" id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`} tabIndex={-1}>
         {tab === 'DESK' ? (
           view === 'ended' ? (
-            <EndedCard ticker={firm.ticker} rank={ownPublic?.rank ?? lastRow?.rank ?? null} valuation={ownPublic?.valuation ?? lastRow?.valuation ?? null} />
+            <OwnResultsCard
+              ticker={firm.ticker}
+              firmId={firmId}
+              results={resultsSub.data}
+              unavailable={resultsSub.error !== null}
+              rank={ownPublic?.rank ?? lastRow?.rank ?? null}
+              valuation={ownPublic?.valuation ?? lastRow?.valuation ?? null}
+            />
           ) : view === 'reveal' ? (
             <RevealCard
               round={round}

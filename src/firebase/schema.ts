@@ -7,8 +7,8 @@
  */
 import { PARAMS } from '../engine/params';
 import type { Params } from '../engine/params';
+import type { FinalResults } from '../engine/results';
 import type {
-  AttributionRow,
   AuditBreach,
   AuditResult,
   BotPolicy,
@@ -186,13 +186,8 @@ export interface EngineNode extends EngineState {
 
 export type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
 
-export interface ResultsNode {
-  /** firmId → final figures; the exact fields are fixed in Session 7. */
-  final: Record<string, Record<string, Json>>;
-  counterfactual: CounterfactualResult | null;
-  attribution: AttributionRow[];
-  dataLines: string[];
-}
+/** `results`: written once by the facilitator when the session ends (spec §10, §12). */
+export type ResultsNode = FinalResults;
 
 // ── Normalisers ────────────────────────────────────────────────────────────────
 
@@ -595,12 +590,62 @@ export function engineStateOf(e: EngineNode): EngineState {
 
 export function fromResults(v: Raw): ResultsNode | null {
   if (!isObj(v)) return null;
+  const cf = obj(v.counterfactual);
   return {
-    final: rec(v.final, (x) => obj(x) as Record<string, Json>),
-    counterfactual: fromCounterfactual(v.counterfactual),
+    rounds: num(v.rounds),
+    collapseRound: numOrNull(v.collapseRound),
+    tau: numOrNull(v.tau),
+    startTrust: num(v.startTrust),
+    trust: arr(v.trust, (x) => num(x)),
+    final: rec(v.final, (x, k) => {
+      const o = obj(x);
+      return {
+        firmId: k,
+        ticker: str(o.ticker),
+        isBot: bool(o.isBot),
+        rank: num(o.rank),
+        valuation: num(o.valuation),
+        peakValuation: num(o.peakValuation),
+        counterfactual: num(o.counterfactual),
+        drawShare: num(o.drawShare),
+        valueShare: num(o.valueShare),
+        cumulativeDraw: num(o.cumulativeDraw),
+        incidents: num(o.incidents),
+        insolvent: bool(o.insolvent),
+        detected: num(o.detected),
+        undetected: num(o.undetected),
+      };
+    }),
+    industry: {
+      actual: num(obj(v.industry).actual),
+      counterfactual: num(obj(v.industry).counterfactual),
+      destroyed: num(obj(v.industry).destroyed),
+    },
+    counterfactual: {
+      rounds: num(cf.rounds),
+      industryTotal: num(cf.industryTotal),
+      perFirm: num(cf.perFirm),
+      byFirm: rec(cf.byFirm, (x) => num(x)),
+      trust: arr(cf.trust, (x) => num(x)),
+      collapseRound: numOrNull(cf.collapseRound),
+    },
     attribution: arr(v.attribution, (x) => {
       const o = obj(x);
       return { firmId: str(o.firmId), drawShare: num(o.drawShare), valueShare: num(o.valueShare), cumulativeDraw: num(o.cumulativeDraw), valuation: num(o.valuation) };
+    }),
+    pacts: arr(v.pacts, (x) => {
+      const o = obj(x);
+      return {
+        pactId: str(o.pactId),
+        name: str(o.name),
+        terms: fromTerms(o.terms),
+        status: str(o.status, 'active') as Pact['status'],
+        createdRound: num(o.createdRound),
+        members: arr(o.members, (m) => str(m)),
+        detected: num(o.detected),
+        undetected: num(o.undetected),
+        perFirm: rec(o.perFirm, (r) => ({ detected: num(obj(r).detected), undetected: num(obj(r).undetected) })),
+      };
     }),
     dataLines: arr(v.dataLines, (x) => str(x)),
   };
