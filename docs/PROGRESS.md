@@ -487,3 +487,26 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 **Next steps**
 - Owner: paste `database.rules.json` into the Firebase console, then decide M1–M4.
 - Session 10: scale to 40–50 participants.
+
+## 2026-10-03 — UI audit and redesign plan (Sessions 11–15 added)
+
+**Done**
+- Audited every screen for looks and for how well it can be understood without the facilitator. Evidence: screenshots from `npm run test:e2e` and `npm run test:e2e:rehearsal` (both passed, no code changed).
+- The audit, with before and after mock-ups drawn from engine output, is saved at `docs/ui-audit/index.html`. The owner approved it on 2026-10-03, including its five decisions.
+- Added Sessions 11–15 to `docs/SESSIONS.md`: chart foundation and results defects; colour, chrome and screen-level clarity; firm performance views; results narrative; phone and plain pages.
+
+**Defects found (to be fixed in Session 11)**
+- When final valuations are negative, results panels 1 and 3 draw empty bars and panel 4 shows 0.0% value share for every firm. The 14-quarter rehearsal reproduces this.
+- Chart lines stop short of their x-axis labels and y labels do not sit at their values, because chart widths are fixed in `ch` and labels are laid out beside the SVG.
+
+**Spec deviations approved, to be written into the spec by the session that implements each**
+- New tokens and a dark top bar (§16.1); full-word uppercase labels where a mnemonic needs explaining (§16.2, settles REVIEW L7).
+- Straight-segment line chart with quarter markers and a change strip instead of square steps; a flat hatch between two compared series; new components for firm performance (§16.3).
+- Negative totals: engine definitions unchanged; display rules in Session 11 step 6 (§10, §14.4).
+
+**Open issues**
+- Sessions 12–15 change layouts that Session 10 (scaling) also changes. Run Session 10 first if it is going ahead.
+
+**Tests:** `npm run typecheck` passes; `npm test` 316 passed.
+
+**Next:** Session 11.

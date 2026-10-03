@@ -1,0 +1,665 @@
+<title>Frontier Interface Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a single reading column of findings; each finding pairs a current screenshot with a terminal-styled proposal drawn from real engine output. */
+:root {
+  color-scheme: dark;
+  /* Report chrome */
+  --bg: #0B0B09;
+  --surface: #13130F;
+  --ink: #E8E2C8;
+  --muted: #9A947C;
+  --line: #2C2A21;
+  /* Proposed FRONTIER tokens (v2), used by every mock-up */
+  --base: #000000;
+  --panel: #1C1B14;
+  --raise: #24231B;
+  --rule: #3A3729;
+  --grid: #2A2820;
+  --text: #E8E2C8;
+  --dim: #9A947C;
+  --signal: #FFB000;
+  --signal-dim: #8A6400;
+  --signal-ink: #000000;
+  --wire: #5EC8D8;
+  --up: #7FD15B;
+  --down: #FF4D3D;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 96px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; font-weight: 600; }
+h1 { font-family: var(--mono); font-size: clamp(28px, 4.4vw, 44px); line-height: 1.1; letter-spacing: -0.01em; }
+h2 { font-family: var(--mono); font-size: 22px; margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; gap: 14px; align-items: baseline; }
+h2 .k { color: var(--signal); font-size: 14px; letter-spacing: 0.06em; }
+h3 { font-size: 18px; margin-top: 36px; }
+p, li { max-width: 72ch; }
+p { margin: 12px 0 0; }
+ul, ol { margin: 12px 0 0; padding-left: 22px; }
+li + li { margin-top: 6px; }
+a { color: var(--wire); }
+code { font-family: var(--mono); font-size: 0.88em; color: var(--signal); }
+.eyebrow { font-family: var(--mono); font-size: 13px; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+.lede { font-size: 19px; color: var(--ink); max-width: 66ch; margin-top: 18px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 28px; margin-top: 20px; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.meta b { color: var(--ink); font-weight: 500; }
+.muted { color: var(--muted); }
+
+/* Summary grid */
+.causes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 24px; }
+.cause { background: var(--surface); padding: 18px 20px 20px; min-width: 0; }
+.cause .n { font-family: var(--mono); color: var(--signal); font-size: 13px; }
+.cause h3 { margin-top: 6px; font-size: 17px; }
+.cause p { font-size: 15px; color: var(--muted); }
+
+/* Defects table */
+.tblwrap { overflow-x: auto; margin-top: 18px; border: 1px solid var(--line); }
+table.def { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 640px; }
+table.def th, table.def td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.def th { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--muted); font-weight: 500; background: var(--surface); }
+table.def td:first-child { font-family: var(--mono); font-size: 13px; color: var(--muted); white-space: nowrap; }
+.sev { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border: 1px solid currentColor; white-space: nowrap; }
+.sev.hi { color: var(--down); }
+.sev.md { color: var(--signal); }
+.sev.lo { color: var(--muted); }
+table.def tr:last-child td { border-bottom: 0; }
+
+/* Before / after */
+.pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; margin-top: 18px; }
+figure { margin: 0; min-width: 0; }
+figcaption { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; display: flex; gap: 10px; align-items: baseline; }
+figcaption .tag { color: var(--signal-ink); background: var(--muted); padding: 0 6px; font-weight: 600; }
+figcaption .tag.after { background: var(--signal); }
+.shot { display: block; width: 100%; height: auto; border: 1px solid var(--line); background: #000; }
+.notes { margin-top: 14px; }
+.spec { font-family: var(--mono); font-size: 12px; padding: 1px 6px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.spec.chg { border-color: var(--signal-dim); color: var(--signal); }
+
+/* ---------- Mock-up frame: the proposed FRONTIER v2 look ---------- */
+.mock { font-family: var(--mono); font-variant-numeric: tabular-nums; background: var(--base); color: var(--text); border: 1px solid var(--line); font-size: 13px; line-height: 1.35; overflow: hidden; }
+.mock svg { display: block; width: 100%; height: auto; }
+.mock svg text { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.m-panel { background: var(--panel); border: 1px solid var(--rule); }
+.m-title { display: flex; justify-content: space-between; gap: 2ch; padding: 4px 1ch; border-bottom: 1px solid var(--rule); color: var(--text); font-weight: 600; letter-spacing: 0.02em; }
+.m-title .r { color: var(--dim); font-weight: 400; }
+.m-body { padding: 8px 1ch 10px; }
+
+/* Mock top bar */
+.m-top { display: flex; align-items: stretch; background: var(--panel); border-bottom: 2px solid var(--signal); white-space: nowrap; overflow: hidden; }
+.m-top > span { display: flex; align-items: center; padding: 6px 1.5ch; border-right: 1px solid var(--rule); }
+.m-top .brand { background: var(--signal); color: var(--signal-ink); font-weight: 600; }
+.m-top .cmd { color: var(--dim); min-width: 18ch; }
+.m-top .cmd::after { content: ''; display: inline-block; width: 1ch; height: 1.1em; background: var(--signal); margin-left: 2px; vertical-align: -0.15em; }
+.m-top .phase { color: var(--signal-ink); background: var(--wire); font-weight: 600; }
+.m-top .grow { flex: 1; border-right: 0; }
+.m-top .clock { font-size: 1.5em; font-weight: 600; color: var(--signal); border-left: 1px solid var(--rule); border-right: 0; }
+.m-fk { display: flex; gap: 0 2ch; padding: 6px 1ch; background: var(--panel); border-top: 1px solid var(--rule); white-space: nowrap; overflow: hidden; color: var(--dim); }
+.m-fk .k { border: 1px solid var(--signal-dim); color: var(--signal); padding: 0 0.6ch; margin-right: 0.6ch; }
+.m-fk .primary { color: var(--text); }
+.m-fk .primary .k { background: var(--signal); color: var(--signal-ink); border-color: var(--signal); font-weight: 600; }
+.m-tick { display: flex; background: var(--base); border-top: 1px solid var(--rule); white-space: nowrap; overflow: hidden; }
+.m-tick .lab { background: var(--wire); color: var(--signal-ink); font-weight: 600; padding: 3px 1ch; }
+.m-tick .run { padding: 3px 0 3px 2ch; color: var(--wire); }
+.m-tick .run i { font-style: normal; color: var(--dim); margin: 0 1ch 0 2ch; }
+.m-tick .neg { color: var(--down); }
+
+/* Mock board */
+.m-board { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.m-board th { color: var(--dim); font-weight: 400; text-align: right; padding: 4px 1ch 4px 0; border-bottom: 1px solid var(--rule); background: var(--raise); }
+.m-board th.l, .m-board td.l { text-align: left; }
+.m-board td { text-align: right; padding: 5px 1ch 5px 0; border-bottom: 1px solid var(--grid); white-space: nowrap; overflow: hidden; }
+.m-board tr:nth-child(even) td { background: color-mix(in srgb, var(--raise) 55%, transparent); }
+.m-board td.spark { padding: 2px 1ch; }
+.m-board td.spark svg { height: 20px; }
+.pos { color: var(--up); } .neg { color: var(--down); } .dimt { color: var(--dim); }
+.m-tag { display: inline-block; font-size: 0.85em; padding: 0 0.5ch; border: 1px solid var(--signal-dim); color: var(--signal); }
+.m-tag.br { border-color: var(--down); color: var(--down); }
+.tri-up::before { content: '▲'; font-size: 0.75em; margin-right: 0.3ch; }
+.tri-dn::before { content: '▼'; font-size: 0.75em; margin-right: 0.3ch; }
+
+/* Mock phone */
+.phones { display: flex; flex-wrap: wrap; gap: 18px; }
+.phone { width: 300px; max-width: 100%; border: 1px solid var(--line); background: var(--base); font-family: var(--mono); font-size: 13px; line-height: 1.35; color: var(--text); }
+.ph-top { display: flex; justify-content: space-between; align-items: center; padding: 8px 1.2ch; background: var(--panel); border-bottom: 2px solid var(--signal); }
+.ph-top b { color: var(--signal); }
+.ph-clock { font-size: 22px; font-weight: 600; color: var(--signal); }
+.ph-strip { display: flex; gap: 3ch; padding: 6px 1.2ch; border-bottom: 1px solid var(--rule); }
+.ph-body { padding: 12px 1.2ch; display: flex; flex-direction: column; gap: 12px; }
+.ph-lab { color: var(--dim); font-size: 12px; display: flex; justify-content: space-between; }
+.ph-seg { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--rule); }
+.ph-seg span { text-align: center; padding: 6px 0 4px; border-right: 1px solid var(--rule); font-size: 12px; }
+.ph-seg span:last-child { border-right: 0; }
+.ph-seg span b { display: block; font-size: 14px; }
+.ph-seg .on { background: var(--raise); color: var(--signal); box-shadow: inset 0 -3px 0 var(--signal); }
+.ph-meter { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 4px; }
+.ph-meter i { height: 4px; background: var(--grid); }
+.ph-meter i.f1 { background: var(--up); } .ph-meter i.f2 { background: var(--signal); } .ph-meter i.f3 { background: var(--down); }
+.ticket { border: 1px solid var(--rule); background: var(--panel); }
+.ticket > div { display: flex; justify-content: space-between; padding: 4px 1ch; border-bottom: 1px solid var(--grid); }
+.ticket > div:last-child { border-bottom: 0; }
+.ph-commit { background: var(--signal); color: var(--signal-ink); text-align: center; font-weight: 600; padding: 12px 0; }
+.ph-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--rule); background: var(--panel); }
+.ph-tabs span { text-align: center; padding: 12px 0; color: var(--dim); }
+.ph-tabs .on { color: var(--signal); box-shadow: inset 0 3px 0 var(--signal); font-weight: 600; }
+.ph-note { border-left: 2px solid var(--wire); padding: 2px 1ch; color: var(--text); background: var(--panel); }
+
+/* Token table */
+.tokens { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 10px; margin-top: 16px; }
+.tok { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 12px; align-items: center; padding: 10px; border: 1px solid var(--line); background: var(--surface); font-size: 14px; }
+.tok .sw { grid-row: span 2; width: 44px; height: 44px; border: 1px solid var(--line); }
+.tok b { font-family: var(--mono); font-weight: 500; font-size: 13px; }
+.tok span { color: var(--muted); font-size: 13px; }
+.tok .new { color: var(--signal); font-family: var(--mono); font-size: 11px; margin-left: 6px; }
+
+.plan { counter-reset: s; list-style: none; padding: 0; }
+.plan li { border-left: 2px solid var(--line); padding: 4px 0 4px 16px; margin-top: 14px; max-width: 76ch; }
+.plan li b { font-family: var(--mono); color: var(--signal); font-weight: 500; }
+
+@media (min-width: 900px) {
+  .pair.side { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .m-top .cmd::after { animation: blink 1.1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+}
+
+/* v2 additions */
+.update { border: 1px solid var(--signal-dim); background: var(--surface); padding: 14px 18px; margin-top: 24px; }
+.update h3 { margin: 0; font-size: 15px; font-family: var(--mono); color: var(--signal); letter-spacing: 0.04em; }
+.update ul { margin-top: 8px; }
+.update li { font-size: 15px; }
+.fix { font-family: var(--mono); font-size: 11px; padding: 0 5px; border: 1px solid var(--down); color: var(--down); margin-right: 6px; white-space: nowrap; }
+.ok { font-family: var(--mono); font-size: 11px; padding: 0 5px; border: 1px solid var(--up); color: var(--up); white-space: nowrap; }
+.nw { font-family: var(--mono); font-size: 11px; padding: 0 5px; border: 1px solid var(--wire); color: var(--wire); white-space: nowrap; }
+.cmp { font-family: var(--mono); font-size: 11px; padding: 0 5px; border: 1px solid var(--muted); color: var(--muted); white-space: nowrap; }
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 16px; }
+.opt { background: var(--surface); padding: 14px 16px; min-width: 0; font-size: 15px; }
+.opt b { font-family: var(--mono); font-size: 13px; color: var(--ink); display: block; margin-bottom: 4px; }
+.opt.pick { box-shadow: inset 0 3px 0 var(--signal); }
+.opt.pick b { color: var(--signal); }
+.opt p { margin: 0; color: var(--muted); }
+table.def td.c { font-family: var(--sans); font-size: 15px; color: var(--ink); white-space: normal; }
+.m-status { padding: 6px 1.5ch; border-bottom: 1px solid var(--rule); background: var(--base); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-key { display: flex; flex-wrap: wrap; gap: 4px 2.5ch; padding: 6px 1ch; border-top: 1px solid var(--rule); color: var(--dim); font-size: 12px; }
+.m-strip { display: flex; gap: 2px; height: 30px; margin: 6px 0 2px; }
+.m-strip div { display: flex; align-items: center; justify-content: center; color: var(--signal-ink); font-weight: 600; font-size: 12px; overflow: hidden; white-space: nowrap; }
+.grid9 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--rule); }
+.card9 { background: var(--panel); padding: 6px 1ch 4px; min-width: 0; }
+.card9 .hd { display: flex; justify-content: space-between; gap: 1ch; }
+.card9 .v { font-size: 20px; font-weight: 500; line-height: 1.2; }
+@media (max-width: 640px) { .grid9 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">FRONTIER · design review · revision 2</div>
+    <h1>Interface audit: projector, phone and results screens</h1>
+    <p class="lede">The terminal look is right. The screens look unpolished for five reasons that run across every screen, not because of any one screen: amber does every job, panels don't stand out from the background, charts are bare lines with misaligned labels, layouts leave large empty areas, and explanations are written as sentences where data should be. Two results charts are also blank in the 14-quarter rehearsal because of a bug in how they scale negative values.</p>
+    <div class="meta">
+      <span>DATE <b>2 Oct 2026</b></span>
+      <span>BRANCH <b>main @ ab96618</b></span>
+      <span>EVIDENCE <b>94 screenshots from the e2e and rehearsal runs against the emulators</b></span>
+      <span>CODE CHANGED <b>none</b></span>
+    </div>
+    <div class="update">
+      <h3>REVISION 2 · WHAT CHANGED</h3>
+      <ul>
+        <li>Decisions 1 to 4 approved. Decision 5 resolved: see <a href="#decisions">section 11</a>.</li>
+        <li>The stepped trust line is replaced by a line with quarter markers and a change bar below it, plus one alternative: <a href="#trust">section 05</a>.</li>
+        <li>New: <a href="#firms">section 06</a> on showing firm performance (board bars, market share strip, small multiples, rank race, your firm compared with the rest).</li>
+        <li>New: <a href="#understood">section 09</a> checks every screen against one goal: understood without the facilitator explaining it.</li>
+        <li><span class="fix">CORRECTED</span>Two errors in revision 1. It proposed removing the board's tag key, which would have made the board harder to read without help. Its live-board mock-up also drew τ on the projector, which must never happen while a game is running. Both are fixed below.</li>
+      </ul>
+    </div>
+  </header>
+
+  <h2><span class="k">01</span>Why it reads as unpolished</h2>
+  <div class="causes">
+    <div class="cause"><div class="n">A · COLOUR</div><h3>Amber is doing every job</h3><p>On the board screen amber fills the whole top bar, all eight F-key caps, the trust numeral, the chart line and every pact tag. When everything is signal-coloured, nothing is: the eye has no first place to land, and the summit banner merges into the top bar.</p></div>
+    <div class="cause"><div class="n">B · SURFACE</div><h3>Panels do not separate</h3><p>The panel fill against true black is 1.14:1 and the rule against the panel is 1.32:1 (computed). On a projector, which lifts blacks, panels and rules will mostly disappear. This is an expectation from the ratios, not a measured projector result.</p></div>
+    <div class="cause"><div class="n">C · CHARTS</div><h3>Charts are bare strokes</h3><p>No gridlines, no ticks, no current-value tag, no labels on τ or the moratorium, no year markers. Axis labels are positioned separately from the plot, so they do not line up with the values, and fixed-width charts stop short of their own x-axis labels.</p></div>
+    <div class="cause"><div class="n">D · SPACE</div><h3>Dead areas on every projector view</h3><p>The board uses the top 60% of its panel; the trust chart floats in the upper half; results panels 1, 4 and 5 use a third of the screen. Empty dark space on a projector looks unfinished rather than calm.</p></div>
+    <div class="cause"><div class="n">E · COPY</div><h3>Sentences where keys should be</h3><p>Legends are prose (<code>FINAL (bar) · PEAK (marker)</code>, <code>SUST = sustainable path (blue)</code>) and abbreviations (DEPL, SUST, ACT, QoQ) are never explained on screen. Charts state no conclusion, so the room needs the facilitator to say what to look at.</p></div>
+    <div class="cause"><div class="n">F · HIERARCHY</div><h3>Flat type hierarchy</h3><p>Panel titles are dim 400-weight text, the same as column headers and hints. Titles, headers, values and hints are four different jobs presented in two styles, so dense screens look uniform and are hard to scan.</p></div>
+  </div>
+
+  <h2><span class="k">02</span>Defects found (fix regardless of taste)</h2>
+  <p class="muted">These are visible faults, not style preferences. All were reproduced in the screenshots from this session's test runs.</p>
+  <div class="tblwrap">
+  <table class="def">
+    <thead><tr><th>WHERE</th><th>SEV</th><th>WHAT HAPPENS</th><th>CAUSE</th></tr></thead>
+    <tbody>
+      <tr><td>Results 1 · Final board</td><td><span class="sev hi">HIGH</span></td><td>In the rehearsal every final valuation is negative, so all nine bars are empty. Only the peak markers show.</td><td><code>barFraction</code> clamps values below zero to 0; the bar has no zero baseline.</td></tr>
+      <tr><td>Results 3 · Counterfactual</td><td><span class="sev hi">HIGH</span></td><td>All "ACT" bars are empty for the same reason. "VALUE DESTROYED 9373 (115%)" reads as an error when actual industry value is negative.</td><td>Same clamp; percentage shown without handling a negative actual total.</td></tr>
+      <tr><td>Results 4 · Attribution</td><td><span class="sev hi">HIGH</span></td><td>Every VAL bar is 0.0%, with no explanation, so the panel looks broken.</td><td>Value share is zero for every firm when no firm ends positive.</td></tr>
+      <tr><td>Firm view, Trust view, Trust trace</td><td><span class="sev md">MED</span></td><td>The line ends at about 70% of the width while the last x label sits at the right edge. The y labels do not sit at the values they name.</td><td>SVG width fixed in <code>ch</code> inside a wider container; y labels laid out with <code>space-between</code>.</td></tr>
+      <tr><td>Firm view</td><td><span class="sev md">MED</span></td><td>A rise from 143 to 197 fills the full chart height and looks like a tripling.</td><td>y range is min..max of the series with no zero.</td></tr>
+      <tr><td>Phone · BOOK</td><td><span class="sev md">MED</span></td><td>After one quarter the valuation chart is a single flat line with no axis.</td><td>Chart drawn with one point.</td></tr>
+      <tr><td>Projector · Summit</td><td><span class="sev md">MED</span></td><td>The amber summit banner reads as part of the amber top bar. At 1280 px the PACTS table clips its MEMBERS header.</td><td>Same fill for both bars; fixed column widths.</td></tr>
+      <tr><td>Phone · Summit</td><td><span class="sev lo">LOW</span></td><td>Banner and a bordered notice say the same thing back to back.</td><td>Banner in header plus notice in PACTS tab.</td></tr>
+      <tr><td>Ticker</td><td><span class="sev lo">LOW</span></td><td>Scrolling text starts flush against the WIRE label and is clipped mid-letter.</td><td>No gap between label and window.</td></tr>
+      <tr><td>Results screens</td><td><span class="sev lo">LOW</span></td><td>The full F-key bar is shown although only F9 and F2 do anything there.</td><td>Shared <code>FKeyBar</code> without a per-screen key set.</td></tr>
+      <tr><td>Notices (all)</td><td><span class="sev lo">LOW</span></td><td>Bordered notice boxes have no vertical padding, so text touches the rule.</td><td><code>.notice</code> padding is <code>0 1ch</code>.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2><span class="k">03</span>Colour and surface system <span class="ok">APPROVED</span></h2>
+  <p>Keep the identity: true black, amber, cyan wire, red and green deltas, one monospace face. Add three structural tokens and a secondary amber so that solid amber is kept for what matters: the primary action, the selection, the viewer's own firm, the countdown and the trust numeral.</p>
+  <div class="tokens" id="tokens"></div>
+  <ul class="notes">
+    <li><b>Amber budget.</b> Solid amber only for the brand block, the one primary action on screen (F9 or COMMIT), the selected option, and the reveal invert. Everything else that is amber today becomes amber text or a <code>--signal-dim</code> outline.</li>
+    <li><b>Top bar.</b> Dark bar with a 2 px amber bottom rule. The phase is a coloured status block, and a plain status sentence sits below it (see section 09).</li>
+    <li><b>Hierarchy.</b> Panel titles in <code>--text</code> at weight 600; column headers in <code>--dim</code> on a <code>--raise</code> header row; hints in <code>--dim</code>.</li>
+    <li><b>Colour-blind check.</b> I ran the palette through a colour-vision validator. Amber and green are close for protanopes (ΔE 4.8): acceptable for deltas, which always carry ▲/▼, but green and amber must never be the only difference between two chart series. Amber vs cyan (ΔE 19.9) and amber vs red (ΔE 14.4) are safe.</li>
+  </ul>
+
+  <h2><span class="k">04</span>Projector chrome and board</h2>
+  <div class="pair">
+    <figure><figcaption><span class="tag">NOW</span>Board at 1920 × 1080, rehearsal Q1 Y2</figcaption><img class="shot" src="img/board.jpg" alt="Current projector board: full amber top bar, nine firm rows, trust panel with a bare step line, large empty areas"></figure>
+    <figure><figcaption><span class="tag after">PROPOSED</span>Status line, share strip, value bars, trust panel without τ · engine run, seed 5; headlines illustrative</figcaption>
+      <div class="mock" id="mock-board"></div>
+    </figure>
+  </div>
+  <ul class="notes">
+    <li><b>Status line.</b> One plain sentence under the top bar says what is happening and what firms should do now.</li>
+    <li><b>Board.</b> Row rules and alternate-row fill; a rank-movement column; a zero-based value bar in each row; a trend line per firm. Section 06 covers this in detail.</li>
+    <li><b>Key strip.</b> <span class="fix">CORRECTED</span> Revision 1 removed the tag key. It now stays as a one-line strip at the foot of the board and lists only the tags currently on screen.</li>
+    <li><b>F-key bar.</b> Outlined key caps, one solid primary (the next action). Keys that do nothing on the current screen are hidden.</li>
+    <li><b>Ticker.</b> A gap after the label; each item prefixed with its quarter; coloured by headline kind (the engine already tags each headline), with ▼ for incidents and breaches so meaning is never colour-only.</li>
+    <li><b>Hidden values.</b> <span class="fix">CORRECTED</span> The live trust panel shows no τ line or band. τ appears only on the results trace when the facilitator has turned on "Reveal threshold".</li>
+  </ul>
+
+  <h2 id="trust"><span class="k">05</span>Trust chart: replacing the stepped line</h2>
+  <p>A stepped line suggests trust jumps once a quarter and holds flat, and its long horizontal runs make a 14-quarter history look like a staircase rather than a trend. Three alternatives fit the terminal style:</p>
+  <div class="opts">
+    <div class="opt pick"><b>A · LINE + CHANGE BARS (RECOMMENDED)</b><p>Straight segments between quarter points, a square marker at each quarter, and a second strip below with one bar per quarter showing the change: green ▲ above zero, red ▼ below. This is the price-and-volume layout of a market terminal. It answers "where is trust?" and "what happened this quarter?" without a legend.</p></div>
+    <div class="opt"><b>B · TRUST COLUMNS</b><p>One column per quarter from zero to the trust level, with an outline showing last quarter's height where trust fell. Very easy to read from the back of the room, but heavier, and the trend matters more than the level.</p></div>
+    <div class="opt"><b>C · PLAIN LINE</b><p>Straight segments with no markers. Cleanest, but quarters become hard to count, and the room cannot tell which quarter caused a drop.</p></div>
+  </div>
+  <div class="pair">
+    <figure><figcaption><span class="tag">NOW</span>Results 2 · Trust trace (rehearsal)</figcaption><img class="shot" src="img/res-trust.jpg" alt="Current trust trace: amber step line, unlabelled vertical marker, axis labels misaligned"></figure>
+    <figure><figcaption><span class="tag after">PROPOSED · A</span>Results trace with τ revealed · engine run, seed 5</figcaption><div class="mock" id="mock-trust"></div></figure>
+    <figure><figcaption><span class="tag after">ALTERNATIVE · B</span>Level columns · same data</figcaption><div class="mock" id="mock-trust-b"></div></figure>
+  </div>
+  <p>Chart rules that apply everywhere: axes and labels drawn inside the chart on the same scale as the data; horizontal gridlines only; value axis on the right; a solid tag carrying the latest value; τ and the moratorium labelled on the chart; one tick per quarter with year labels; trust always 0–100 and money axes always including zero; the gap between two compared lines filled with a flat 45° hatch. <span class="spec chg">SPEC §16.3</span> Option A replaces "square steps" in <code>StepSparkline</code> with straight segments; I will log this as a spec deviation.</p>
+
+  <h2 id="firms"><span class="k">06</span>Firm performance</h2>
+  <p>Today a firm's performance appears as a number in a table row, plus a single-firm chart behind a typed command. Four views make it visible at a glance, each with one clear job:</p>
+  <div class="opts" style="grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr))">
+    <div class="opt pick"><b>1 · BOARD WITH BARS</b><p>Live board. A market share strip across the top, then each row with a value bar drawn from zero, rank movement and a trend line. Who leads, by how much, who is moving.</p></div>
+    <div class="opt pick"><b>2 · SMALL MULTIPLES</b><p>A projector view (command <code>FIRMS</code>). One small chart per firm, all on the same scale, so trajectories can be compared honestly. Who is rising, who peaked.</p></div>
+    <div class="opt pick"><b>3 · RANK RACE</b><p>A projector view (command <code>RANKS</code>) and an optional opening for results. Rank by quarter as connected lines; the leader and the biggest faller highlighted. Overtakes become a story.</p></div>
+    <div class="opt pick"><b>4 · YOU AGAINST THE FIELD</b><p>Phone BOOK tab. Every other firm as a thin dim line, your firm in amber with its value tag. Answers "am I doing well?" without a facilitator.</p></div>
+  </div>
+
+  <h3>1 · Board with share strip and value bars</h3>
+  <div class="mock" id="mock-board2" style="margin-top:14px"></div>
+  <p>The share strip uses cyan, the colour already reserved for market information, and fades it by rank. Tickers are printed in each segment, so identity never depends on colour. Negative values extend left of the zero line in red with a − sign.</p>
+
+  <h3>2 · Small multiples (<code>FIRMS</code> view)</h3>
+  <div class="mock" id="mock-multiples" style="margin-top:14px"></div>
+  <p>Every card uses the same y-scale and shows the zero line, so a firm that falls below zero is unmistakable. Up to 16 firms fit as a 4 × 4 grid at 1920 × 1080.</p>
+
+  <h3>3 · Rank race (<code>RANKS</code> view)</h3>
+  <div class="mock" id="mock-bump" style="margin-top:14px"></div>
+  <p>Only two firms are highlighted at a time, chosen automatically: the current leader in amber and the largest faller in red. The rest stay dim with labels at the line ends, so 16 firms stay readable.</p>
+
+  <h3>4 · You against the field (phone BOOK)</h3>
+  <div class="phones" id="mock-field" style="margin-top:14px"></div>
+
+  <h2><span class="k">07</span>Results sequence</h2>
+  <p>Each panel gets a headline sentence written from the data, saying the one thing the room should notice. The facilitator then only has to say "discuss".</p>
+
+  <h3>Panel 1 · Final board → peak-to-final drop</h3>
+  <div class="pair">
+    <figure><figcaption><span class="tag">NOW</span>All bars empty because valuations are negative</figcaption><img class="shot" src="img/res-final.jpg" alt="Current final board: nine empty bar tracks with white peak markers"></figure>
+    <figure><figcaption><span class="tag after">PROPOSED</span>Dumbbell on a zero-based axis · engine run, seed 5</figcaption><div class="mock" id="mock-final"></div></figure>
+  </div>
+
+  <h3>Panel 3 · Counterfactual → the lost value as an area</h3>
+  <div class="pair">
+    <figure><figcaption><span class="tag">NOW</span>Squashed chart and empty ACT bars</figcaption><img class="shot" src="img/res-cf.jpg" alt="Current counterfactual: thin two-line chart and paired bars where all actual bars are empty"></figure>
+    <figure><figcaption><span class="tag after">PROPOSED</span>Headline figures, hatched gap · engine run, seed 5</figcaption><div class="mock" id="mock-cf"></div></figure>
+  </div>
+
+  <h3>Panel 4 · Attribution → butterfly</h3>
+  <div class="pair">
+    <figure><figcaption><span class="tag">NOW</span>Red bars only; value share all 0.0%</figcaption><img class="shot" src="img/res-attr.jpg" alt="Current attribution: red depletion bars and empty value bars"></figure>
+    <figure><figcaption><span class="tag after">PROPOSED</span>Damage left, value right · engine run, seed 5</figcaption><div class="mock" id="mock-attr"></div></figure>
+  </div>
+
+  <h3>Panel 5 · Pact record → quarter strip</h3>
+  <p>A row of quarter cells per member: solid red for a detected breach, red outline for an undetected one, a dim dot for a compliant quarter. No mock-up: per-quarter breach data was not available outside the emulator run.</p>
+
+  <h2><span class="k">08</span>Participant phone</h2>
+  <div class="pair side">
+    <figure><figcaption><span class="tag">NOW</span>DESK, reveal, BOOK, PACTS at 390 × 844</figcaption><img class="shot" src="img/phones.jpg" alt="Four current phone screens with amber header and amber tab bar"></figure>
+    <figure><figcaption><span class="tag after">PROPOSED</span>DESK and quarter result · values illustrative</figcaption><div class="phones" id="mock-phones"></div></figure>
+  </div>
+  <ul class="notes">
+    <li><b>Countdown.</b> The largest element in the header.</li>
+    <li><b>Decision ticket.</b> Cost and exposure grouped directly above COMMIT, with exposure as a four-step meter plus the word.</li>
+    <li><b>Card effects inline.</b> The selected card's one-line effect (already written in the code) shown under the card name, not only inside the picker.</li>
+    <li><b>Commit state.</b> After committing, the COMMIT button becomes a full-width status bar ("COMMITTED 14:02:31 · edit until close") so nobody has to ask whether it went through.</li>
+    <li><b>Quarter result.</b> Opens with one sentence ("You ranked 2nd of 9, ▲1. Profit 57.7.") above the figures.</li>
+    <li><b>Notices.</b> A 2 px left rule coloured by kind, with padding, instead of a full box.</li>
+  </ul>
+
+  <h2 id="understood"><span class="k">09</span>Understood without the facilitator</h2>
+  <p>I checked each screen against one test: could someone who missed the briefing tell, within a few seconds, what is happening, what it means for them and what to do next? Revision 1 mostly improved looks; the items marked NEW below are what it missed.</p>
+  <div class="tblwrap">
+  <table class="def">
+    <thead><tr><th>SCREEN</th><th>MUST BE OBVIOUS</th><th>GAP TODAY</th><th>FIX</th><th>STATUS</th></tr></thead>
+    <tbody>
+      <tr><td>Projector · top bar</td><td class="c">Which quarter, what stage, time left</td><td class="c">Phase is one word (OPEN, REVEAL); <code>FRNT &lt;GO&gt;</code> and <code>DISCL OFF</code> mean nothing to the room.</td><td class="c">Status sentence under the bar, e.g. "Q3 Y2 · Decisions open. Set pace, safety and a card, then commit. 1:42 left." Command line shown only while the facilitator types; "DISCL" spelt "DISCLOSURE".</td><td><span class="nw">NEW</span></td></tr>
+      <tr><td>Projector · board</td><td class="c">Who leads, who moved, what the flags mean</td><td class="c">CMT, EXPO, SAFE and the tags are abbreviations; positions are numbers only.</td><td class="c">Full column words where width allows (CHANGE, PACE, SAFETY, EXPOSURE); key strip for tags on screen; value bars, rank movement and trend.</td><td><span class="fix">CORRECTED</span></td></tr>
+      <tr><td>Projector · trust</td><td class="c">What trust is, where it is heading, why it matters</td><td class="c">A number and "QoQ".</td><td class="c">Subtitle from the existing briefing copy: "Total market revenue tracks public trust." "QoQ" becomes "since last quarter". Change bars show which quarters cost trust.</td><td><span class="nw">NEW</span></td></tr>
+      <tr><td>Projector · reveal</td><td class="c">What changed this quarter</td><td class="c">Numbers roll, but nothing summarises the quarter.</td><td class="c">A reveal headline built from the data, e.g. "Q3 Y2 resolved · Trust ▼5.9 to 45.6 · BTC takes 1st · 2 incidents."</td><td><span class="nw">NEW</span></td></tr>
+      <tr><td>Projector · ticker</td><td class="c">What happened, good or bad</td><td class="c">One undifferentiated cyan stream.</td><td class="c">Quarter prefix; kind-coded glyph and colour.</td><td><span class="cmp">IN REV 1</span></td></tr>
+      <tr><td>Projector · lobby</td><td class="c">How to join</td><td class="c">Clear already: QR, code, address.</td><td class="c">Number the steps: 1 scan or enter code, 2 form or join a firm, 3 wait for the briefing.</td><td><span class="nw">NEW</span></td></tr>
+      <tr><td>Results · every panel</td><td class="c">The one lesson of the panel</td><td class="c">Charts with prose legends and abbreviations (SUST, ACT, DEPL); no stated conclusion.</td><td class="c">Data-written headline per panel; labels on the chart; no abbreviations.</td><td><span class="nw">NEW</span></td></tr>
+      <tr><td>Phone · first visit</td><td class="c">How a quarter works</td><td class="c">The briefing tab shows market rules only.</td><td class="c">A three-step strip in lobby, briefing and the first quarter: DECIDE → COMMIT → REVEAL, with one line each.</td><td><span class="nw">NEW</span></td></tr>
+      <tr><td>Phone · DESK</td><td class="c">What to decide, its cost and risk, time left, whether it is committed</td><td class="c">Rules paragraph; exposure is a bare word; countdown small; commit state is small grey text.</td><td class="c">Decision ticket, inline card effect, large countdown, commit status bar. SAFETY label becomes "SAFETY · share of reference budget, 0–30%".</td><td><span class="cmp">IN REV 1</span> <span class="nw">+ NEW</span></td></tr>
+      <tr><td>Phone · result</td><td class="c">How did I do</td><td class="c">A table of seven figures.</td><td class="c">One result sentence on top; you-against-the-field chart in BOOK.</td><td><span class="nw">NEW</span></td></tr>
+      <tr><td>Phone · PACTS</td><td class="c">What signing commits me to</td><td class="c">Clear text, repeated twice during the summit.</td><td class="c">Remove the duplicate; show the terms as "pace ≤ 2 · safety ≥ 15%".</td><td><span class="cmp">IN REV 1</span></td></tr>
+      <tr><td>Control console</td><td class="c">The next action and which buttons cannot be undone</td><td class="c">All buttons look alike.</td><td class="c">Group by consequence; irreversible actions outlined red; a "NEXT" hint naming the expected key.</td><td><span class="cmp">IN REV 1</span> <span class="nw">+ NEW</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="muted">All proposed wording was checked against the copy rules: no banned or telegraphing terms on participant or projector screens outside results.</p>
+
+  <h2><span class="k">10</span>Plain pages: index, join and control</h2>
+  <div class="pair side">
+    <figure><figcaption><span class="tag">NOW</span>Control console at 1440 × 900</figcaption><img class="shot" src="img/control.jpg" alt="Current control console with outlined buttons and four panels"></figure>
+    <figure><figcaption><span class="tag">NOW</span>Results card, landing and summit on phone</figcaption><img class="shot" src="img/phones2.jpg" alt="Current phone results card, landing page and summit pacts tab"></figure>
+  </div>
+  <ul class="notes">
+    <li><b>Landing.</b> "FRONTIER" set as a wordmark with the OFS line beneath; a code field with four character cells; button the same width as the field.</li>
+    <li><b>Control.</b> Routine (timer), session flow (F8, F9) and irreversible (END, TAU) grouped apart; firm presence as a dot row.</li>
+  </ul>
+
+  <h2 id="decisions"><span class="k">11</span>Decisions</h2>
+  <ol>
+    <li><span class="ok">APPROVED</span> Tokens v2.</li>
+    <li><span class="ok">APPROVED</span> Dark top bar with an amber rule.</li>
+    <li><span class="ok">APPROVED</span> Flat 45° hatch between two compared lines.</li>
+    <li><span class="ok">APPROVED</span> Trend column, dumbbell and butterfly forms; by extension the share strip, small multiples, rank race and field chart in section 06.</li>
+    <li><span class="ok">RESOLVED</span> <b>Negative totals: change the display only, keep the engine definitions.</b> The spec's definitions are sound and unchanged, so the engine, its tests and its calibration stay as they are.
+      <ul>
+        <li><b>Value destroyed</b> stays "alternative total − actual total". The percentage is shown only when the actual total is positive; otherwise the sub-label reads "industry finished below zero". If the actual total ever beats the alternative, the figure is labelled VALUE ADDED with ▲.</li>
+        <li><b>Value share</b> stays "share of final value, negatives counted as zero", because the panel's point is who kept the value. When no firm finishes positive, the value side shows one stated line, "No firm finished with positive value", instead of nine 0.0% bars. Negative valuations themselves are drawn on the final board and counterfactual, where the axes now include zero.</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h2><span class="k">12</span>Order of work</h2>
+  <ol class="plan">
+    <li><b>1 · Chart primitive and defects.</b> New line chart (straight segments, markers, change strip, in-chart axes, value tag, annotations); zero-based bars; negative-total handling.</li>
+    <li><b>2 · Tokens and chrome.</b> Tokens v2, top bar and status sentence, F-key bar, ticker, key strip, panel titles, notices.</li>
+    <li><b>3 · Firm performance.</b> Board with share strip and value bars; <code>FIRMS</code> and <code>RANKS</code> views; phone field chart.</li>
+    <li><b>4 · Results sequence.</b> Data-written headlines, dumbbell, hatched counterfactual, butterfly, pact strip.</li>
+    <li><b>5 · Phone and plain pages.</b> Countdown, decision ticket, commit bar, result sentence, three-step strip, landing, control grouping.</li>
+  </ol>
+  <p class="muted" style="margin-top:28px">Mock-up figures come from a fresh engine run (seed 5, 14 quarters, eight mixed bots and one pace-4 firm). That run has no pacts and no moratorium, so its numbers differ from the rehearsal screenshots. Headlines, phone cash, profit and settings in the mock-ups are illustrative.</p>
+</div>
+<script>
+const D = {"tau":37.584291577804834,"start":72,"trust":[65.9,67.4,65.7,59.8,61.4,59.7,54.9,53.5,52.1,47.2,46.1,48.7,50.8,45.6],"cfTrust":[75.3,78.2,80.7,82.8,84.6,86.1,87.4,88.4,85.6,87,88.1,88.9,89.6,86.7],"industry":{"actual":2559.49,"counterfactual":8116.90,"destroyed":5557.41},
+"final":[{"t":"BTA","v":-104.8,"peak":148.2,"cf":892.3,"draw":0.017,"vs":0,"rank":8},{"t":"BTB","v":101.1,"peak":189.2,"cf":904.6,"draw":0.055,"vs":0.037,"rank":6},{"t":"BTC","v":606.7,"peak":615,"cf":904.6,"draw":0.192,"vs":0.219,"rank":2},{"t":"BTD","v":293.3,"peak":306.4,"cf":904.6,"draw":0.127,"vs":0.106,"rank":4},{"t":"BTE","v":-104.8,"peak":148.2,"cf":904.6,"draw":0.017,"vs":0,"rank":9},{"t":"BTF","v":101.1,"peak":189.2,"cf":904.6,"draw":0.055,"vs":0.037,"rank":7},{"t":"BTG","v":546.6,"peak":564.5,"cf":904.6,"draw":0.161,"vs":0.197,"rank":3},{"t":"BTH","v":291.5,"peak":304.6,"cf":904.6,"draw":0.127,"vs":0.105,"rank":5},{"t":"HUMN","v":828.6,"peak":828.6,"cf":892.5,"draw":0.248,"vs":0.299,"rank":1}],
+"val":{"BTA":[145.5,148.2,139.5,123.3,108.7,91.1,66.6,45.2,21.5,-6.6,-32.1,-52.4,-73.7,-104.8],"BTB":[158.1,178.2,186.7,186.9,189.2,189.1,178,172.2,162.2,145.5,132,128.2,122.7,101.1],"BTC":[176.6,223.4,277.4,296.5,349.8,394.1,417.5,449.6,483.6,494.7,524.6,570.8,615,606.7],"BTD":[164.4,199.8,224.2,240.4,259.9,279,274.6,285.7,288.9,282.7,279.8,294.7,306.4,293.3],"BTE":[145.5,148.2,139.5,123.3,108.7,91.1,66.6,45.2,21.5,-6.6,-32.1,-52.4,-73.7,-104.8],"BTF":[158.1,178.2,186.7,186.9,189.2,189.1,178,172.2,162.2,145.5,132,128.2,122.7,101.1],"BTG":[176.6,231.9,285.8,315.8,369.1,414.4,443.5,474.3,499.8,499.8,503.3,533.9,564.5,546.6],"BTH":[164.4,199.8,224.2,232.7,252.1,271.3,272.7,283.8,287.1,280.9,277.9,292.9,304.6,291.5],"HUMN":[173.5,247.5,300.2,361.6,428.6,486.3,529.5,577.4,612,633.4,668.8,739.3,803.2,828.6]}};
+
+const MINUS = '−';
+const f1 = (n, d = 1) => (n < 0 ? MINUS : '') + Math.abs(n).toFixed(d);
+const pct = (n) => (n * 100).toFixed(1) + '%';
+const ql = (r) => `Q${((r - 1) % 4) + 1} Y${Math.ceil(r / 4)}`;
+const C = { text: 'var(--text)', dim: 'var(--dim)', grid: 'var(--grid)', rule: 'var(--rule)', signal: 'var(--signal)', sdim: 'var(--signal-dim)', wire: 'var(--wire)', up: 'var(--up)', down: 'var(--down)', ink: 'var(--signal-ink)', panel: 'var(--panel)', base: 'var(--base)' };
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const t = (x, y, s, o = {}) => `<text x="${x}" y="${y}" fill="${o.fill || C.dim}" font-size="${o.size || 13}" text-anchor="${o.anchor || 'start'}" font-weight="${o.weight || 400}" dominant-baseline="${o.base || 'middle'}">${esc(s)}</text>`;
+const stepD = (vals, X, Y) => { let d = `M${X(0)} ${Y(vals[0])}`; for (let i = 1; i < vals.length; i++) d += ` H${X(i)} V${Y(vals[i])}`; return d + ` H${X(vals.length)}`; };
+
+/* Tokens */
+const TOK = [
+  ['--base', '#000000', 'Page. Unchanged.', false], ['--panel', '#1C1B14', 'Was #15140F. 1.22:1 on base.', false], ['--raise', '#24231B', 'Header rows, alternate rows, selection.', true],
+  ['--rule', '#3A3729', 'Was #2E2C22. Visible on panel.', false], ['--grid', '#2A2820', 'Chart gridlines, row rules.', true], ['--dim', '#9A947C', 'Was #8A8570. 5.67:1 on panel.', false],
+  ['--signal', '#FFB000', 'Primary action, own firm, trust.', false], ['--signal-dim', '#8A6400', 'Outlines, hatches, inactive caps.', true], ['--wire', '#5EC8D8', 'Headlines, info. Unchanged.', false],
+  ['--up', '#7FD15B', 'Gains, with ▲. Unchanged.', false], ['--down', '#FF4D3D', 'Losses, alarms, with ▼. Unchanged.', false],
+];
+document.getElementById('tokens').innerHTML = TOK.map(([n, h, d, isNew]) => `<div class="tok"><div class="sw" style="background:${h}"></div><b>${n} ${h}${isNew ? '<span class="new">NEW</span>' : ''}</b><span>${d}</span></div>`).join('');
+
+
+const lineD = (pts) => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+const sq = (x, y, s, fill, stroke) => `<rect x="${x - s / 2}" y="${y - s / 2}" width="${s}" height="${s}" fill="${fill}"${stroke ? ` stroke="${stroke}" stroke-width="1.5"` : ''}/>`;
+const tagR = (x, y, w, h, v, col, size) => `<rect x="${x}" y="${y - h / 2}" width="${w}" height="${h}" fill="${col}"/>` + t(x + 5, y, v, { fill: C.ink, weight: 600, size });
+const TICK = Object.keys(D.val);
+const N = 14;
+const rankSeries = (() => { const out = {}; TICK.forEach((k) => (out[k] = [])); for (let q = 0; q < N; q++) { const order = [...TICK].sort((a, b) => D.val[b][q] - D.val[a][q]); order.forEach((k, i) => out[k].push(i + 1)); } return out; })();
+const headline = (s) => `<div style="padding:8px 1ch 2px;font-size:15px;font-weight:500;color:var(--text);white-space:normal">${s}</div>`;
+
+/* Trust chart, option A: straight segments, quarter markers, change strip */
+function trustA({ W, H, mini, tau }) {
+  const vals = [D.start, ...D.trust], n = vals.length;
+  const L = 8, R = mini ? 50 : 66, TP = 12, fs = mini ? 11 : 13;
+  const stripH = mini ? 44 : 78, gapH = mini ? 22 : 28, axisH = mini ? 22 : 26;
+  const mainB = H - stripH - gapH - axisH;
+  const X = (i) => L + ((i + 0.5) / n) * (W - L - R);
+  const Y = (v) => TP + (1 - v / 100) * (mainB - TP);
+  const id = 'h' + Math.random().toString(36).slice(2, 7);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Public trust by quarter with change per quarter">`;
+  s += `<defs><pattern id="${id}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="${C.down}" stroke-width="1" opacity="0.4"/></pattern></defs>`;
+  [0, 25, 50, 75, 100].forEach((v) => { s += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 0 ? C.rule : C.grid}"/>` + t(W - R + 8, Y(v), String(v), { size: fs }); });
+  if (tau) {
+    s += `<rect x="${L}" y="${Y(D.tau)}" width="${W - L - R}" height="${Y(0) - Y(D.tau)}" fill="url(#${id})"/><line x1="${L}" x2="${W - R}" y1="${Y(D.tau)}" y2="${Y(D.tau)}" stroke="${C.down}" stroke-dasharray="5 4"/>`;
+    s += t(L + 6, Y(D.tau) + 12, `τ ${D.tau.toFixed(1)} · a moratorium starts below this line`, { fill: C.down, size: fs });
+  }
+  const pts = vals.map((v, i) => [X(i), Y(v)]);
+  s += `<path d="${lineD(pts)}" fill="none" stroke="${C.signal}" stroke-width="2" stroke-linejoin="miter"/>`;
+  vals.forEach((v, i) => {
+    const d = i ? v - vals[i - 1] : 0, big = d <= -5;
+    if (i === 0) s += sq(X(i), Y(v), mini ? 6 : 8, C.base, C.dim);
+    else if (i < n - 1) s += sq(X(i), Y(v), mini ? 5 : 7, big ? C.down : C.signal);
+  });
+  s += sq(X(n - 1), Y(vals[n - 1]), mini ? 8 : 11, C.signal);
+  // largest drop annotation
+  let wi = 1; for (let i = 2; i < n; i++) if (vals[i] - vals[i - 1] < vals[wi] - vals[wi - 1]) wi = i;
+  if (!mini) s += t(X(wi), Y(vals[wi]) + 22, `▼${f1(Math.abs(vals[wi] - vals[wi - 1]))} in ${ql(wi)}`, { fill: C.down, anchor: 'middle', size: fs });
+  s += tagR(W - R + 2, Y(vals[n - 1]), R - 4, mini ? 18 : 22, f1(vals[n - 1]), C.signal, fs);
+  // change strip
+  const z = mainB + gapH + stripH / 2, maxD = 8, bw = ((W - L - R) / n) * 0.56;
+  s += t(L, mainB + gapH - 6, 'CHANGE PER QUARTER', { size: mini ? 10 : 12 });
+  s += `<line x1="${L}" x2="${W - R}" y1="${z}" y2="${z}" stroke="${C.rule}"/>` + t(W - R + 8, z, '0', { size: fs });
+  for (let i = 1; i < n; i++) {
+    const d = vals[i] - vals[i - 1], h = Math.max(1, (Math.min(Math.abs(d), maxD) / maxD) * (stripH / 2 - 2));
+    s += `<rect x="${X(i) - bw / 2}" y="${d >= 0 ? z - h : z}" width="${bw}" height="${h}" fill="${d >= 0 ? C.up : C.down}"/>`;
+    if (!mini && Math.abs(d) >= 4.5) s += t(X(i), d >= 0 ? z - h - 9 : z + h + 10, (d >= 0 ? '▲' : '▼') + f1(Math.abs(d)), { anchor: 'middle', size: 11, fill: d >= 0 ? C.up : C.down });
+  }
+  // x axis
+  const ay = H - axisH + 4;
+  for (let i = 0; i < n; i++) { const yr = i % 4 === 0; s += `<line x1="${X(i)}" x2="${X(i)}" y1="${ay}" y2="${ay + (yr ? 7 : 3)}" stroke="${yr ? C.dim : C.rule}"/>`; if (yr) s += t(X(i), ay + 15, i === 0 ? 'START' : `Y${i / 4 + 1}`, { anchor: 'middle', size: fs }); }
+  return s + '</svg>';
+}
+
+/* Trust chart, option B: trust columns with last-quarter ghost */
+function trustB({ W, H }) {
+  const vals = [D.start, ...D.trust], n = vals.length, L = 8, R = 66, TP = 12, B = 26;
+  const X = (i) => L + (i / n) * (W - L - R), cw = ((W - L - R) / n) * 0.7, Y = (v) => TP + (1 - v / 100) * (H - TP - B);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Public trust as one column per quarter">`;
+  [0, 25, 50, 75, 100].forEach((v) => { s += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 0 ? C.rule : C.grid}"/>` + t(W - R + 8, Y(v), String(v)); });
+  vals.forEach((v, i) => {
+    const x = X(i) + (X(1) - X(0) - cw) / 2, last = i === n - 1;
+    if (i && vals[i - 1] > v) s += `<rect x="${x + 0.75}" y="${Y(vals[i - 1])}" width="${cw - 1.5}" height="${Y(v) - Y(vals[i - 1])}" fill="none" stroke="${C.down}" stroke-width="1.5" stroke-dasharray="3 2"/>`;
+    s += `<rect x="${x}" y="${Y(v)}" width="${cw}" height="${Y(0) - Y(v)}" fill="${last ? C.signal : C.sdim}"/>`;
+    if (i % 4 === 0) s += t(x + cw / 2, H - 10, i === 0 ? 'START' : `Y${i / 4 + 1}`, { anchor: 'middle' });
+  });
+  s += tagR(W - R + 2, Y(vals[n - 1]), R - 4, 22, f1(vals[n - 1]), C.signal, 13);
+  return s + '</svg>';
+}
+
+/* Board panel with share strip and value bars */
+function boardPanel({ compact }) {
+  const rows = TICK.map((k) => ({ t: k, v: D.val[k][N - 1], prev: D.val[k][N - 2], hist: D.val[k], rk: rankSeries[k][N - 1], rkPrev: rankSeries[k][N - 2] })).sort((a, b) => a.rk - b.rk);
+  const pos = rows.reduce((s, x) => s + Math.max(0, x.v), 0);
+  const lo = Math.min(0, ...rows.map((x) => x.v)), hi = Math.max(...rows.map((x) => x.v));
+  const BW = 220, bx = (v) => 4 + ((v - lo) / (hi - lo)) * (BW - 8), z = bx(0);
+  const bar = (v) => `<svg viewBox="0 0 ${BW} 16" preserveAspectRatio="none" style="height:16px"><line x1="${z}" x2="${z}" y1="0" y2="16" stroke="${C.dim}" vector-effect="non-scaling-stroke"/><rect x="${Math.min(z, bx(v))}" y="3" width="${Math.max(1, Math.abs(bx(v) - z))}" height="10" fill="${v < 0 ? C.down : C.signal}"/></svg>`;
+  const allLo = Math.min(0, ...rows.flatMap((x) => x.hist)), allHi = Math.max(...rows.flatMap((x) => x.hist));
+  const spark = (h) => { const W = 120, H = 20, X = (i) => (i / (h.length - 1)) * (W - 4) + 2, Y = (v) => H - 2 - ((v - allLo) / (allHi - allLo)) * (H - 4); return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:20px"><line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="${C.rule}" vector-effect="non-scaling-stroke"/><path d="${lineD(h.map((v, i) => [X(i), Y(v)]))}" fill="none" stroke="${h[h.length - 1] < 0 ? C.down : C.text}" stroke-width="1.5" vector-effect="non-scaling-stroke"/></svg>`; };
+  const shares = rows.filter((x) => x.v > 0);
+  const strip = `<div style="padding:4px 1ch 6px;border-bottom:1px solid var(--rule)"><div class="dimt" style="font-size:12px;display:flex;justify-content:space-between"><span>MARKET VALUE SHARE</span><span>${rows.length - shares.length} firm${rows.length - shares.length === 1 ? '' : 's'} below zero, not shown</span></div><div class="m-strip">${shares.map((x, i) => { const w = Math.max(0, x.v) / pos; return `<div style="flex:${w} 1 0;background:var(--wire);opacity:${(1 - i * 0.09).toFixed(2)}" title="${x.t}">${w > 0.06 ? `${x.t} ${(w * 100).toFixed(0)}%` : ''}</div>`; }).join('')}</div></div>`;
+  const body = rows.map((x) => {
+    const mv = x.rkPrev - x.rk, ch = x.v - x.prev;
+    return `<tr><td class="l">${x.rk}</td><td>${mv === 0 ? '<span class="dimt">–</span>' : `<span class="${mv > 0 ? 'pos tri-up' : 'neg tri-dn'}">${Math.abs(mv)}</span>`}</td><td class="l" style="font-weight:600">${x.t}</td><td class="spark">${bar(x.v)}</td><td class="${x.v < 0 ? 'neg' : ''}">${f1(x.v)}</td><td><span class="${ch >= 0 ? 'pos tri-up' : 'neg tri-dn'}">${f1(Math.abs(ch))}</span></td>${compact ? '' : `<td class="spark">${spark(x.hist)}</td>`}<td class="l"></td></tr>`;
+  }).join('');
+  return `<div class="m-panel" style="border:0"><div class="m-title"><span>BOARD</span><span class="r">ranked by valuation · ${ql(N)}</span></div>${strip}
+  <div class="m-body" style="padding-top:0"><table class="m-board"><colgroup><col style="width:3ch"><col style="width:5ch"><col style="width:6ch"><col><col style="width:9ch"><col style="width:9ch">${compact ? '' : '<col style="width:16ch">'}<col style="width:9ch"></colgroup>
+  <thead><tr><th class="l">#</th><th>MOVE</th><th class="l">FIRM</th><th class="l">VALUATION · 0 marked</th><th>VALUE</th><th>CHANGE</th>${compact ? '' : '<th class="l">14 QUARTERS</th>'}<th></th></tr></thead><tbody>${body}</tbody></table></div>
+  <div class="m-key"><span>MOVE places gained or lost since last quarter</span><span>Bars start at 0; red bars are below zero</span><span>Tags such as AUTO or BREACH are explained here when they appear</span></div></div>`;
+}
+
+/* Section 04 full frame */
+(function () {
+  const T = [D.start, ...D.trust], dT = T[N] - T[N - 1];
+  document.getElementById('mock-board').innerHTML = `
+  <div class="m-top"><span class="brand">FRONTIER</span><span>${ql(N)}</span><span class="phase">RESULTS IN</span><span>9/9 COMMITTED</span><span>DISCLOSURE OFF</span><span class="grow"></span><span class="clock">00:00</span></div>
+  <div class="m-status">${ql(N)} resolved · Trust <span class="neg tri-dn">${f1(Math.abs(dT))}</span> to ${f1(T[N])} · HUMN holds 1st · Next quarter opens when the facilitator advances.</div>
+  <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)">
+    <div style="border-right:1px solid var(--rule)">${boardPanel({ compact: true })}</div>
+    <div class="m-panel" style="border:0"><div class="m-title"><span>PUBLIC TRUST</span><span class="r">0–100</span></div>
+      <div class="m-body"><div class="dimt" style="font-size:12px">Total market revenue tracks public trust.</div><div style="display:flex;align-items:baseline;gap:2ch;margin-top:4px"><span style="font-size:44px;font-weight:500;color:var(--signal);line-height:1">${f1(T[N])}</span><span><span class="neg tri-dn">${f1(Math.abs(dT))}</span> <span class="dimt">since last quarter</span></span></div>
+      <div style="margin-top:6px">${trustA({ W: 420, H: 300, mini: true, tau: false })}</div></div></div>
+  </div>
+  <div class="m-tick"><span class="lab">WIRE</span><span class="run"><i>${ql(N)}</i><span class="neg">▼ Incident: model misuse reported at BTA</span><i>${ql(N)}</i>Halden Research: enterprise AI spending steady<i>${ql(N - 1)}</i>HUMN brings forward next model launch</span></div>
+  <div class="m-fk"><span><span class="k">F2</span>BOARD</span><span><span class="k">F3</span>TRUST</span><span><span class="k">F4</span>PACTS</span><span><span class="k">F6</span>AUDIT</span><span><span class="k">F7</span>DISCLOSURE</span><span><span class="k">F8</span>SUMMIT</span><span class="primary"><span class="k">F9</span>OPEN NEXT QUARTER</span><span><span class="k">F10</span>END</span></div>`;
+})();
+
+document.getElementById('mock-trust').innerHTML = `<div class="m-panel" style="border:0"><div class="m-title"><span>TRUST TRACE</span><span class="r">τ revealed · no moratorium in this run</span></div>${headline(`Trust fell from ${f1(D.start)} to ${f1(D.trust[N - 1])} over ${N} quarters, ending ${f1(D.trust[N - 1] - D.tau)} points above τ.`)}<div class="m-body">${trustA({ W: 900, H: 470, tau: true })}</div></div>`;
+document.getElementById('mock-trust-b').innerHTML = `<div class="m-panel" style="border:0"><div class="m-title"><span>PUBLIC TRUST</span><span class="r">dashed outline = trust lost that quarter</span></div><div class="m-body">${trustB({ W: 900, H: 300 })}</div></div>`;
+document.getElementById('mock-board2').innerHTML = boardPanel({ compact: false });
+
+/* Small multiples */
+(function () {
+  const lo = Math.min(0, ...TICK.flatMap((k) => D.val[k])), hi = Math.max(...TICK.flatMap((k) => D.val[k]));
+  const order = [...TICK].sort((a, b) => rankSeries[a][N - 1] - rankSeries[b][N - 1]);
+  const cards = order.map((k) => {
+    const h = D.val[k], W = 260, H = 84, R = 4, X = (i) => 2 + (i / (N - 1)) * (W - 2 - R), Y = (v) => 4 + (1 - (v - lo) / (hi - lo)) * (H - 8);
+    const last = h[N - 1], peak = Math.max(...h), pi = h.indexOf(peak), col = last < 0 ? C.down : C.signal, ch = last - h[N - 2];
+    let s = `<svg viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${Y(0)}" y2="${Y(0)}" stroke="${C.dim}" stroke-dasharray="2 3"/><line x1="0" x2="${W}" y1="${Y(500)}" y2="${Y(500)}" stroke="${C.grid}"/>`;
+    s += `<path d="${lineD(h.map((v, i) => [X(i), Y(v)]))}" fill="none" stroke="${col}" stroke-width="2"/>`;
+    if (pi !== N - 1) s += sq(X(pi), Y(peak), 7, C.base, C.dim);
+    s += sq(X(N - 1), Y(last), 8, col) + '</svg>';
+    return `<div class="card9"><div class="hd"><span style="font-weight:600">${rankSeries[k][N - 1]} · ${k}</span><span class="${ch >= 0 ? 'pos tri-up' : 'neg tri-dn'}">${f1(Math.abs(ch))}</span></div><div class="v ${last < 0 ? 'neg' : ''}">${f1(last)}</div>${s}</div>`;
+  }).join('');
+  document.getElementById('mock-multiples').innerHTML = `<div class="m-panel" style="border:0"><div class="m-title"><span>FIRMS</span><span class="r">valuation, ${N} quarters · same scale · dotted line = 0 · grid = 500 · □ peak</span></div><div class="grid9">${cards}</div></div>`;
+})();
+
+/* Rank race */
+(function () {
+  const W = 900, H = 340, L = 50, R = 120, TP = 16, B = 30, n = TICK.length;
+  const X = (i) => L + (i / (N - 1)) * (W - L - R), Y = (r) => TP + ((r - 1) / (n - 1)) * (H - TP - B);
+  const leader = TICK.find((k) => rankSeries[k][N - 1] === 1);
+  let faller = TICK[0], worst = -1; TICK.forEach((k) => { const d = rankSeries[k][N - 1] - Math.min(...rankSeries[k]); if (d > worst) { worst = d; faller = k; } });
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Rank of each firm by quarter">`;
+  for (let r = 1; r <= n; r++) s += `<line x1="${L}" x2="${W - R}" y1="${Y(r)}" y2="${Y(r)}" stroke="${C.grid}"/>` + t(L - 12, Y(r), String(r), { anchor: 'end' });
+  for (let i = 0; i < N; i += 4) s += t(X(i), H - 8, i === 0 ? 'Q1 Y1' : `Y${i / 4 + 1}`, { anchor: 'middle' });
+  const draw = (k, col, w) => { const rs = rankSeries[k]; s += `<path d="${lineD(rs.map((r, i) => [X(i), Y(r)]))}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round"/>`; };
+  TICK.filter((k) => k !== leader && k !== faller).forEach((k) => { draw(k, C.rule, 1.5); s += t(W - R + 10, Y(rankSeries[k][N - 1]), k, { size: 12 }); });
+  [[faller, C.down], [leader, C.signal]].forEach(([k, col]) => { draw(k, col, 3); rankSeries[k].forEach((r, i) => (s += sq(X(i), Y(r), 7, col))); s += t(W - R + 10, Y(rankSeries[k][N - 1]), `${k} ${k === leader ? '1st' : `▼${worst}`}`, { fill: col, weight: 600 }); });
+  const fb = Math.min(...rankSeries[faller]);
+  document.getElementById('mock-bump').innerHTML = `<div class="m-panel" style="border:0"><div class="m-title"><span>RANKS</span><span class="r">rank by valuation, each quarter</span></div>${headline(`${leader} rose to 1st. ${faller} fell from ${fb === 1 ? '1st' : `#${fb}`} to #${rankSeries[faller][N - 1]}.`)}<div class="m-body">${s}</svg></div></div>`;
+})();
+
+/* Final board dumbbell */
+(function () {
+  const fs = [...D.final].sort((a, b) => a.rank - b.rank);
+  const W = 900, rowH = 32, TP = 30, B = 58, H = TP + rowH * fs.length + B, L = 90, R = 150;
+  const lo = Math.min(0, ...fs.map((f) => f.v)) - 40, hi = Math.max(...fs.map((f) => f.peak)) + 20;
+  const X = (v) => L + ((v - lo) / (hi - lo)) * (W - L - R);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Peak to final valuation per firm">`;
+  [-100, 0, 200, 400, 600, 800].forEach((v) => { s += `<line x1="${X(v)}" x2="${X(v)}" y1="${TP - 8}" y2="${H - B}" stroke="${v === 0 ? C.dim : C.grid}"/>` + t(X(v), H - B + 16, v === 0 ? '0' : f1(v, 0), { anchor: 'middle', fill: v === 0 ? C.text : C.dim }); });
+  s += t(L - 80, TP - 14, '#  FIRM', { size: 12 }) + t(W - R + 16, TP - 14, 'FINAL', { size: 12 }) + t(W - 10, TP - 14, 'FROM PEAK', { size: 12, anchor: 'end' });
+  fs.forEach((f, i) => {
+    const y = TP + i * rowH + rowH / 2, neg = f.v < 0, col = neg ? C.down : C.signal, drop = f.v - f.peak;
+    if (i % 2) s += `<rect x="0" y="${y - rowH / 2}" width="${W}" height="${rowH}" fill="var(--raise)" opacity="0.5"/>`;
+    s += t(L - 80, y, `${f.rank}`) + t(L - 58, y, f.t, { fill: C.text, weight: 600 });
+    s += `<line x1="${X(f.peak)}" x2="${X(f.v)}" y1="${y}" y2="${y}" stroke="${col}" stroke-width="2"/>` + sq(X(f.peak), y, 10, C.base, C.dim) + sq(X(f.v), y, 12, col);
+    s += t(W - R + 16, y, f1(f.v), { fill: neg ? C.down : C.text }) + t(W - 10, y, Math.abs(drop) < 0.05 ? 'at peak' : `▼${f1(Math.abs(drop))}`, { anchor: 'end', fill: Math.abs(drop) < 0.05 ? C.dim : C.down });
+  });
+  s += sq(L + 4, H - 10, 9, C.base, C.dim) + t(L + 16, H - 9, 'PEAK', { size: 12 }) + sq(L + 75, H - 10, 10, C.signal) + t(L + 88, H - 9, 'FINAL', { size: 12 }) + sq(L + 155, H - 10, 10, C.down) + t(L + 168, H - 9, 'FINAL BELOW ZERO', { size: 12 });
+  const below = fs.filter((f) => f.v < f.peak - 0.05).length, neg = fs.filter((f) => f.v < 0).length;
+  document.getElementById('mock-final').innerHTML = `<div class="m-panel" style="border:0"><div class="m-title"><span>FINAL BOARD</span><span class="r">peak → final valuation · ${N} QTR</span></div>${headline(`${below} of ${fs.length} firms finished below their peak. ${neg} finished below zero.`)}<div class="m-body">${s}</svg></div></div>`;
+})();
+
+/* Counterfactual */
+(function () {
+  const a = [D.start, ...D.trust], b = [D.start, ...D.cfTrust], n = a.length;
+  const W = 900, H = 300, L = 8, R = 70, TP = 14, B = 34;
+  const X = (i) => L + ((i + 0.5) / n) * (W - L - R), Y = (v) => TP + (1 - v / 100) * (H - TP - B);
+  const pa = a.map((v, i) => [X(i), Y(v)]), pb = b.map((v, i) => [X(i), Y(v)]);
+  const gap = lineD([...pb, ...[...pa].reverse()]) + ' Z';
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Actual trust against the alternative path, gap hatched">`;
+  s += `<defs><pattern id="hcf" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" stroke="${C.sdim}" stroke-width="2"/></pattern></defs>`;
+  [0, 25, 50, 75, 100].forEach((v) => { s += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 0 ? C.rule : C.grid}"/>` + t(W - R + 8, Y(v), String(v)); });
+  s += `<path d="${gap}" fill="url(#hcf)"/><path d="${lineD(pb)}" fill="none" stroke="${C.wire}" stroke-width="2"/><path d="${lineD(pa)}" fill="none" stroke="${C.signal}" stroke-width="2"/>`;
+  s += t(X(n - 1), Y(b[n - 1]) - 16, 'ALTERNATIVE PATH', { anchor: 'end', fill: C.wire, size: 12 }) + t(X(n - 1), Y(a[n - 1]) + 18, 'ACTUAL', { anchor: 'end', fill: C.signal, size: 12 });
+  s += t(X(9), (Y(a[9]) + Y(b[9])) / 2, 'TRUST LOST', { fill: C.text, weight: 600, anchor: 'middle' });
+  for (let i = 0; i < n; i += 4) s += t(X(i), Y(0) + 20, i === 0 ? 'START' : `Y${i / 4 + 1}`, { anchor: 'middle' });
+  s += tagR(W - R + 2, Y(b[n - 1]), R - 4, 22, f1(b[n - 1]), C.wire, 13) + tagR(W - R + 2, Y(a[n - 1]), R - 4, 22, f1(a[n - 1]), C.signal, 13) + '</svg>';
+  const I = D.industry;
+  const stat = (lab, v, style, sub) => `<div style="flex:1;min-width:16ch;border-right:1px solid var(--rule);padding:6px 1.5ch"><div class="dimt">${lab}</div><div style="font-size:30px;font-weight:500;line-height:1.15;${style}">${v}</div><div class="dimt" style="font-size:12px">${sub}</div></div>`;
+  const sub = I.actual > 0 ? `${(I.destroyed / I.counterfactual * 100).toFixed(0)}% of the alternative` : 'industry finished below zero';
+  document.getElementById('mock-cf').innerHTML = `<div class="m-panel" style="border:0"><div class="m-title"><span>COUNTERFACTUAL</span><span class="r">same incident draws · every firm at pace 2, safety 15</span></div>${headline(`Holding pace 2 and safety 15 would have left the industry worth ${(I.counterfactual / I.actual).toFixed(1)}× what it kept.`)}
+  <div style="display:flex;flex-wrap:wrap;border-bottom:1px solid var(--rule);border-top:1px solid var(--rule);margin-top:6px">${stat('INDUSTRY VALUE', f1(I.actual, 0), '', 'actual, all firms')}${stat('ALTERNATIVE', f1(I.counterfactual, 0), 'color:var(--wire)', 'pace 2, safety 15')}${stat('VALUE LOST', '▼' + f1(I.destroyed, 0), 'color:var(--down)', sub)}</div>
+  <div class="m-body">${s}</div></div>`;
+})();
+
+/* Attribution butterfly */
+(function () {
+  const fs = [...D.final].sort((a, b) => b.draw - a.draw);
+  const W = 900, rowH = 30, TP = 34, B = 24, H = TP + rowH * fs.length + B, mid = W / 2, half = mid - 120, max = 0.32;
+  const S = (v) => (v / max) * half;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Share of damage against share of value by firm">`;
+  s += t(mid - 40, 14, 'SHARE OF DAMAGE', { anchor: 'end', fill: C.down, size: 12, weight: 600 }) + t(mid + 40, 14, 'SHARE OF VALUE', { fill: C.signal, size: 12, weight: 600 });
+  [0.1, 0.2, 0.3].forEach((v) => { [mid - 34 - S(v), mid + 34 + S(v)].forEach((x) => { s += `<line x1="${x}" x2="${x}" y1="${TP - 6}" y2="${H - B}" stroke="${C.grid}"/>` + t(x, H - 8, (v * 100).toFixed(0) + '%', { anchor: 'middle', size: 11 }); }); });
+  fs.forEach((f, i) => {
+    const y = TP + i * rowH + rowH / 2;
+    s += t(mid, y, f.t, { anchor: 'middle', fill: C.text, weight: 600 });
+    s += `<rect x="${mid - 34 - S(f.draw)}" y="${y - 8}" width="${Math.max(1, S(f.draw))}" height="16" fill="${C.down}"/><rect x="${mid + 34}" y="${y - 8}" width="${Math.max(1, S(f.vs))}" height="16" fill="${C.signal}"/>`;
+    s += t(mid - 40 - S(f.draw) - 6, y, pct(f.draw), { anchor: 'end', fill: C.text, size: 12 }) + t(mid + 40 + S(f.vs) + 4, y, pct(f.vs), { fill: C.text, size: 12 });
+  });
+  const top = fs[0], more = fs.filter((f) => f.draw > f.vs + 0.005).length;
+  document.getElementById('mock-attr').innerHTML = `<div class="m-panel" style="border:0"><div class="m-title"><span>ATTRIBUTION</span><span class="r">ranked by share of damage</span></div>${headline(`${top.t} caused ${pct(top.draw)} of the damage and kept ${pct(top.vs)} of the value. ${more} firms took a larger share of the damage than of the value.`)}<div class="m-body">${s}</svg></div></div>`;
+})();
+
+/* Phones */
+const phTop = (q, clock) => `<div class="ph-top"><span><b>HUMN</b> · ${q}</span><span class="ph-clock">${clock}</span></div><div class="ph-strip"><span><span class="dimt">CASH</span> 312.4</span><span><span class="dimt">PROFIT</span> <span class="pos tri-up">57.7</span></span></div>`;
+(function () {
+  const W = 270, H = 150, L = 2, R = 56, TP = 8, B = 20, lo = Math.min(0, ...TICK.flatMap((k) => D.val[k])), hi = 900;
+  const X = (i) => L + (i / (N - 1)) * (W - L - R), Y = (v) => TP + (1 - (v - lo) / (hi - lo)) * (H - TP - B);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Your valuation against the other firms">`;
+  [0, 400, 800].forEach((v) => { s += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 0 ? C.dim : C.grid}"${v === 0 ? ' stroke-dasharray="2 3"' : ''}/>` + t(W - R + 6, Y(v), String(v), { size: 11 }); });
+  TICK.filter((k) => k !== 'HUMN').forEach((k) => (s += `<path d="${lineD(D.val[k].map((v, i) => [X(i), Y(v)]))}" fill="none" stroke="${C.rule}" stroke-width="1.25"/>`));
+  const h = D.val.HUMN; s += `<path d="${lineD(h.map((v, i) => [X(i), Y(v)]))}" fill="none" stroke="${C.signal}" stroke-width="2.5"/>` + sq(X(N - 1), Y(h[N - 1]), 8, C.signal);
+  s += tagR(W - R + 2, Y(h[N - 1]), R - 4, 18, f1(h[N - 1]), C.signal, 11) + t(L, H - 6, 'Q1 Y1', { size: 11 }) + t(W - R - 2, H - 6, ql(N), { size: 11, anchor: 'end' }) + '</svg>';
+  document.getElementById('mock-field').innerHTML = `<div class="phone">${phTop('Q3 Y4 · OPEN', '01:42')}<div class="ph-body">
+    <div class="ph-lab"><span style="color:var(--text);font-weight:600">VALUATION · YOU AGAINST 8 FIRMS</span></div>${s}
+    <div class="ph-lab"><span><span style="color:var(--signal)">━</span> HUMN</span><span><span style="color:var(--rule)">━</span> other firms</span><span>┄ zero</span></div>
+    <div class="ph-note">Rank ${rankSeries.HUMN[N - 1]} of ${TICK.length}. Highest valuation in the industry for ${(() => { let c = 0; for (let i = N - 1; i >= 0 && rankSeries.HUMN[i] === 1; i--) c++; return c; })()} quarters running.</div>
+  </div><div class="ph-tabs"><span>DESK</span><span class="on">BOOK</span><span>PACTS</span><span>WIRE</span></div></div>`;
+})();
+document.getElementById('mock-phones').innerHTML = `
+  <div class="phone">${phTop('Q3 Y2 · OPEN', '01:42')}<div class="ph-body">
+    <div><div class="ph-lab"><span>PACE</span><span>exposure rises with pace</span></div><div class="ph-seg"><span><b>1</b>Cautious</span><span><b>2</b>Standard</span><span class="on"><b>3</b>Aggress.</span><span><b>4</b>Breakn.</span></div></div>
+    <div><div class="ph-lab"><span>SAFETY · share of ref. budget</span><span style="color:var(--text);font-weight:600">13%</span></div><div style="height:3px;background:var(--rule);margin:14px 0 4px;position:relative"><i style="position:absolute;left:43%;top:-12px;width:2ch;height:27px;background:var(--signal)"></i></div><div class="ph-lab"><span>0%</span><span>30%</span></div></div>
+    <div><div class="ph-lab"><span>CARD</span><span style="color:var(--text)">PUBLISH · 10 ›</span></div><div class="dimt" style="font-size:12px;margin-top:2px">Raises public trust. Lowers your incident risk this quarter.</div></div>
+    <div class="ticket"><div><span class="dimt">COST THIS QTR</span><span>55.0</span></div><div style="display:block"><div style="display:flex;justify-content:space-between"><span class="dimt">EXPOSURE</span><span class="neg">HIGH</span></div><div class="ph-meter"><i class="f3"></i><i class="f3"></i><i class="f3"></i><i></i></div></div></div>
+    <div class="ph-commit" style="background:var(--raise);color:var(--up);border:1px solid var(--up)"><span class="glyph-ck">✓</span> COMMITTED 14:02:31 · edit until close</div>
+  </div><div class="ph-tabs"><span class="on">DESK</span><span>BOOK</span><span>PACTS</span><span>WIRE</span></div></div>
+  <div class="phone">${phTop('Q2 Y2 · RESULTS IN', '—')}<div class="ph-body">
+    <div style="font-size:15px;font-weight:500">You ranked 2nd of 9, <span class="pos tri-up">1</span>. Profit <span class="pos tri-up">57.7</span>.</div>
+    <div class="ticket"><div><span class="dimt">REVENUE</span><span>141.2</span></div><div><span class="dimt">COSTS</span><span>83.5</span></div><div><span class="dimt">SHARE</span><span>17.9% <span class="pos tri-up">1.2 pp</span></span></div><div><span class="dimt">VALUATION</span><span>486.3</span></div></div>
+    <div class="ph-note" style="border-color:var(--down)">Incident at your firm this quarter. Trust fell <span class="neg tri-dn">5.9</span>.</div>
+  </div><div class="ph-tabs"><span class="on">DESK</span><span>BOOK</span><span>PACTS</span><span>WIRE</span></div></div>`;
+</script>
