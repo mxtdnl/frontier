@@ -377,9 +377,14 @@ Fines leave the economy. `LOBBY` in the quarter of detection waives the fine but
 - Outputs: the industry total final valuation and the per-firm final valuation, which is equal across firms.
 
 **Headline figures.**
-- `INDUSTRY VALUE` actual vs counterfactual.
-- `VALUE DESTROYED` = counterfactual total − actual total.
+- `INDUSTRY VALUE` (actual total) and `ALTERNATIVE` (counterfactual total).
+- `VALUE LOST` = counterfactual total − actual total (the definition is unchanged; this figure was labelled `VALUE DESTROYED` before 2026-10-03).
 - `YOUR FIRM` actual vs counterfactual.
+
+**Display rules for negative totals** (owner decision 5, 2026-10-03; display only, engine definitions unchanged):
+- The value-lost percentage (of the alternative total) is shown only when the actual industry total is positive. Otherwise the sub-label reads "industry finished below zero".
+- If the actual total exceeds the alternative, the figure is labelled `VALUE ADDED` with ▲.
+- Value share keeps counting negative valuations as 0. When no firm finishes above zero, the value side of the attribution chart shows the single line "No firm finished with positive value" instead of 0.0% bars.
 
 **Attribution.** For each firm: share of cumulative draw (Σ over rounds of d_i × 8/N, divided by the total) against share of final industry valuation. Plot as a ranked pair of bars per firm.
 
@@ -472,7 +477,7 @@ The layout is built on a monospace character grid (§16.2). Regions:
 ├ BOARD (left ~62%) ─────────────────────────┬ TRUST (right ~38%) ───────────────────┤
 │ #  FIRM      SHARE   PROFIT   VALUE   Δ  ✓ │ PUBLIC TRUST                          │
 │ rows… (BREACH / AUTO / INSOLV / BOT tags)  │ 61.8  ▼6.3 QoQ   (large numerals)      │
-│ [PACE SAFE EXPO columns if disclosure on]  │ step sparkline, all quarters           │
+│ [PACE SAFE EXPO columns if disclosure on]  │ line chart + change strip, all quarters│
 │                                            │ MKT SIZE bar  │ INCIDENTS │ PACTS │ DISCL│
 ├ WIRE (scrolling ticker; static list if reduced motion) ─────────────────────────────┤
 └ F-KEY BAR: F2 BOARD  F3 TRUST  F4 PACTS  F6 AUDIT  F7 DISCL  F8 SUMMIT  F9 ADVANCE  F10 END ┘
@@ -515,7 +520,7 @@ Panels:
 - Header: firm ticker, quarter, countdown, cash, last-quarter profit.
 - Bottom tab bar on mobile, left rail on desktop. Tabs:
   - **DESK**: the decisions
-  - **BOOK**: own P&L history and own sparkline
+  - **BOOK**: own P&L history and own valuation line chart (zero-based)
   - **PACTS**: propose, join, leave, terms, members
   - **WIRE**: the feed
 - DESK contents: pace selector (4 segments, ≥ 44 px targets); safety slider plus numeric stepper; card picker sheet, with a target list for POACH; an *Estimated cost this quarter* line; a *Public exposure* label; the commit button (signal amber, full width).
@@ -528,10 +533,12 @@ Panels:
 
 On the projector the facilitator steps through panels with F9:
 
-1. **FINAL BOARD**: ranked by final valuation, with peak valuation shown alongside.
-2. **TRUST TRACE**: full history. The collapse quarter is marked. The τ line appears only if the "Reveal threshold" setting is on.
-3. **COUNTERFACTUAL**: industry actual vs sustainable path; value destroyed; per-firm comparison.
-4. **ATTRIBUTION**: per firm, share of depletion vs share of value.
+1. **FINAL BOARD**: ranked by final valuation. A dumbbell per firm from peak (hollow square) to final (solid square) on one axis that includes zero; final value and drop from peak on the right; final values below zero in `--down` with a − sign.
+2. **TRUST TRACE**: full history as a `LineChart`. The collapse quarter is a labelled vertical marker. The τ line, with a hatched band below it, appears only if the "Reveal threshold" setting is on.
+3. **COUNTERFACTUAL**: three headline figures (INDUSTRY VALUE, ALTERNATIVE, VALUE LOST or VALUE ADDED, §10); actual and alternative trust paths, each labelled at its end, with the gap hatched; per-firm comparison on a zero-based axis (actual bar from zero, alternative as a marker).
+4. **ATTRIBUTION**: a butterfly chart per firm: share of damage extending left in `--down`, share of value extending right in `--signal`, ticker in the middle, values at the bar ends. Negative-total rule in §10.
+
+Series are labelled on the chart; no abbreviations (SUST, ACT, DEPL) or prose legends.
 5. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).
 6. **DEBRIEF**: the five prompts in §15.5.
 
@@ -642,13 +649,25 @@ Colours do not invert.
 
 ### 16.3 Components
 
-`TopBar`, `FKeyBar`, `CommandLine`, `Panel` (title row and 1 px rule border, no radius), `DataTable` (fixed ch columns, right-aligned numerics), `Delta` (sign, glyph and colour), `StepSparkline` (SVG, square steps, no smoothing, no area fill), `HBar`, `Ticker`, `Segmented4`, `SafetySlider` (track and block thumb), `CardPicker` (sheet), `CommitButton`, `Tag` (`BOT`, `AUTO`, `BREACH`, `INSOLV`, `PACT-A`), `PresenceDot`, `QR`, `Countdown`.
+`TopBar`, `FKeyBar`, `CommandLine`, `Panel` (title row and 1 px rule border, no radius), `DataTable` (fixed ch columns, right-aligned numerics), `Delta` (sign, glyph and colour), `LineChart` (below), `HBar` (drawn from a visible zero line; negative values extend left in `--down` with a − sign), `Ticker`, `Segmented4`, `SafetySlider` (track and block thumb), `CardPicker` (sheet), `CommitButton`, `Tag` (`BOT`, `AUTO`, `BREACH`, `INSOLV`, `PACT-A`), `PresenceDot`, `QR`, `Countdown`.
 
 All corners are square, except the device-like participant sheet edges, which are max 2 px.
+
+**`LineChart`** (replaces `StepSparkline`; owner approval 2026-10-03, UI audit):
+- One SVG, sized from its container. Axes, ticks and labels are drawn inside it on the same scale as the data.
+- Horizontal gridlines only. The value axis is on the right. One tick per quarter, with longer ticks and `Y1`, `Y2`… labels at year boundaries (`START` at the opening value).
+- Straight segments between quarter points (no steps, no smoothing, no area fill), with a square marker at each quarter. On trust charts, quarters that lost 5 or more are drawn as `--down` markers and the largest drop is labelled.
+- A solid tag at the end of the line carries the latest value.
+- Optional: a change strip under the plot (one bar per quarter from a zero line, `--up` with ▲ for a rise, `--down` with ▼ for a fall); a labelled horizontal reference line; a labelled vertical marker; a flat 45° hatch between two series.
+- The y domain is either trust (always 0–100) or zero-based (always includes 0); never the min-to-max of the data.
+- A series with a single point shows the text "1 quarter resolved" instead of a line.
+- τ is never passed to a chart on `#/screen` or `#/play`. It is drawn only on the results trust trace when the "Reveal threshold" setting is on.
 
 ### 16.4 Forbidden
 
 Gradients, glows, blur, glassmorphism, drop shadows, rounded cards, donut or pie charts, smoothed area charts, emoji, icon fonts used as decoration, sparkle or AI iconography, skeleton shimmer, fade-and-slide-up entrances, hover lift effects.
+
+Allowed exception: a flat 45° hatch (1 px lines in a token colour, no gradient or opacity ramp) filling the gap between two compared series or the band below a revealed τ line.
 
 ### 16.5 Motion (one orchestrated moment)
 

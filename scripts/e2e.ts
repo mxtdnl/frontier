@@ -530,7 +530,7 @@ async function participantScenario(
   await snapPlay(A, 'play-reveal');
   await A.getByRole('tab', { name: 'BOOK' }).click();
   await waitText(A, /Q1 Y1/, 'BOOK lists the quarter');
-  check((await A.locator('main svg').count()) >= 1, 'BOOK draws the step sparkline');
+  check(/1 quarter resolved/.test(await A.locator('main').innerText()), 'BOOK says 1 quarter resolved instead of drawing a one-point line');
   await snapPlay(A, 'play-book');
   await A.getByRole('tab', { name: 'WIRE' }).click();
   check((await A.locator('ul[aria-label="Wire"] li').count()) >= 2, 'WIRE lists the quarter’s headlines');
@@ -549,7 +549,11 @@ async function participantScenario(
   check(/4/.test(defaultsText) && (await A.getByRole('radio', { name: /Breakneck/ }).getAttribute('aria-checked')) === 'true', 'the desk defaults to last quarter’s applied pace');
   await key(fac, 'F8');
   await waitText(A, /Industry summit in session/, 'the summit banner shows', 15_000);
-  check((await A.getByRole('tab', { name: 'PACTS' }).getAttribute('aria-selected')) === 'true', 'the summit selects the PACTS tab');
+  // The tab switches in an effect after the banner first renders, so wait for it rather than reading it at once.
+  check(
+    await A.waitForFunction(() => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.includes('PACTS') ?? false, undefined, { timeout: 5_000 }).then(() => true, () => false),
+    'the summit selects the PACTS tab',
+  );
   await snapPlay(A, 'play-summit');
 
   // Pacts (Session 6): propose from the phone, join from the desktop, audit and disclose from the projector.
@@ -680,8 +684,8 @@ async function participantScenario(
   await snapProjector(fac, 'results-1');
   const panels: Array<[number, RegExp, string]> = [
     [2, /TRUST TRACE/, 'TRUST TRACE'],
-    [3, /COUNTERFACTUAL[\s\S]*VALUE DESTROYED/, 'COUNTERFACTUAL'],
-    [4, /ATTRIBUTION[\s\S]*DEPL/, 'ATTRIBUTION'],
+    [3, /COUNTERFACTUAL[\s\S]*INDUSTRY VALUE[\s\S]*ALTERNATIVE[\s\S]*VALUE (LOST|ADDED)/, 'COUNTERFACTUAL'],
+    [4, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE[\s\S]*SHARE OF VALUE/, 'ATTRIBUTION'],
     [5, /PACT RECORD/, 'PACT RECORD'],
     [6, /DEBRIEF[\s\S]*Ostrom/, 'DEBRIEF'],
   ];
@@ -691,13 +695,15 @@ async function participantScenario(
     await waitText(fac, re, `panel ${n} shows ${name}`, 5_000, '.scr');
     const text = await screenText(fac);
     if (n === 2) {
-      check(!/Dashed line|tau/i.test(text), 'the trust trace has no tau line while the setting is off');
-      check(/marker: collapse|no collapse/.test(text), 'the trust trace states the collapse marker');
+      check(!/τ|tau/i.test(text) && (await fac.locator('.scr .lc-ref').count()) === 0, 'the trust trace has no tau line while the setting is off');
+      check(/moratorium from Q\d Y\d|no moratorium/.test(text), 'the trust trace states the moratorium marker');
       // The line itself is drawn from the published value; publish one to check the drawing.
       await adminSet(`games/${g}/results/tau`, 33);
-      await waitText(fac, /Dashed line: tau, 33/, 'a published tau draws the dashed line', 10_000, '.scr');
+      await waitText(fac, /τ 33\.0 · a moratorium starts below this line/, 'a published tau draws the labelled line', 10_000, '.scr');
+      check((await fac.locator('.scr .lc-ref').count()) === 1, 'the tau line is drawn');
+      await snapProjector(fac, 'results-2-tau');
       await adminSet(`games/${g}/results/tau`, null);
-      await waitText(fac, /^(?![\s\S]*Dashed line)[\s\S]*/, 'the dashed line goes when tau is removed', 10_000, '.scr');
+      await waitText(fac, /^(?![\s\S]*τ)[\s\S]*/, 'the tau line goes when tau is removed', 10_000, '.scr');
     }
     if (n === 3 && res) {
       check(text.replace(/\s+/g, ' ').includes(`INDUSTRY VALUE ${fmt(res.industry.actual, 0)}`), 'panel 3 shows the actual industry value from the results');

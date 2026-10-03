@@ -142,10 +142,10 @@ Never ask a participant to read out a hidden value. The projector and the partic
 
 Allow 20 to 30 minutes. On the projector, press **F9** to step forward and **Esc** to step back. The step is saved, so a reload returns to the same panel.
 
-1. **FINAL BOARD.** Who finished first? Compare final valuation with peak valuation. Ask which teams peaked early.
-2. **TRUST TRACE.** Point at the collapse marker if there was one. If you want the hidden threshold shown, it must have been switched on at creation.
-3. **COUNTERFACTUAL.** How much value was destroyed compared with a sustainable path. Ask whether any single firm could have prevented it.
-4. **ATTRIBUTION.** Each firm's share of the damage next to its share of the value. This is the fairness conversation.
+1. **FINAL BOARD.** Who finished first? Each firm has a line from its peak (hollow square) to its final valuation (solid square); red squares finished below zero. Ask which teams peaked early.
+2. **TRUST TRACE.** Point at the labelled MORATORIUM line if there was one, and at the red squares (quarters that lost 5 or more trust). If you want the hidden threshold shown (a dashed red line with a hatched band below it), it must have been switched on at creation.
+3. **COUNTERFACTUAL.** Three figures: the industry's actual value, the ALTERNATIVE (every firm at pace 2, safety 15) and the VALUE LOST between them. If the industry finished below zero, no percentage is shown. The hatched area on the chart is the trust lost. Ask whether any single firm could have prevented it.
+4. **ATTRIBUTION.** Each firm's share of the damage (red, to the left) against its share of the value (amber, to the right). If no firm finished above zero, the right side says so. This is the fairness conversation.
 5. **PACT RECORD.** Violations that no audit caught are now shown. Ask what the pacts did and did not achieve.
 6. **DEBRIEF.** Five prompts, shown on screen:
    1. When did your firm first notice trust falling, and what did you change?

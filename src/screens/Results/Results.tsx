@@ -1,24 +1,26 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { FinalResults } from '../../engine';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { PARAMS, type FinalResults } from '../../engine';
 import { stepResults, type ActionResult } from '../../firebase/orchestrator';
 import { RESULT_PANEL_COUNT } from '../../firebase/phases';
 import { navigate, useRoute } from '../../router';
 import { usePublic, useResults } from '../../state';
 import { useMeta, useOrchestrator, useResultsPublisher } from '../../state/facilitator';
-import { DataTable, Delta, FKeyBar, HBar, Panel, StepSparkline, TopBar } from '../../ui/components';
-import { fmt, fmtShare, quarterLabel } from '../../ui/format';
+import { niceDomain } from '../../ui/chart';
+import { DataTable, FKeyBar, HBar, LineChart, Panel, TopBar } from '../../ui/components';
+import { fmt, quarterLabel } from '../../ui/format';
 import { matchKey, type KeyAction } from '../../ui/keys';
 import { useLitRoom } from '../../ui/litRoom';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
+import { Butterfly, Dumbbell } from './charts';
 import {
   DEBRIEF_PROMPTS,
   RESULT_PANELS,
-  barFraction,
+  attributionRows,
   counterfactualTrustSeries,
-  destroyedShare,
+  finalBoardRows,
+  headlineFigures,
   pactLines,
   rankedFirms,
-  tickerOf,
   trustSeries,
 } from './model';
 
@@ -163,53 +165,10 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   );
 }
 
-/**
- * Per-firm bar rows (panels 3 and 4). Up to 8 firms stack in one column; above that they flow down the left column and then
- * the right, so a class of 16 firms still fits the projector (spec §14.1) without clipping.
- */
-function FirmRows({ count, children }: { count: number; children: ReactNode }) {
-  if (count <= 8) return <>{children}</>;
-  return (
-    <div style={{ display: 'grid', gridAutoFlow: 'column', gridTemplateRows: `repeat(${Math.ceil(count / 2)}, auto)`, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: '4ch' }}>
-      {children}
-    </div>
-  );
-}
-
 export function FinalBoard({ r }: { r: FinalResults }) {
-  const firms = rankedFirms(r);
-  const top = Math.max(1, ...firms.map((f) => Math.max(f.valuation, f.peakValuation)));
   return (
-    <Panel title="FINAL BOARD · ranked by final valuation" right={`${r.rounds} QTR`} bodyClassName="pad">
-      <div className="stack" style={{ gap: 0 }}>
-        <div className="row dim" style={{ flexWrap: 'nowrap' }}>
-          <span style={{ width: '4ch' }}>#</span>
-          <span style={{ width: '8ch' }}>FIRM</span>
-          <span style={{ flex: 1 }}>FINAL (bar) · PEAK (marker)</span>
-          <span style={{ width: '10ch', textAlign: 'right' }}>FINAL</span>
-          <span style={{ width: '10ch', textAlign: 'right' }}>PEAK</span>
-        </div>
-        {firms.map((f) => (
-          <div key={f.firmId} style={{ display: 'flex', alignItems: 'center', height: firms.length > 8 ? '1lh' : '2lh' }}>
-            <span style={{ width: '4ch' }}>{f.rank}</span>
-            <span style={{ width: '8ch' }} >{f.ticker}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <HBar
-                label=""
-                labelW={0}
-                textW={0}
-                value={barFraction(f.valuation, top)}
-                marker={barFraction(f.peakValuation, top)}
-                tone="signal"
-                text=""
-                describe={`${f.ticker} rank ${f.rank}, final ${fmt(f.valuation)}, peak ${fmt(f.peakValuation)}`}
-              />
-            </div>
-            <span style={{ width: '10ch', textAlign: 'right' }}>{fmt(f.valuation)}</span>
-            <span style={{ width: '10ch', textAlign: 'right' }} className="dim">{fmt(f.peakValuation)}</span>
-          </div>
-        ))}
-      </div>
+    <Panel title="FINAL BOARD · ranked by final valuation" right={`peak → final valuation · ${r.rounds} QTR`} bodyClassName="pad col">
+      <Dumbbell rows={finalBoardRows(r)} />
     </Panel>
   );
 }
@@ -217,83 +176,105 @@ export function FinalBoard({ r }: { r: FinalResults }) {
 export function TrustTrace({ r }: { r: FinalResults }) {
   const series = trustSeries(r);
   const marker = r.collapseRound;
+  const last = r.trust[r.trust.length - 1] ?? r.startTrust;
   return (
     <Panel
       title="TRUST TRACE"
-      right={marker !== null ? `marker: collapse ${quarterLabel(marker)}` : 'no collapse'}
-      bodyClassName="pad"
+      right={`${marker !== null ? `moratorium from ${quarterLabel(marker)}` : 'no moratorium'}${r.tau !== null ? ' · τ revealed' : ''}`}
+      bodyClassName="pad col"
     >
-      <div className="chart">
-        <div className="chart-y" style={{ height: '20lh' }}>
-          <span>100</span>
-          <span>50</span>
-          <span>0</span>
-        </div>
-        <StepSparkline
-          series={[{ values: series, label: 'Trust', tone: 'signal' }]}
-          min={0}
-          max={100}
-          w={130}
-          h={20}
-          markAt={marker ?? undefined}
-          refLine={r.tau ?? undefined}
-          description={`Public trust by quarter, from ${fmt(r.startTrust)} to ${fmt(r.trust[r.trust.length - 1] ?? r.startTrust)}. ${
-            marker !== null ? `Collapse in ${quarterLabel(marker)}.` : 'No collapse.'
-          }`}
-        />
-        <div className="chart-x">
-          <span>START</span>
-          <span>{quarterLabel(Math.max(1, r.rounds))}</span>
-        </div>
-      </div>
-      {r.tau !== null ? <p className="dim" style={{ marginTop: '1lh' }}>Dashed line: tau, {fmt(r.tau, 0)}.</p> : null}
+      <LineChart
+        series={[{ values: series, label: 'Trust', tone: 'signal' }]}
+        domain="trust"
+        alarmDrop={5}
+        changeStrip
+        marker={marker !== null ? { index: marker, label: `MORATORIUM ${quarterLabel(marker)}` } : undefined}
+        reference={r.tau !== null ? { value: r.tau, label: `τ ${fmt(r.tau)} · a moratorium starts below this line`, band: true } : undefined}
+        description={`Public trust by quarter, from ${fmt(r.startTrust)} to ${fmt(last)}. ${
+          marker !== null ? `Moratorium from ${quarterLabel(marker)}.` : 'No moratorium.'
+        }${r.tau !== null ? ` Threshold ${fmt(r.tau)}.` : ''}`}
+      />
     </Panel>
+  );
+}
+
+function Figure({ label, value, sub, tone }: { label: string; value: string; sub: string; tone?: 'wire' | 'down' | 'up' }) {
+  return (
+    <div className="fig" data-figure={label}>
+      <div className="dim">{label}</div>
+      <div className={`fig-v${tone ? ` t-${tone}` : ''}`}>{value}</div>
+      <div className="dim">{sub || '\u00a0'}</div>
+    </div>
   );
 }
 
 export function Counterfactual({ r }: { r: FinalResults }) {
   const firms = rankedFirms(r);
-  const top = Math.max(1, ...firms.map((f) => Math.max(f.valuation, f.counterfactual)));
-  const share = destroyedShare(r);
+  const f = headlineFigures(r);
+  const alt = PARAMS.BOT_SUSTAINABLE;
+  const { domain } = niceDomain(
+    Math.min(0, ...firms.flatMap((x) => [x.valuation, x.counterfactual])),
+    Math.max(0, ...firms.flatMap((x) => [x.valuation, x.counterfactual])),
+    4,
+  );
+  const zeroAt = ((0 - domain[0]) / (domain[1] - domain[0])) * 100;
   return (
-    <Panel title="COUNTERFACTUAL · industry actual vs sustainable path" bodyClassName="pad">
-      <div className="stack">
-        <div className="row" style={{ gap: '4ch' }}>
-          <span><span className="dim">INDUSTRY VALUE</span> {fmt(r.industry.actual, 0)}</span>
-          <span><span className="dim">SUSTAINABLE</span> {fmt(r.industry.counterfactual, 0)}</span>
-          <span>
-            <span className="dim">VALUE DESTROYED</span> <Delta value={-r.industry.destroyed} digits={0} />
-            {share !== null ? ` (${fmt(share * 100, 0)}%)` : ''}
-          </span>
-        </div>
-        <div className="chart">
-          <div className="chart-y" style={{ height: '6lh' }}>
-            <span>100</span>
-            <span>0</span>
-          </div>
-          <StepSparkline
+    <Panel title="COUNTERFACTUAL" right={`same incident draws · every firm at pace ${alt.pace}, safety ${alt.safety}`} bodyClassName="pad col">
+      <div className="figs">
+        <Figure label="INDUSTRY VALUE" value={fmt(f.actual, 0)} sub="actual, all firms" tone={f.actual < 0 ? 'down' : undefined} />
+        <Figure label="ALTERNATIVE" value={fmt(f.alternative, 0)} sub={`pace ${alt.pace}, safety ${alt.safety}`} tone="wire" />
+        <Figure label={f.change.label} value={`${f.change.glyph}${fmt(f.change.amount, 0)}`} sub={f.change.sub} tone={f.change.label === 'VALUE ADDED' ? 'up' : 'down'} />
+      </div>
+      <div className="cf-grid">
+        <div className="col">
+          <div className="dim">PUBLIC TRUST · 0–100</div>
+          <LineChart
             series={[
-              { values: counterfactualTrustSeries(r), label: 'Sustainable path', tone: 'wire' },
-              { values: trustSeries(r), label: 'Actual', tone: 'signal' },
+              { values: trustSeries(r), label: 'ACTUAL', tone: 'signal' },
+              { values: counterfactualTrustSeries(r), label: 'ALTERNATIVE', tone: 'wire' },
             ]}
-            min={0}
-            max={100}
-            w={130}
-            h={6}
-            description="Trust: actual path against the sustainable path, by quarter"
+            domain="trust"
+            hatchBetween
+            endLabels
+            description="Public trust by quarter: the actual path against the alternative path, gap hatched"
           />
-          <div className="chart-x"><span>START</span><span>{quarterLabel(Math.max(1, r.rounds))}</span></div>
         </div>
-        <div className="stack" style={{ gap: 0 }}>
-          <div className="dim row" style={{ flexWrap: 'nowrap' }}><span style={{ width: '8ch' }}>FIRM</span><span>SUST = sustainable path (blue) · ACT = actual (signal)</span></div>
-          <FirmRows count={firms.length}>
-          {firms.map((f) => (
-            <div key={f.firmId} className="stack" style={{ gap: 0 }}>
-              <HBar label={f.ticker} value={barFraction(f.counterfactual, top)} tone="wire" text={`${fmt(f.counterfactual, 0)} SUST`} textW={12} describe={`${f.ticker} sustainable path ${fmt(f.counterfactual, 0)}`} />
-              <HBar label="" value={barFraction(f.valuation, top)} tone="signal" text={`${fmt(f.valuation, 0)} ACT`} textW={12} describe={`${f.ticker} actual ${fmt(f.valuation, 0)}`} />
+        <div className="col">
+          <div className="cmp-row dim">
+            <span>FIRM</span>
+            <span>ACTUAL FROM 0</span>
+            <span className="num">ACTUAL</span>
+            <span className="num wire-c">┃ ALTERNATIVE</span>
+          </div>
+          {firms.map((x) => (
+            <div key={x.firmId} className="cmp-row" data-firm={x.ticker}>
+              <span>{x.ticker}</span>
+              <HBar
+                label=""
+                labelW={0}
+                textW={0}
+                value={x.valuation}
+                domain={domain}
+                marker={x.counterfactual}
+                markerTone="wire"
+                tone="signal"
+                text=""
+                describe={`${x.ticker} actual ${fmt(x.valuation, 0)}, alternative ${fmt(x.counterfactual, 0)}`}
+              />
+              <span className={`num${x.valuation < 0 ? ' t-down' : ''}`}>{fmt(x.valuation, 0)}</span>
+              <span className="num wire-c">{fmt(x.counterfactual, 0)}</span>
             </div>
           ))}
-          </FirmRows>
+          <div className="cmp-row dim">
+            <span />
+            <span className="cmp-axis">
+              <span>{fmt(domain[0], 0)}</span>
+              {domain[0] < 0 ? <span style={{ left: `${zeroAt.toFixed(2)}%` }}>0</span> : null}
+              <span>{fmt(domain[1], 0)}</span>
+            </span>
+            <span />
+            <span />
+          </div>
         </div>
       </div>
     </Panel>
@@ -301,22 +282,10 @@ export function Counterfactual({ r }: { r: FinalResults }) {
 }
 
 export function Attribution({ r }: { r: FinalResults }) {
+  const { rows, anyPositive } = attributionRows(r);
   return (
-    <Panel title="ATTRIBUTION · share of depletion vs share of value" bodyClassName="pad">
-      <div className="stack" style={{ gap: 0 }}>
-        <div className="dim row" style={{ flexWrap: 'nowrap' }}><span style={{ width: '8ch' }}>FIRM</span><span>DEPL = share of depletion (red) · VAL = share of value (signal)</span></div>
-        <FirmRows count={r.attribution.length}>
-        {r.attribution.map((a) => {
-          const t = tickerOf(r, a.firmId);
-          return (
-            <div key={a.firmId} style={{ marginBottom: '0.5lh' }}>
-              <HBar label={t} value={a.drawShare} tone="down" text={`${fmtShare(a.drawShare)} DEPL`} textW={14} describe={`${t} share of depletion ${fmtShare(a.drawShare)}`} />
-              <HBar label="" value={a.valueShare} tone="signal" text={`${fmtShare(a.valueShare)} VAL`} textW={14} describe={`${t} share of value ${fmtShare(a.valueShare)}`} />
-            </div>
-          );
-        })}
-        </FirmRows>
-      </div>
+    <Panel title="ATTRIBUTION · share of damage against share of value" right="ranked by share of damage" bodyClassName="pad col">
+      <Butterfly rows={rows} anyPositive={anyPositive} />
     </Panel>
   );
 }

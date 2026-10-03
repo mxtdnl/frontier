@@ -207,61 +207,135 @@
   border-color: var(--up);
 }
 
-/* ---------- StepSparkline / HBar ---------- */
-.spark {
-  display: block;
-}
-.spark svg {
-  display: block;
+/* ---------- LineChart / HBar (spec §16.3) ---------- */
+.lchart {
+  position: relative;
   width: 100%;
-  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.lchart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dim);
+  border: var(--rule-w) solid var(--rule);
+}
+.lc {
+  display: block;
   overflow: visible;
 }
-.spark path {
+.lc text {
+  fill: var(--dim);
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
+.lc .lc-grid,
+.lc .lc-tick {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+.lc .lc-zero,
+.lc .lc-tick-major {
+  stroke: var(--dim);
+  stroke-width: 1;
+}
+.lc .lc-line {
   fill: none;
   stroke-width: 2;
-  vector-effect: non-scaling-stroke;
   stroke-linejoin: miter;
   stroke-linecap: butt;
 }
-.spark .s-signal {
+.lc .lc-s-signal {
   stroke: var(--signal);
 }
-.spark .s-wire {
+.lc .lc-s-wire {
   stroke: var(--wire);
 }
-.spark .s-dim {
+.lc .lc-s-dim {
   stroke: var(--dim);
 }
-.spark .s-down {
+.lc .lc-s-down {
   stroke: var(--down);
 }
-.spark .ref {
+.lc .lc-f-signal {
+  fill: var(--signal);
+}
+.lc .lc-f-wire {
+  fill: var(--wire);
+}
+.lc .lc-f-dim {
+  fill: var(--dim);
+}
+.lc .lc-f-down {
+  fill: var(--down);
+}
+.lc .lc-f-up {
+  fill: var(--up);
+}
+.lc .lc-pt-open {
+  fill: var(--base);
+  stroke: var(--dim);
+  stroke-width: 1.5;
+}
+.lc .lc-tag-text {
+  fill: var(--signal-ink);
+  font-weight: 600;
+}
+.lc .lc-ref {
+  stroke: var(--down);
+  stroke-width: 1;
+  stroke-dasharray: 5 4;
+}
+.lc .lc-ref-label,
+.lc .lc-drop,
+.lc .lc-t-down {
+  fill: var(--down);
+}
+.lc .lc-t-up {
+  fill: var(--up);
+}
+.lc .lc-t-signal {
+  fill: var(--signal);
+}
+.lc .lc-t-wire {
+  fill: var(--wire);
+}
+.lc .lc-t-dim {
+  fill: var(--dim);
+}
+.lc .lc-mark {
+  stroke: var(--text);
+  stroke-width: 1;
+}
+.lc .lc-mark-label,
+.lc .lc-strong {
+  fill: var(--text);
+}
+.lc .lc-name {
+  font-weight: 600;
+}
+.lc .lc-hatch {
   stroke: var(--dim);
   stroke-width: 1;
-  stroke-dasharray: 4 4;
 }
-.spark .mark {
+.lc .lc-hatch-down {
   stroke: var(--down);
   stroke-width: 1;
 }
-.chart {
-  display: grid;
-  grid-template-columns: 6ch minmax(0, 1fr);
-  column-gap: 1ch;
+.lc .lc-pt-hollow {
+  fill: var(--base);
+  stroke: var(--text);
+  stroke-width: 1.5;
 }
-.chart-y {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  text-align: right;
-  color: var(--dim);
+.lc .lc-row-line {
+  stroke-width: 2;
 }
-.chart-x {
-  grid-column: 2;
-  display: flex;
-  justify-content: space-between;
-  color: var(--dim);
+.lc .lc-row-line.is-signal {
+  stroke: var(--signal);
+}
+.lc .lc-row-line.is-down {
+  stroke: var(--down);
 }
 
 .hbar {
@@ -278,7 +352,8 @@
 }
 .hbar-fill {
   position: absolute;
-  inset: 0 auto 0 0;
+  top: 0;
+  bottom: 0;
   background: var(--wire);
 }
 .hbar-fill.t-signal {
@@ -290,16 +365,33 @@
 .hbar-fill.t-down {
   background: var(--down);
 }
+.hbar-zero {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--dim);
+}
 .hbar-marker {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 2px;
+  margin-left: -1px;
   background: var(--text);
+}
+.hbar-marker.m-wire {
+  width: 4px;
+  margin-left: -2px;
+  background: var(--wire);
 }
 .hbar-text {
   text-align: right;
   white-space: nowrap;
+}
+.hbar-text.neg {
+  color: var(--down);
 }
 
 /* ---------- Ticker ---------- */
@@ -594,6 +686,70 @@
 }
 .big.is-inverted.signal {
   color: var(--signal-ink);
+}
+
+/* ---------- Results panels (spec §14.4) ---------- */
+.panel-body.col,
+.col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.figs {
+  display: flex;
+  flex-wrap: wrap;
+  border-top: var(--rule-w) solid var(--rule);
+  border-bottom: var(--rule-w) solid var(--rule);
+  margin-bottom: 1lh;
+}
+.fig {
+  flex: 1 1 0;
+  min-width: 18ch;
+  padding: 0 2ch;
+  border-right: var(--rule-w) solid var(--rule);
+}
+.fig:last-child {
+  border-right: 0;
+}
+.fig-v {
+  font-size: 2em;
+  line-height: 1.35;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.t-down {
+  color: var(--down);
+}
+.t-up {
+  color: var(--up);
+}
+.t-wire {
+  color: var(--wire);
+}
+.cf-grid {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  column-gap: 3ch;
+}
+.cmp-row {
+  display: grid;
+  grid-template-columns: 6ch minmax(0, 1fr) 8ch 14ch;
+  column-gap: 1ch;
+  align-items: center;
+  white-space: nowrap;
+}
+.cmp-axis {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 1ch;
+}
+.cmp-axis > span:nth-child(2):not(:last-child) {
+  position: absolute;
+  transform: translateX(-50%);
 }
 
 /* ---------- Notices ---------- */
