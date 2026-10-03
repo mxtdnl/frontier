@@ -17,11 +17,6 @@ export function rankedFirms(r: FinalResults): FirmFinal[] {
   return Object.values(r.final).sort((a, b) => a.rank - b.rank || (a.ticker < b.ticker ? -1 : 1));
 }
 
-/** Bar length 0–1 against `max`; negative values draw no bar (the figure carries the sign). */
-export function barFraction(value: number, max: number): number {
-  return max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
-}
-
 /** Trust by quarter with the opening value first: index n is the value after quarter n. */
 export function trustSeries(r: FinalResults): number[] {
   return [r.startTrust, ...r.trust];
@@ -31,9 +26,78 @@ export function counterfactualTrustSeries(r: FinalResults): number[] {
   return [r.startTrust, ...r.counterfactual.trust];
 }
 
-/** Value destroyed as a share of the sustainable total; null when that total is not positive. */
-export function destroyedShare(r: FinalResults): number | null {
-  return r.industry.counterfactual > 0 ? r.industry.destroyed / r.industry.counterfactual : null;
+export interface ChangeFigure {
+  /** VALUE LOST when the alternative total is at least the actual total, VALUE ADDED otherwise (§10). */
+  label: 'VALUE LOST' | 'VALUE ADDED';
+  /** Size of the difference, never negative. */
+  amount: number;
+  glyph: '▼' | '▲' | '';
+  /** Percentage of the alternative, only when the actual industry total is positive; otherwise the reason. */
+  sub: string;
+}
+
+export interface HeadlineFigures {
+  actual: number;
+  alternative: number;
+  change: ChangeFigure;
+}
+
+/**
+ * The three counterfactual figures (spec §10, owner decision 5). The engine's `destroyed` = alternative − actual is
+ * unchanged; only its presentation depends on the signs.
+ */
+export function headlineFigures(r: FinalResults): HeadlineFigures {
+  const { actual, counterfactual: alternative, destroyed } = r.industry;
+  const added = destroyed < 0;
+  const amount = Math.abs(destroyed);
+  let sub: string;
+  if (actual <= 0) sub = 'industry finished below zero';
+  else if (alternative > 0) sub = `${Math.round((amount / alternative) * 100)}% ${added ? 'above' : 'of'} the alternative`;
+  else sub = '';
+  return {
+    actual,
+    alternative,
+    change: { label: added ? 'VALUE ADDED' : 'VALUE LOST', amount, glyph: amount === 0 ? '' : added ? '▲' : '▼', sub },
+  };
+}
+
+export interface DumbbellRow {
+  firmId: string;
+  rank: number;
+  ticker: string;
+  final: number;
+  peak: number;
+  /** final − peak; 0 or negative. */
+  fromPeak: number;
+}
+
+/** Final board rows, by rank: peak and final valuation for the dumbbell (panel 1). */
+export function finalBoardRows(r: FinalResults): DumbbellRow[] {
+  return rankedFirms(r).map((f) => ({
+    firmId: f.firmId,
+    rank: f.rank,
+    ticker: f.ticker,
+    final: f.valuation,
+    peak: f.peakValuation,
+    fromPeak: Math.min(0, f.valuation - f.peakValuation),
+  }));
+}
+
+export interface ButterflyRow {
+  firmId: string;
+  ticker: string;
+  /** Share of cumulative draw, 0–1. */
+  damage: number;
+  /** Share of final value with negatives counted as 0, 0–1. */
+  value: number;
+}
+
+/** Attribution rows in the engine's order (highest share of damage first), and whether any firm kept positive value. */
+export function attributionRows(r: FinalResults): { rows: ButterflyRow[]; anyPositive: boolean } {
+  return {
+    rows: r.attribution.map((a) => ({ firmId: a.firmId, ticker: tickerOf(r, a.firmId), damage: a.drawShare, value: a.valueShare })),
+    anyPositive: Object.values(r.final).some((f) => f.valuation > 0),
+  };
 }
 
 export function tickerOf(r: FinalResults, firmId: string): string {
