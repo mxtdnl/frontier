@@ -208,12 +208,12 @@ await runWithStack(async (browser) => {
       await fac.goto(`${BASE}#/results/${g}`);
       await waitText(fac, /RESULTS[\s\S]*FINAL BOARD/, 'the results screen opens', 15_000, '.scr');
       await snapProjector(fac, 'rehearsal-results-1');
-      const panels: Array<[number, RegExp]> = [[2, /TRUST TRACE/], [3, /COUNTERFACTUAL[\s\S]*VALUE DESTROYED/], [4, /ATTRIBUTION/], [5, /PACT RECORD[\s\S]*UNDETECTED/], [6, /DEBRIEF/]];
+      const panels: Array<[number, RegExp]> = [[2, /TRUST TRACE/], [3, /COUNTERFACTUAL[\s\S]*INDUSTRY VALUE[\s\S]*ALTERNATIVE[\s\S]*VALUE LOST/], [4, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE/], [5, /PACT RECORD[\s\S]*UNDETECTED/], [6, /DEBRIEF/]];
       for (const [n, re] of panels) {
         await key('F9');
         await waitText(fac, new RegExp(`${n}/6`), `F9 steps to results panel ${n}`, 15_000, '.scr');
         await waitText(fac, re, `panel ${n} shows its content`, 5_000, '.scr');
-        if (n === 2) check(/marker: collapse/.test(await screenText(fac)) && !/Dashed line|tau/i.test(await screenText(fac)), 'the trust trace marks the collapse and shows no tau line');
+        if (n === 2) check(/moratorium from Q\d Y\d/.test(await screenText(fac)) && /MORATORIUM Q\d Y\d/.test(await screenText(fac)) && !/τ|tau/i.test(await screenText(fac)), 'the trust trace labels the moratorium and shows no tau line');
         if (n === 3) check((await screenText(fac)).replace(/\s+/g, ' ').includes(`INDUSTRY VALUE ${fmt(res.industry.actual, 0)}`), 'panel 3 shows the stored actual industry value');
         await snapProjector(fac, `rehearsal-results-${n}`);
       }

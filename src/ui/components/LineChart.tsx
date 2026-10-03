@@ -220,7 +220,7 @@ function ChartSvg(p: Props & { w: number; h: number; fs: number; idBase: string 
     const labelled = p.alarmDrop !== undefined && stepPx >= cw * 6;
     const half = stripH / 2 - (labelled ? lh * 0.8 : 2);
     const maxAbs = Math.max(1, ...ch.map((c) => Math.abs(c.delta)));
-    const bw = Math.max(2, Math.min(fs, stepPx * 0.56));
+    const bw = Math.max(2, Math.min(fs * 0.7, stepPx * 0.56));
     out.push(
       <text key="st" className="lc-strip-title" x={left} y={mainBottom + stripTitleH * 0.55} dominantBaseline="central">
         CHANGE PER QUARTER
