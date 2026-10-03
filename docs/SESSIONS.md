@@ -301,3 +301,137 @@ Added after Session 8. Read docs/spec.md §2, §6.2 (DRAW scale), §8, §13, §1
 - A phone check at 360×640 with 49 POACH targets.
 
 **Acceptance.** No clipped panel at 1280×720 or 1920×1080 for any firm count from 2 to the new maximum. Calibration passes at the new maximum. A 14-quarter rehearsal with the new maximum runs without errors. Phone screens stay usable at 360×640. The pull request states, in plain English, the connection limit that applies and the facilitator-visible changes (paging, new commands).
+
+---
+
+# Interface redesign (Sessions 11–15)
+
+Added after the UI audit of 2 and 3 October 2026. The audit is saved in this repository at `docs/ui-audit/index.html` (open it in a browser, or read the HTML source: every mock-up is drawn by the script at the bottom of the file, and its layout and labels are the reference). The owner approved all of it on 3 October 2026, including the five decisions in its section 11.
+
+**Goal for every session.** Each screen must be understood without the facilitator explaining it. Someone who missed the briefing must be able to tell, within a few seconds, what is happening, what it means for them and what to do next. Judge every change against this, not only against looks.
+
+**Rules for Sessions 11–15.**
+- Each session updates the spec sections it changes before changing code, and logs each change in docs/PROGRESS.md as "spec change approved by the owner on 2026-10-03 (UI audit)". After each session the spec and the code must agree.
+- Keep the terminal identity: one monospace face, square corners, flat fills, 1 px rules, ▲/▼ with every coloured delta. `npm run lint:design` and `npm run lint:copy` must pass; the design linter forbids `box-shadow`, so draw underlines and selection bars with borders.
+- Hidden values never reach the projector or phones. No chart on `#/screen` or `#/play` may receive τ, even as an unused prop. τ is drawn only on the results trust trace when the "Reveal threshold" setting is on.
+- Layouts must work for every firm count the code supports (`MAX_FIRMS`). If Session 10 has run, keep its paging and column rules and build on them.
+- Before opening the pull request, run `npm run test:e2e` and `npm run test:e2e:rehearsal`, look at the screenshots of every screen the session changed, and list in the pull request what the owner should look at on the live site.
+
+**Order.** Run 11, 12, 13, 14, 15 in that order. Session 11 does not depend on Session 10. Sessions 12–15 change the board, results and console layouts that Session 10 also changes, so run Session 10 first if it is going ahead.
+
+---
+
+## Session 11 — Chart foundation and results defects (model: Opus 5.5)
+
+Read docs/spec.md §10, §14.1, §14.3, §14.4 and §16; docs/ui-audit/index.html sections 02, 05, 07 and 11; docs/PROGRESS.md.
+
+**Why.** The charts are bare stepped strokes whose labels do not line up with the data, and three results panels are blank or misleading when valuations are negative (audit section 02, the three HIGH defects).
+
+1. **Spec.** Update §16.3 and §16.4: `StepSparkline` is replaced by `LineChart` (below); a flat 45° hatch in a token colour is allowed between two compared series; `HBar` has a zero baseline. Update §10 and §14.4 with the negative-total display rules in step 6.
+2. **Chart geometry module** `src/ui/chart.ts`, pure functions only: linear scales, "nice" tick values, the line path (straight segments between quarter points), year and quarter ticks, the change-per-quarter values, and label placement that keeps labels inside the plot and apart from each other.
+3. **`LineChart` component** replacing `StepSparkline`:
+   - one SVG with axes, ticks and labels drawn on the same scale as the data, sized from its container with a `ResizeObserver` (no more labels laid out beside the SVG);
+   - horizontal gridlines only; value axis on the right; one tick per quarter, longer ticks and Y1, Y2… labels at year boundaries;
+   - straight segments with a square marker at each quarter; quarters that lost 5 or more trust drawn as red markers; the largest drop labelled;
+   - a solid tag at the end of the line carrying the latest value;
+   - optional change strip under the plot: one bar per quarter from a zero line, green with ▲ for a rise, red with ▼ for a fall;
+   - optional labelled horizontal reference line and labelled vertical marker; optional hatch between two series;
+   - y domain is `trust` (always 0–100) or `zero` (always includes 0); never min-to-max of the data;
+   - a series with one point shows the text "1 quarter resolved" instead of a line.
+   Use the new token names from the audit only if Session 12 has already added them; otherwise use the current tokens.
+4. **Replace every use of `StepSparkline`**: projector trust panel and `TRUST` view (change strip on, no τ), `FIRM` view (zero-based), results trust trace (τ line and hatched band below it only when revealed; moratorium as a labelled vertical marker), phone BOOK, and the kit.
+5. **`HBar`**: draw from a visible zero line; negative values extend left in the down colour with a − sign.
+6. **Results panels 1, 3 and 4** (follow the audit mock-ups):
+   - FINAL BOARD: a dumbbell per firm from peak (hollow square) to final (solid square) on one axis that includes zero; final value and drop from peak on the right; final values below zero in red.
+   - COUNTERFACTUAL: three headline figures (industry value, alternative, value lost); the trust chart with both lines labelled at their ends and the gap hatched; per-firm comparison on a zero-based axis.
+   - ATTRIBUTION: a butterfly chart, share of damage extending left in red and share of value extending right in amber, ticker in the middle, values at the bar ends.
+   - Negative totals (decision 5): keep the engine definitions. Show the value-destroyed percentage only when the actual industry total is positive; otherwise the sub-label reads "industry finished below zero". If the actual total exceeds the alternative, label the figure VALUE ADDED with ▲. When no firm finishes above zero, the value side of ATTRIBUTION shows the single line "No firm finished with positive value" instead of 0.0% bars.
+   - Remove the abbreviations SUST, ACT and DEPL; label series on the chart instead.
+
+**Tests.** Unit tests for every function in `src/ui/chart.ts` (scales, ticks including a domain that crosses zero, path, change values, one-point series). Results model tests for negative valuations, a negative industry total, actual above the alternative, and no firm above zero. A test that the projector trust components are never given τ. Replace `tests/ui/sparkline.test.ts`.
+
+**Acceptance.** In the rehearsal screenshots every results panel shows visible marks, including when every final valuation is negative. Chart labels sit on the values they name at 1280×720 and 1920×1080. No chart line stops short of its axis.
+
+---
+
+## Session 12 — Colour, chrome and screen-level clarity (model: Sonnet 5.5)
+
+Read docs/spec.md §14, §15 and §16; docs/ui-audit/index.html sections 01, 03, 04, 09 and 10; docs/REVIEW.md L7.
+
+**Why.** Amber fills every bar and key, so nothing stands out; panels are almost invisible against black; and the projector uses abbreviations the room cannot decode.
+
+1. **Spec.** Update §16.1 (token table and top bar) and §16.2 (labels: full words in uppercase are allowed where a mnemonic would need explaining, which also settles REVIEW L7). Re-check WCAG AA for `--dim` on `--panel` and record the ratios.
+2. **Tokens v2** in `src/ui/tokens.css`: `--panel #1C1B14`, `--rule #3A3729`, `--dim #9A947C`, and new `--raise #24231B` (header rows, alternate rows, selection), `--grid #2A2820` (gridlines, row rules) and `--signal-dim #8A6400` (outlines, hatches, inactive key caps). Adjust lit-room values so they stay brighter than the new base values.
+3. **Amber budget.** Solid amber only for the brand block, the one primary action on screen, the selected option, the countdown, the trust numeral and the reveal invert. Pact tags and other amber marks become amber text or `--signal-dim` outlines.
+4. **Top bar** on projector, results and phone: dark `--panel` bar with a 2 px amber bottom rule; brand block in solid amber; the phase as a coloured status block (each phase distinct, always with its word); the countdown large and right-aligned. The command line is visible only while the facilitator is typing.
+5. **Status sentence** under the projector top bar, written from the phase, e.g. "Q3 Y2 · Decisions open. Set pace, safety and a card, then commit. 1:42 left." Write one sentence per phase and check each with `lint:copy`.
+6. **Reveal headline.** During reveal the status line summarises the quarter from the data, e.g. "Q3 Y2 resolved · Trust ▼5.9 to 45.6 · BTC takes 1st · 2 incidents."
+7. **Board readability.** Row rules and alternate-row fill; panel titles in `--text` at weight 600; column headers in `--dim` on a `--raise` header row; full-word column headers where width allows (CHANGE, PACE, SAFETY, EXPOSURE, COMMITTED). Keep the tag key, as a one-line strip at the foot of the board listing only the tags on screen.
+8. **Trust panel copy.** Subtitle "Total market revenue tracks public trust." (existing briefing copy); "QoQ" becomes "since last quarter"; `DISCL` becomes `DISCLOSURE` everywhere.
+9. **F-key bar.** Outlined key caps; the next expected action as the one solid key; keys that do nothing on the current screen are hidden (results shows only F9 and F2).
+10. **Ticker.** 2ch gap after the label; each item prefixed with its quarter; coloured by headline kind with ▼ for incidents and breaches.
+11. **Notices and banners.** Notices get half-line vertical padding and a 2 px left rule coloured by kind instead of a full box. The summit banner uses a colour distinct from the top bar.
+12. **Lobby.** Number the join steps: 1 scan or enter the code, 2 form or join a firm, 3 wait for the briefing.
+
+**Tests.** Update the contrast test for the new tokens. Unit tests for the status sentence and reveal headline builders (every phase; ties; no incidents). Layout checks still pass at every supported firm count.
+
+**Acceptance.** On the board screenshot, solid amber appears only on the brand block, the primary key, the countdown and the trust numeral. Every projector label is a word or is explained by the key strip.
+
+---
+
+## Session 13 — Firm performance views (model: Opus 5.5)
+
+Read docs/spec.md §14.1, §14.2, §14.3 and §16; docs/ui-audit/index.html section 06.
+
+**Why.** Firm performance is a column of numbers. Four views make it readable at a glance.
+
+1. **Spec.** Add the new components and the `FIRMS` and `RANKS` commands to §14 and §16.3, and to the HELP screen.
+2. **Board.** Market value share strip across the top of the board (cyan segments faded by rank, ticker and percentage printed in each segment wide enough to hold them, firms below zero counted in the caption). Per row: rank, places gained or lost since last quarter (▲/▼ with a number), ticker, a valuation bar drawn from zero (negative bars red to the left), value, change, and a 14-quarter trend line on a scale shared by all rows.
+3. **`FIRMS` view.** Small multiples: one card per firm with rank, ticker, value, change and a line chart; every card on the same y-scale with a dotted zero line and a hollow square at the peak. 3 × 3 up to 9 firms, 4 × 4 up to 16; follow Session 10's rules above that.
+4. **`RANKS` view.** Rank by quarter as connected lines. Highlight two firms automatically: the current leader in amber and the firm with the largest fall from its best rank in red. Other firms dim, labels at the line ends, a headline sentence such as "HUMN rose to 1st. BTC fell from 1st to 2nd." Ties broken by ticker so the chart is deterministic.
+5. **Phone BOOK.** "You against the field": every other firm as a thin dim line, your firm in amber with its value tag, a dotted zero line, and a sentence such as "Rank 1 of 9. Highest valuation for 13 quarters running." Phones already receive every firm's public valuation; confirm this and confirm no private data is used.
+
+**Tests.** Unit tests for rank-by-quarter (ties), rank movement, largest-faller selection, share-strip segment widths (sum to 1, negatives excluded) and the BOOK sentence. Layout checks for the board, `FIRMS` and `RANKS` at every supported firm count.
+
+**Acceptance.** From the board screenshot alone, a reader can name the leader, the biggest mover this quarter and any firm below zero.
+
+---
+
+## Session 14 — Results narrative (model: Sonnet 5.5)
+
+Read docs/spec.md §10, §14.4 and §15.5; docs/ui-audit/index.html sections 07 and 09.
+
+**Why.** After Session 11 the results charts are correct, but the room still needs the facilitator to say what each panel shows.
+
+1. **Spec.** Update §14.4 with the panel headlines and the pact quarter strip.
+2. **Headlines.** Each results panel opens with one sentence written from the data, for example: "8 of 9 firms finished below their peak. 2 finished below zero."; "Trust fell from 72.0 to 45.6 over 14 quarters."; "Holding pace 2 and safety 15 would have left the industry worth 3.2× what it kept."; "HUMN caused 24.8% of the damage and kept 29.9% of the value." Write a builder per panel with careful wording for edge cases (no moratorium, no pacts, ties, negative totals).
+3. **Pact record.** Under the table, one row of quarter cells per member: solid red for a detected breach, red outline for an undetected breach, a dim dot for a compliant quarter, blank before the firm joined. If `FinalResults` does not hold breaches by quarter, add them in `buildResults` (keep it deterministic and add engine tests), and confirm with the owner before changing anything the participant results card reads.
+4. **Fill the screen.** Size every results panel to use the projector height; no panel uses only a third of the screen.
+5. **Participant results card.** Opens with one sentence ("You finished 2nd of 9, 12.5% below your peak."), then the figures; damage and value shares shown as two short bars.
+
+**Tests.** Unit tests for every headline builder and its edge cases; engine tests if `buildResults` changes; the rehearsal screenshots for all six panels.
+
+**Acceptance.** Each results panel's main point can be read from its headline alone.
+
+---
+
+## Session 15 — Phone and plain pages (model: Sonnet 5.5)
+
+Read docs/spec.md §3, §14.2, §14.3 and §16.6; docs/ui-audit/index.html sections 08, 09 and 10; docs/REVIEW.md L8.
+
+**Why.** On the phone the countdown is small, cost and risk sit below the commit button, and first-time players get no picture of how a quarter works.
+
+1. **Spec.** Update §14.3 with the decision ticket, commit status bar, result sentence and three-step strip.
+2. **Header.** The countdown is the largest element, right-aligned.
+3. **DESK.** Selected pace option shown as raised fill with an amber bottom border instead of a solid amber block. SAFETY label reads "SAFETY · share of reference budget" with 0% and 30% at the ends. The selected card's one-line effect (already in `CARD_INFO`) shown under the card name. Cost and exposure grouped in a bordered decision ticket directly above COMMIT, with exposure as a four-step meter plus the word; on a 360×640 screen the ticket and COMMIT are visible together (settles REVIEW L8). The rules paragraph under CARD moves into the card sheet.
+4. **Commit state.** After committing, COMMIT becomes a full-width status bar: "COMMITTED 14:02:31 · edit until close", with "changes not committed" when the draft differs.
+5. **Tabs.** Active tab shown with an amber top border and amber text instead of a solid block.
+6. **Quarter result.** Opens with one sentence ("You ranked 2nd of 9, ▲1. Profit 57.7."), then the figures, then notices with coloured left rules.
+7. **Three-step strip.** In lobby, briefing and quarter 1: DECIDE → COMMIT → REVEAL, one line each.
+8. **Summit.** Remove the duplicate notice under the banner; show pact terms as "pace ≤ 2 · safety ≥ 15%".
+9. **Landing and join.** "FRONTIER" as a wordmark with the Office of Frontier Systems line beneath; a four-cell code field; the button the same width as the field.
+10. **Control console.** Group buttons by consequence: routine (timer), session flow (F8, F9) and irreversible (END, TAU), with the irreversible group outlined in red; a "NEXT" line naming the expected key; firm presence as a row of dots.
+
+**Tests.** Phone screenshots at 360×640, 390×844 and 1440×900 for every DESK state; a check that the ticket and COMMIT are both inside the viewport at 360×640; unit tests for the result sentence.
+
+**Acceptance.** A first-time participant can commit a decision without asking, and can see whether it was committed and how much time is left without scrolling.
