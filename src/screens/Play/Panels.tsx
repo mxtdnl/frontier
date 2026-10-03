@@ -1,6 +1,6 @@
 import type { AuditResult, FirmRoundResult, Headline, Pact } from '../../engine';
 import type { NoticeEntry } from '../../firebase/schema';
-import { DataTable, Delta, Panel, StepSparkline } from '../../ui/components';
+import { DataTable, Delta, LineChart, Panel } from '../../ui/components';
 import { fmt, fmtSigned, quarterLabel } from '../../ui/format';
 import { resultNotices, shareChangePp, type BookRow, type WireItem } from './model';
 
@@ -48,12 +48,11 @@ export function Book({ rows }: { rows: BookRow[] }) {
     <div className="stack">
       <div>
         <span className="dim">VALUATION</span>
-        <StepSparkline
+        <LineChart
           series={[{ values, label: 'Valuation', tone: 'signal' }]}
-          min={Math.min(...values) - 10}
-          max={Math.max(...values) + 10}
-          w={36}
-          h={6}
+          domain="zero"
+          startQuarter={rows[0]?.round ?? 1}
+          height="10lh"
           description={`Own valuation by quarter, from ${fmt(values[0] ?? 0)} to ${fmt(values[values.length - 1] ?? 0)}`}
         />
       </div>

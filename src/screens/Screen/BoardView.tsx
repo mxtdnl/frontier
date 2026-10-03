@@ -1,6 +1,6 @@
 import { PARAMS } from '../../engine';
-import { DataTable, Delta, GlyphCheck, HBar, Panel, StepSparkline, Tag, type Column } from '../../ui/components';
-import { fmt, fmtInt, fmtShare, quarterLabel } from '../../ui/format';
+import { DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, Tag, type Column } from '../../ui/components';
+import { fmt, fmtInt, fmtShare } from '../../ui/format';
 import { committedCount, marketCeiling, previousTrust, trustSeries, type BoardRow, type ScreenData } from './model';
 
 interface BoardProps {
@@ -101,13 +101,12 @@ export function TrustPanel({ data, reveal }: { data: ScreenData; reveal: boolean
   const series = trustSeries(rounds);
   const prev = previousTrust(rounds);
   const delta = pub.round === 0 ? 0 : pub.T - prev;
-  const resolved = series.length - 1;
   const latest = Object.values(rounds).length ? Math.max(...Object.keys(rounds).map(Number)) : 0;
   const incidents = rounds[String(latest)]?.incidents ?? 0;
   const firmCount = Object.keys(data.firms).length;
   const activePacts = Object.values(data.pacts).filter((p) => p.status === 'active').length;
   return (
-    <Panel title="PUBLIC TRUST">
+    <Panel title="PUBLIC TRUST" bodyClassName="col">
       <div style={{ paddingTop: '0.5lh' }}>
         <div className="big signal" data-trust-numerals="" data-trust-delta={delta.toFixed(1)}>
           <span data-roll="" data-prev={reveal ? fmt(prev) : undefined}>{fmt(pub.T)}</span>
@@ -116,23 +115,17 @@ export function TrustPanel({ data, reveal }: { data: ScreenData; reveal: boolean
           <Delta value={delta} /> <span className="dim">QoQ</span>
         </div>
       </div>
-      <div style={{ marginTop: '1lh' }}>
-        <StepSparkline
+      <div className="col" style={{ flex: '1 1 0', marginTop: '1lh' }} data-trust-chart="">
+        <LineChart
           series={[{ values: series, label: 'Trust', tone: 'signal' }]}
-          min={0}
-          max={100}
-          w={0}
-          h={12}
-          count={series.length}
+          domain="trust"
+          changeStrip
+          alarmDrop={5}
           description={`Public trust by quarter, from ${fmt(series[0] ?? PARAMS.T0)} to ${fmt(pub.T)}`}
         />
-        <div className="dim" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>START</span>
-          <span>{resolved > 0 ? quarterLabel(resolved) : ''}</span>
-        </div>
       </div>
-      <div className="stack" style={{ marginTop: '1lh', gap: 0 }}>
-        <HBar label="MKT" labelW={7} textW={8} value={pub.M / marketCeiling(firmCount)} text={fmtInt(pub.M)} describe={`Market size ${fmtInt(pub.M)}`} />
+      <div className="stack" style={{ margin: '1lh 0 0.5lh', gap: 0 }}>
+        <HBar label="MKT" labelW={7} textW={8} value={pub.M} domain={[0, marketCeiling(firmCount)]} text={fmtInt(pub.M)} describe={`Market size ${fmtInt(pub.M)}`} />
         <div className="row"><span className="dim" style={{ width: '7ch' }}>INCID</span><span>{incidents} this quarter</span></div>
         <div className="row"><span className="dim" style={{ width: '7ch' }}>PACTS</span><span>{activePacts} active</span></div>
         <div className="row"><span className="dim" style={{ width: '7ch' }}>DISCL</span><span>{pub.disclosure ? 'ON' : 'OFF'}</span></div>

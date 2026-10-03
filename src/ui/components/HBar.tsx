@@ -1,18 +1,31 @@
+import { linearScale, type Domain } from '../chart';
+
 interface Props {
   label: string;
-  /** 0 to 1. */
+  /** Signed value in the units of `domain`. */
   value: number;
+  /** Axis range; it is widened to include 0. Defaults to 0–1. */
+  domain?: Domain;
   text: string;
+  /** Tone for positive values; negative values are always drawn in the down colour. */
   tone?: 'wire' | 'signal' | 'dim' | 'down';
-  /** Optional marker position, 0 to 1. */
+  /** Optional marker, in the units of `domain`. */
   marker?: number;
+  markerTone?: 'text' | 'wire';
   labelW?: number;
   textW?: number;
   describe?: string;
 }
 
-export function HBar({ label, value, text, tone = 'wire', marker, labelW = 8, textW = 10, describe }: Props) {
-  const pct = `${(Math.min(1, Math.max(0, value)) * 100).toFixed(2)}%`;
+/** Horizontal bar drawn from a visible zero line (spec §16.3). Negative values extend left in the down colour. */
+export function HBar({ label, value, domain = [0, 1], text, tone = 'wire', marker, markerTone = 'text', labelW = 8, textW = 10, describe }: Props) {
+  const lo = Math.min(0, domain[0]);
+  const hi = Math.max(0, domain[1]);
+  const at = linearScale([lo, hi], [0, 100]);
+  const clamp = (v: number) => Math.min(100, Math.max(0, at(Math.min(hi, Math.max(lo, v)))));
+  const zero = clamp(0);
+  const end = clamp(value);
+  const neg = value < 0;
   return (
     <div
       className="hbar"
@@ -22,10 +35,15 @@ export function HBar({ label, value, text, tone = 'wire', marker, labelW = 8, te
     >
       <span>{label}</span>
       <span className="hbar-track">
-        <span className={`hbar-fill t-${tone}`} style={{ width: pct }} />
-        {marker !== undefined ? <span className="hbar-marker" style={{ left: `${(marker * 100).toFixed(2)}%` }} /> : null}
+        <span
+          className={`hbar-fill t-${neg ? 'down' : tone}`}
+          style={{ left: `${Math.min(zero, end).toFixed(2)}%`, width: `${Math.abs(end - zero).toFixed(2)}%` }}
+          data-neg={neg ? '' : undefined}
+        />
+        <span className="hbar-zero" style={{ left: `${zero.toFixed(2)}%` }} />
+        {marker !== undefined ? <span className={`hbar-marker m-${markerTone}`} style={{ left: `${clamp(marker).toFixed(2)}%` }} /> : null}
       </span>
-      <span className="hbar-text">{text}</span>
+      <span className={`hbar-text${neg ? ' neg' : ''}`}>{text}</span>
     </div>
   );
 }
