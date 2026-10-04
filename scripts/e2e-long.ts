@@ -54,8 +54,8 @@ await runWithStack(async (browser) => {
   bots.stdout?.on('data', (d: Buffer) => (botText += d.toString()));
   bots.stderr?.on('data', (d: Buffer) => (botText += d.toString()));
   try {
-    for (let i = 0; i < 160 && !/bot firm\(s\) ready/.test(botText); i++) await fac.waitForTimeout(500);
-    check(new RegExp(`${BOTS} bot firm\\(s\\) ready`).test(botText), `${BOTS} bot clients founded their firms${/ready/.test(botText) ? '' : ` (bots said: ${botText.slice(0, 300)})`}`);
+    for (let i = 0; i < 160 && !/bot firm\(s\) on \d+ device\(s\) ready/.test(botText); i++) await fac.waitForTimeout(500);
+    check(new RegExp(`${BOTS} bot firm\\(s\\) on ${BOTS} device\\(s\\) ready`).test(botText), `${BOTS} bot clients founded their firms${/ready/.test(botText) ? '' : ` (bots said: ${botText.slice(0, 300)})`}`);
 
     const hctx = await browser.newContext();
     const human = watchPage(await hctx.newPage(), 'human', ignore);
