@@ -117,7 +117,7 @@ function world(o: Opts = {}): World {
   const db: Json = {
     meta: { code: 'ABCD', title: 'Session ABCD', createdAt: 1, facilitatorUid: 'fac', settings: { mode: o.mode ?? 'team', timerSec: o.timerSec ?? 120, autoResolve: false, revealThreshold: false, litRoom: false } },
     public: {
-      phase: 'lobby', round: 0, paused: false, disclosure: false, T: state.T, M: 0, collapsed: false, joinLocked: false, revealStep: 0, revealSub: 0,
+      phase: 'lobby', round: 0, paused: false, disclosure: false, T: state.T, M: 0, collapsed: false, joinLocked: false, revealStep: 0,
     },
     firms,
     engine: { ...state, params: PARAMS },
@@ -252,27 +252,20 @@ describe('phase machine', () => {
     expect(w.pub().revealStep).toBe(1);
   });
 
-  it('steps through the pages of a results panel before the next panel (spec §14.4)', async () => {
+  it('steps the six results panels with 50 firms; long panels scroll instead of paging (spec §14.4)', async () => {
     const w = world({ endMode: 'fixed', fixedEnd: 1, humans: 48, bots: ['standard', 'greedy'], mode: 'multiplayer' });
     await toOpen(w);
     expect((await advance(w.ctx)).ok).toBe(true); // resolve
     expect((await advance(w.ctx)).ok).toBe(true); // → ended
     expect(w.pub().phase).toBe('ended');
-    const seen: string[] = [`${w.pub().revealStep}.${w.pub().revealSub}`];
-    let last = '';
-    for (let i = 0; i < 12; i++) {
-      const r = await advance(w.ctx);
-      if (!r.ok) {
-        last = r.message;
-        break;
-      }
-      seen.push(`${w.pub().revealStep}.${w.pub().revealSub}`);
+    const seen = [w.pub().revealStep];
+    for (let i = 0; i < 5; i++) {
+      expect((await advance(w.ctx)).ok).toBe(true);
+      seen.push(w.pub().revealStep);
     }
-    expect(seen).toEqual(['0.0', '0.1', '1.0', '2.0', '2.1', '2.2', '3.0', '4.0', '5.0']);
-    expect(last).toBe('This is the last results panel.');
+    expect(seen).toEqual([0, 1, 2, 3, 4, 5]);
+    expect((await advance(w.ctx)).message).toBe('This is the last results panel.');
     expect((await stepResults(w.ctx, -1)).message).toBe('Results panel 5 of 6.');
-    expect((await stepResults(w.ctx, -1)).message).toBe('Results panel 4 of 6.');
-    expect((await stepResults(w.ctx, -1)).message).toBe('Results panel 3 of 6, page 3 of 3.');
   });
 
   it('stops after round 30 in manual mode', async () => {

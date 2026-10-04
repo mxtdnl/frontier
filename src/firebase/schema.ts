@@ -65,10 +65,8 @@ export interface PublicNode {
   joinLocked: boolean;
   resolvingBy: string | null;
   endedAt: number | null;
-  /** Results panel index (§14.4). */
+  /** Results sequence index (§14.4). */
   revealStep: number;
-  /** Page within the results panel (§14.4, Session 10); 0 when the panel has one page. */
-  revealSub: number;
   /** Phase to return to when a summit ends (`open` or `reveal`); null outside a summit. */
   resumePhase: ResumePhase | null;
   /** Time left on the round timer while it is paused or a summit is running; null otherwise. */
@@ -264,7 +262,6 @@ export function fromPublic(v: Raw): PublicNode | null {
     resolvingBy: strOrNull(v.resolvingBy),
     endedAt: numOrNull(v.endedAt),
     revealStep: num(v.revealStep),
-    revealSub: num(v.revealSub),
     resumePhase: v.resumePhase === 'open' || v.resumePhase === 'reveal' ? v.resumePhase : null,
     pausedRemainingMs: numOrNull(v.pausedRemainingMs),
   };

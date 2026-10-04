@@ -5,7 +5,6 @@
  * a second facilitator window that arrives late is refused rather than applied twice.
  */
 import type { PublicNode } from './schema';
-import { stepResultsPosition } from '../ui/layout';
 
 /** A step returns the next node, or the reason it cannot run. */
 export type Step = (p: PublicNode) => PublicNode | string;
@@ -150,15 +149,13 @@ export const toggleDisclosureStep: Step = (p) => {
 /** Number of results panels (spec §14.4). `revealStep` is the zero-based index of the panel on screen. */
 export const RESULT_PANEL_COUNT = 6;
 
-/**
- * F9 steps the results forward and Esc steps back, once the session has ended. A panel with
- * several pages (§14.4) steps through `revealSub` first; `counts` holds the pages per panel.
- */
+/** F9 steps the results forward and Esc steps back, once the session has ended. */
 export const stepResultsStep =
-  (delta: 1 | -1, counts: ReadonlyArray<number> = Array.from({ length: RESULT_PANEL_COUNT }, () => 1)): Step =>
+  (delta: 1 | -1): Step =>
   (p) => {
     if (p.phase !== 'ended') return 'The results screen is available after the session ends.';
-    const next = stepResultsPosition(counts, p.revealStep, p.revealSub, delta);
-    if (typeof next === 'string') return next;
-    return { ...p, revealStep: next.step, revealSub: next.sub };
+    const next = p.revealStep + delta;
+    if (next >= RESULT_PANEL_COUNT) return 'This is the last results panel.';
+    if (next < 0) return 'This is the first results panel.';
+    return { ...p, revealStep: next };
   };

@@ -22,7 +22,7 @@ const round = (T: number, results: RoundNode['results'], headlines: RoundNode['h
 });
 const pub = (over: Partial<PublicNode> = {}): PublicNode => ({
   phase: 'open', round: 2, deadline: 1, paused: false, disclosure: false, T: 70, M: 500, collapsed: false, collapseRound: null,
-  joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0, revealSub: 0, resumePhase: null, pausedRemainingMs: null, ...over,
+  joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0, resumePhase: null, pausedRemainingMs: null, ...over,
 });
 
 function data(over: Partial<ScreenData> = {}): ScreenData {

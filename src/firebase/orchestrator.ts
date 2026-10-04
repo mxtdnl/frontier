@@ -47,7 +47,6 @@ import {
   type Step,
 } from './phases';
 import { paths, rel } from './paths';
-import { resultPageCounts } from '../ui/layout';
 import { disclosureEntry, pendingWire, type WireInput } from './wire';
 import {
   engineStateOf,
@@ -328,11 +327,9 @@ export async function ensureResults(ctx: Ctx): Promise<ActionResult | null> {
 
 /** F9 steps the results panels forward; Esc steps back. */
 export async function stepResults(ctx: Ctx, delta: 1 | -1): Promise<ActionResult> {
-  const counts = resultPageCounts(Object.keys(await ctx.io.readFirms()).length);
-  const t = await transition(ctx, stepResultsStep(delta, counts));
+  const t = await transition(ctx, stepResultsStep(delta));
   if (!t.ok) return t;
-  const pages = counts[t.after.revealStep] ?? 1;
-  return ok(`Results panel ${t.after.revealStep + 1} of ${counts.length}${pages > 1 ? `, page ${t.after.revealSub + 1} of ${pages}` : ''}.`);
+  return ok(`Results panel ${t.after.revealStep + 1} of 6.`);
 }
 
 /** Deletes the session record and frees its join code. The caller collects the double confirmation. */
@@ -753,7 +750,6 @@ export async function createSession(
       resolvingBy: null,
       endedAt: null,
       revealStep: 0,
-      revealSub: 0,
       resumePhase: null,
       pausedRemainingMs: null,
     };

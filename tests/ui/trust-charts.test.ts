@@ -23,7 +23,7 @@ const fp = (over: Partial<FirmPublicNode>): FirmPublicNode => ({
 const round = (T: number, results: RoundNode['results']): RoundNode => ({ T, dT: 0, M: 100, incidents: 1, headlines: [], audits: [], disclosure: null, results });
 const pub: PublicNode = {
   phase: 'reveal', round: 3, deadline: 1, paused: false, disclosure: false, T: 31, M: 500, collapsed: true, collapseRound: 3,
-  joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0, revealSub: 0, resumePhase: null, pausedRemainingMs: null,
+  joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0, resumePhase: null, pausedRemainingMs: null,
 };
 const data: ScreenData = {
   pub,

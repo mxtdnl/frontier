@@ -168,69 +168,7 @@ export function filterByTicker<T extends { ticker: string }>(items: ReadonlyArra
 
 // ── Results (§14.4) ───────────────────────────────────────────────────────────
 
-/** Rows per column on the full-width results panels. */
-export const RESULT_COLUMN_ROWS = 16;
-export const RESULT_COLUMNS_MAX = 2;
-export const RESULT_PAGE_MAX = RESULT_COLUMN_ROWS * RESULT_COLUMNS_MAX;
 /** ATTRIBUTION lists every firm up to this count. */
 export const ATTRIBUTION_ALL_MAX = 24;
 /** Above that, the firms with the largest share of damage, then one OTHERS row. */
 export const ATTRIBUTION_TOP = 12;
-
-export interface Span {
-  start: number;
-  end: number;
-}
-
-/** P balanced pages of at most `max` items, in order. */
-export function balancedPages(n: number, max: number): Span[] {
-  if (n <= 0) return [{ start: 0, end: 0 }];
-  const pages = Math.ceil(n / max);
-  const per = Math.ceil(n / pages);
-  return Array.from({ length: pages }, (_, i) => ({ start: i * per, end: Math.min(n, (i + 1) * per) }));
-}
-
-/** Columns for `rows` rows on one results page: 1 up to 16 rows, 2 above. */
-export const resultColumns = (rows: number): number => Math.min(RESULT_COLUMNS_MAX, Math.max(1, Math.ceil(rows / RESULT_COLUMN_ROWS)));
-
-/** FINAL BOARD pages. */
-export const finalBoardPages = (n: number): Span[] => balancedPages(n, RESULT_PAGE_MAX);
-
-/** COUNTERFACTUAL: one page up to 16 firms; above, a figures-and-trust page, then comparison pages. */
-export function counterfactualPages(n: number): { split: boolean; compare: Span[] } {
-  if (n <= RESULT_COLUMN_ROWS) return { split: false, compare: [{ start: 0, end: n }] };
-  return { split: true, compare: balancedPages(n, RESULT_PAGE_MAX) };
-}
-
-/** Pages per results panel, in panel order (FINAL BOARD … DEBRIEF). */
-export function resultPageCounts(n: number): number[] {
-  const cf = counterfactualPages(n);
-  return [finalBoardPages(n).length, 1, cf.split ? 1 + cf.compare.length : 1, 1, 1, 1];
-}
-
-/** The next (panel, page) when stepping by `delta`, or a message at either end. */
-export function stepResultsPosition(
-  counts: ReadonlyArray<number>,
-  step: number,
-  sub: number,
-  delta: 1 | -1,
-): { step: number; sub: number } | string {
-  const pagesOf = (i: number): number => Math.max(1, counts[i] ?? 1);
-  const s = Math.min(Math.max(0, step), counts.length - 1);
-  const p = Math.min(Math.max(0, sub), pagesOf(s) - 1);
-  if (delta === 1) {
-    if (p + 1 < pagesOf(s)) return { step: s, sub: p + 1 };
-    if (s + 1 >= counts.length) return 'This is the last results panel.';
-    return { step: s + 1, sub: 0 };
-  }
-  if (p > 0) return { step: s, sub: p - 1 };
-  if (s === 0) return 'This is the first results panel.';
-  return { step: s - 1, sub: pagesOf(s - 1) - 1 };
-}
-
-/** Top-bar position: "3/6" or "3/6 · 2/3". */
-export function resultsPositionLabel(counts: ReadonlyArray<number>, step: number, sub: number): string {
-  const pages = Math.max(1, counts[step] ?? 1);
-  const base = `${step + 1}/${counts.length}`;
-  return pages > 1 ? `${base} · ${Math.min(sub, pages - 1) + 1}/${pages}` : base;
-}

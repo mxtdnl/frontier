@@ -275,28 +275,22 @@ describe('results at 50 firms (spec §14.4, Session 10)', () => {
   const r50 = fromResults(storeAndRead(buildResults(play50(), { revealTau: false }))) as FinalResults;
   const marks = (h: string) => [...h.matchAll(/data-firm="([^"]+)"/g)].map((m) => m[1]);
 
-  it('splits FINAL BOARD into two pages of 25 in two columns, each firm once', () => {
-    const p1 = html(createElement(FinalBoard, { r: r50, page: 0 }));
-    const p2 = html(createElement(FinalBoard, { r: r50, page: 1 }));
-    expect(p1).toContain('data-res-cols="2"');
-    expect(p1).toContain('ranks 1–25 of 50');
-    expect(p2).toContain('ranks 26–50 of 50');
-    const all = [...marks(p1), ...marks(p2)];
-    expect(all).toHaveLength(50);
-    expect(new Set(all).size).toBe(50);
-    expect(all).toEqual(rankedFirms(r50).map((f) => f.ticker));
+  it('draws every firm on one scrolling FINAL BOARD, in rank order, with the axis values kept in view', () => {
+    const h = html(createElement(FinalBoard, { r: r50 }));
+    expect(marks(h)).toEqual(rankedFirms(r50).map((f) => f.ticker));
+    expect(h).toContain('data-res-scroll');
+    expect(h).toContain('res-sticky-top');
+    expect(h).not.toContain('data-res-cols');
   });
 
-  it('shows the figures first on COUNTERFACTUAL, then the per-firm comparison on two pages', () => {
-    const p0 = html(createElement(Counterfactual, { r: r50, page: 0 }));
-    expect(p0).toContain('INDUSTRY VALUE');
-    expect(marks(p0)).toEqual([]);
-    expect(p0).toContain('Press F9 for the comparison by firm.');
-    const rows = [1, 2].flatMap((page) => marks(html(createElement(Counterfactual, { r: r50, page }))));
-    expect(rows).toEqual(rankedFirms(r50).map((f) => f.ticker));
+  it('keeps the figures and trust paths on COUNTERFACTUAL and scrolls the per-firm comparison', () => {
+    const h = html(createElement(Counterfactual, { r: r50 }));
+    expect(h).toContain('INDUSTRY VALUE');
+    expect(h).toContain('data-res-scroll');
+    expect(marks(h)).toEqual(rankedFirms(r50).map((f) => f.ticker));
   });
 
-  it('keeps 16 firms on one COUNTERFACTUAL page', () => {
+  it('compares all 16 firms on COUNTERFACTUAL', () => {
     const r16 = fromResults(storeAndRead(buildResults((() => {
       let s = game(16, { seed: 3 });
       for (let k = 1; k <= 3; k++) s = resolveRound(s, Object.fromEntries(s.firms.map((f) => [f.id, dec(3, 5)])), PARAMS).state;

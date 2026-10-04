@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  balancedPages,
   boardCapacity,
   boardTagWidth,
   fitTags,
@@ -8,15 +7,9 @@ import {
   boardMode,
   boardPage,
   boardPageCount,
-  counterfactualPages,
   fillColumns,
   filterByTicker,
-  finalBoardPages,
   lobbyColumns,
-  resultColumns,
-  resultPageCounts,
-  resultsPositionLabel,
-  stepResultsPosition,
   tickerLine,
   truncateList,
   type Ranked,
@@ -167,81 +160,6 @@ describe('long lists', () => {
     expect(filterByTicker(list, 'r').map((t) => t.ticker)).toEqual(['ARCN', 'BRLK', 'CYRA']);
     expect(filterByTicker(list, 'rc ').map((t) => t.ticker)).toEqual(['ARCN']);
     expect(filterByTicker(list, 'zz')).toEqual([]);
-  });
-});
-
-describe('results pages', () => {
-  it('balances pages and covers every firm once', () => {
-    for (const n of COUNTS) {
-      for (const max of [16, 24, 32]) {
-        const pages = balancedPages(n, max);
-        expect(pages[0]?.start).toBe(0);
-        expect(pages[pages.length - 1]?.end).toBe(n);
-        pages.forEach((p, i) => {
-          expect(p.end - p.start).toBeLessThanOrEqual(max);
-          if (i > 0) expect(p.start).toBe(pages[i - 1]?.end);
-        });
-        const sizes = pages.map((p) => p.end - p.start);
-        expect(Math.max(...sizes) - Math.min(...sizes)).toBeLessThanOrEqual(pages.length);
-      }
-    }
-    expect(balancedPages(50, 32).map((p) => p.end - p.start)).toEqual([25, 25]);
-  });
-
-  it('FINAL BOARD: one column to 16, two to 32, pages above', () => {
-    expect(finalBoardPages(16)).toHaveLength(1);
-    expect(resultColumns(16)).toBe(1);
-    expect(resultColumns(17)).toBe(2);
-    expect(finalBoardPages(32)).toHaveLength(1);
-    expect(finalBoardPages(33)).toHaveLength(2);
-    expect(finalBoardPages(50)).toHaveLength(2);
-  });
-
-  it('COUNTERFACTUAL splits above 16 firms', () => {
-    expect(counterfactualPages(16).split).toBe(false);
-    expect(counterfactualPages(17)).toEqual({ split: true, compare: [{ start: 0, end: 17 }] });
-    expect(counterfactualPages(50).compare).toHaveLength(2);
-  });
-
-  it('counts pages per panel', () => {
-    expect(resultPageCounts(8)).toEqual([1, 1, 1, 1, 1, 1]);
-    expect(resultPageCounts(16)).toEqual([1, 1, 1, 1, 1, 1]);
-    expect(resultPageCounts(24)).toEqual([1, 1, 2, 1, 1, 1]);
-    expect(resultPageCounts(50)).toEqual([2, 1, 3, 1, 1, 1]);
-  });
-
-  it('steps through pages before panels, both ways', () => {
-    const c = resultPageCounts(50);
-    const seq: string[] = [];
-    let pos: { step: number; sub: number } = { step: 0, sub: 0 };
-    for (;;) {
-      seq.push(resultsPositionLabel(c, pos.step, pos.sub));
-      const next = stepResultsPosition(c, pos.step, pos.sub, 1);
-      if (typeof next === 'string') {
-        expect(next).toBe('This is the last results panel.');
-        break;
-      }
-      pos = next;
-    }
-    expect(seq).toEqual(['1/6 · 1/2', '1/6 · 2/2', '2/6', '3/6 · 1/3', '3/6 · 2/3', '3/6 · 3/3', '4/6', '5/6', '6/6']);
-    const back: string[] = [];
-    for (;;) {
-      const prev = stepResultsPosition(c, pos.step, pos.sub, -1);
-      if (typeof prev === 'string') {
-        expect(prev).toBe('This is the first results panel.');
-        break;
-      }
-      pos = prev;
-      back.push(resultsPositionLabel(c, pos.step, pos.sub));
-    }
-    expect(back).toEqual(seq.slice(0, -1).reverse());
-  });
-
-  it('keeps the six-step sequence for team-mode counts', () => {
-    const c = resultPageCounts(12);
-    expect(stepResultsPosition(c, 4, 0, 1)).toEqual({ step: 5, sub: 0 });
-    expect(stepResultsPosition(c, 5, 0, 1)).toBe('This is the last results panel.');
-    expect(resultsPositionLabel(c, 2, 0)).toBe('3/6');
   });
 });
 

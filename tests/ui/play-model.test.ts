@@ -30,7 +30,7 @@ const pub = (over: Partial<PublicNode>): PublicNode => ({
   joinLocked: true,
   resolvingBy: null,
   endedAt: null,
-  revealStep: 0, revealSub: 0,
+  revealStep: 0,
   resumePhase: null,
   pausedRemainingMs: null,
   ...over,

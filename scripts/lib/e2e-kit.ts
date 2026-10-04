@@ -114,7 +114,9 @@ export async function checkCharts(page: Page, label: string): Promise<void> {
       const box = svg.getBoundingClientRect();
       const hostBox = host.getBoundingClientRect();
       if (box.width < 20 || box.height < 20) problems.push(`${kind}#${k} is ${Math.round(box.width)}x${Math.round(box.height)}`);
-      if (box.width > hostBox.width + 1 || box.height > hostBox.height + 1) problems.push(`${kind}#${k} is larger than its container`);
+      // A results list that scrolls (§14.4) is taller than its scroll area by design; only its width must fit.
+      const scrolls = host.matches('[data-res-scroll]');
+      if (box.width > hostBox.width + 1 || (!scrolls && box.height > hostBox.height + 1)) problems.push(`${kind}#${k} is larger than its container`);
       const fs = parseFloat(getComputedStyle(svg).fontSize);
       if (kind === 'line') {
         const left = Number(svg.dataset.plotLeft);

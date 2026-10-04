@@ -17,7 +17,6 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { createWriteStream, mkdirSync, writeFileSync } from 'node:fs';
 import type { Browser, Page } from 'playwright';
 import { resolveCurrentRound } from '../src/firebase/orchestrator';
-import { resultPageCounts, resultsPositionLabel } from '../src/ui/layout';
 import { adminSet } from './emulator-rules';
 import { BASE, OUT, adminGet, check, h, runWithStack, signUp, snapProjector, waitText, watchPage } from './lib/e2e-kit';
 import { memoryCtx, type Json } from './lib/memory-io';
@@ -189,22 +188,23 @@ async function runPlan(browser: Browser, plan: Plan, email: string, seed: number
     await key('F9');
     await waitText(fac, /ENDED/, `${tag}: the session ends after quarter ${QUARTERS}`, 20_000, '.scr');
 
-    // Results: F9 on the ended projector opens them; then F9 steps through every page.
+    // Results: F9 on the ended projector opens them; then F9 steps through the six panels.
     await key('F9');
     await fac.waitForURL(/#\/results\//);
-    const counts = resultPageCounts(firmsN);
     const seq: string[] = [];
-    for (let step = 0; step < counts.length; step++) {
-      for (let sub = 0; sub < (counts[step] ?? 1); sub++) {
-        const want = resultsPositionLabel(counts, step, sub);
-        const ok = await fac
-          .waitForFunction((w) => document.querySelector('[data-results-pos]')?.textContent === w, want, { timeout: 20_000 })
-          .then(() => true, () => false);
-        check(ok, `${tag}: results show ${want}`);
-        seq.push(want);
-        await snapProjector(fac, `scale-run-${plan.mode}-results-${step + 1}-${sub + 1}`);
-        await key('F9');
+    for (let step = 0; step < 6; step++) {
+      const want = `${step + 1}/6`;
+      const ok = await fac
+        .waitForFunction((w) => document.querySelector('[data-results-pos]')?.textContent === w, want, { timeout: 20_000 })
+        .then(() => true, () => false);
+      check(ok, `${tag}: results show ${want}`);
+      seq.push(want);
+      await snapProjector(fac, `scale-run-${plan.mode}-results-${step + 1}`);
+      if (step === 0 || step === 2) {
+        const drawn = await fac.evaluate(() => document.querySelectorAll('svg g[data-firm], .cmp-row[data-firm]').length);
+        check(drawn === firmsN, `${tag}: results panel ${step + 1} draws all ${firmsN} firms (${drawn})`);
       }
+      await key('F9');
     }
     console.log(`${tag}: results sequence ${seq.join(', ')}`);
     report.wireEntries = Object.keys((await adminGet<Json>(`games/${g}/wire`)) ?? {}).length;

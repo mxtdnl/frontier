@@ -435,3 +435,59 @@ Read docs/spec.md §3, §14.2, §14.3 and §16.6; docs/ui-audit/index.html secti
 **Tests.** Phone screenshots at 360×640, 390×844 and 1440×900 for every DESK state; a check that the ticket and COMMIT are both inside the viewport at 360×640; unit tests for the result sentence.
 
 **Acceptance.** A first-time participant can commit a decision without asking, and can see whether it was committed and how much time is left without scrolling.
+
+---
+
+# Recalibration (Session 16)
+
+Added after Session 10 at the owner's request (2026-10-04). Run it **after Sessions 11–15** (the interface redesign), so the debrief screens it affects are final.
+
+## Session 16 — Earlier moratorium under greedy play (model: Opus 5.5)
+
+Read docs/spec.md §5, §6, §7, §8, §10 and §15.4; docs/CALIBRATION.md (all entries, especially Session 10); docs/REVIEW.md M1–M3; `reports/calibration.md`. Present a detailed plan first and wait for "go".
+
+**Why.** The moratorium must arrive within a normal session when a large part of the room plays greedily, at every class size. Session 10 found that it does not. The §8.2 diagnostic "half greedy, half sustainable" gives a moratorium by quarter 14 in these shares of seeds:
+
+| N | 4 | 8 | 12 | 20 | 30 | 50 |
+|---|---|---|---|---|---|---|
+| by quarter 14 | 34.5% | 26.0% | 21.5% | 10.5% | 5.0% | 2.5% |
+
+The owner finds both 2.5% at N = 50 and 21.5% at N = 12 unacceptably low.
+
+**Likely causes (to confirm, not assume).**
+1. The 8/N factor (§6.3 steps 4 and 5) makes total draw depend on the share of greedy firms. A half-greedy room draws about halfway between the sustainable and greedy rooms, and logistic regeneration (R = 0.25) nearly offsets it.
+2. Incident losses are independent per firm and scaled by 8/N, so their variance falls as N grows. Small rooms reach τ partly by chance; large rooms follow the average path and rarely do.
+
+**First question to ask the owner (one question, before the plan).** What is the target for the half-greedy room? Proposed new condition **C5** for every N from 4 to 50: a moratorium by quarter 14 in at least 80% of seeds, with the median moratorium quarter at 11 or earlier. The owner may choose different numbers; use theirs.
+
+**Constraints that still hold.**
+- **C1:** the all-greedy median moratorium quarter stays within 5–9, so greedy rooms do not collapse before anyone can react.
+- **C2:** sustainable rooms never collapse.
+- **C3:** greed still pays for one firm alone.
+- **C4:** one greedy firm alone cannot trigger the moratorium.
+
+Tightening the model makes REVIEW M1 (one firm can trigger the moratorium at N ≤ 4) worse. If C4 cannot hold at N = 4 together with C5, stop and ask the owner whether C4 should apply from N = 6 (the runbook already recommends at least 6 firms).
+
+**Steps.**
+1. **Add C5 to the spec** (§8.1) with the owner's numbers, and to `tools/calibration/scenarios.ts`, `tools/calibrate.ts` and `tests/engine/calibration.test.ts`. Also report the share of seeds with a moratorium by quarter 10, 12 and 14 for rooms with a quarter, a third, half and two thirds of firms greedy, at every N.
+2. **Tune parameters only, in the §8.3 order** (R, DRAW, INC_TRUST, COMPUTE_COST, CAP_GAIN, γ). Options to try first:
+   - lower R
+   - make DRAW steeper between pace 2 and paces 3–4, so a mixed room out-draws regeneration while one greedy firm in a large room stays small.
+   Run 200 seeds per change and log each attempt, kept or not, in `docs/CALIBRATION.md` with before and after tables.
+3. **If no parameter set passes C1–C5 at every N,** stop and explain the structural options to the owner in plain English before changing the engine. For example, an industry-wide incident shock whose size does not shrink with N, or a regeneration rate that weakens as trust falls. Any engine change is a spec deviation that needs the owner's approval, with engine unit tests and the property tests (T in [0, 100], shares sum to 1, determinism, identical counterfactual draws).
+4. **Re-run and update everything that depends on the parameters:**
+   - `npm run calibrate -- --seeds 200` and the 500-seed report
+   - `tools/audit-strategies.ts`; check that no dominant strategy appears, and record M1–M3 again
+   - the rehearsal replica: `tests/tools/rehearsal-model.test.ts` expects the seed-5 moratorium in quarters 8–11; choose a new fixed seed if needed and update `scripts/e2e-rehearsal.ts` to match
+   - `npm run test:e2e:rehearsal`, `test:e2e:long` and `test:e2e:scale-run`
+   - the exposure label cutoffs (§6.5) if DRAW changes; keep each pace and safety combination on the label the spec intends, as Session 2 step 3 did
+   - RUNBOOK sections 4 and 9 (the moratorium timing advice).
+
+**Acceptance.**
+- C1–C5 pass at N = 4, 6, 8, 10, 12, 16, 20, 30, 40 and 50 over 200 seeds, and the 500-seed run agrees.
+- Every parameter change is logged in docs/CALIBRATION.md.
+- All test suites pass.
+- The pull request states, in plain English:
+  - how early a half-greedy room now reaches the moratorium at 12 and at 50 firms
+  - what changed for an all-sustainable room
+  - whether M1 changed.

@@ -153,9 +153,10 @@ Never ask a participant to read out a hidden value. The projector and the partic
 
 Allow 20 to 30 minutes. On the projector, press **F9** to step forward and **Esc** to step back. The step is saved, so a reload returns to the same panel.
 
-With many firms some panels have pages, and F9 goes through a panel's pages before the next panel. The top bar shows `3/6 · 2/3` (panel 3 of 6, page 2 of 3):
-- **FINAL BOARD**: two columns above 16 firms; two pages above 32 firms.
-- **COUNTERFACTUAL**: above 16 firms, page 1 has the three figures and the trust chart, and the next pages compare the firms in two columns.
+With about 20 firms or more, two panels hold a list that scrolls inside the panel (the heading and the axis stay in view):
+- **FINAL BOARD**: every firm in rank order.
+- **COUNTERFACTUAL**: the per-firm comparison on the right.
+- Scroll with the mouse wheel or trackpad, or with **↓ ↑**, **Page Down**, **Page Up**, **Home** and **End**. F9 and Esc still move between panels.
 - **ATTRIBUTION**: above 24 firms, the 12 firms with the largest share of the damage, then one **OTHERS** line that adds up the rest.
 
 1. **FINAL BOARD.** Who finished first? Each firm has a line from its peak (hollow square) to its final valuation (solid square); red squares finished below zero. Ask which teams peaked early.

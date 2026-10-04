@@ -44,7 +44,7 @@ describe('export', () => {
       {
         gameId: 'g1',
         meta: { code: 'TEST', title: 'Session TEST', createdAt: 1, facilitatorUid: 'f', settings: { mode: 'team', timerSec: 120, autoResolve: false, revealThreshold: false, litRoom: false } },
-        public: { phase: 'ended', round: 6, deadline: null, paused: false, disclosure: false, T: state.T, M: state.M, collapsed: state.collapsed, collapseRound: state.collapseRound, joinLocked: true, resolvingBy: null, endedAt: 5, revealStep: 0, revealSub: 0, resumePhase: null, pausedRemainingMs: null },
+        public: { phase: 'ended', round: 6, deadline: null, paused: false, disclosure: false, T: state.T, M: state.M, collapsed: state.collapsed, collapseRound: state.collapseRound, joinLocked: true, resolvingBy: null, endedAt: 5, revealStep: 0, resumePhase: null, pausedRemainingMs: null },
         firms: {},
         engine,
         decisions: { '1': { f0: { pace: 4, safety: 0, card: 'NONE', target: null, by: 'u', at: 1 } } },

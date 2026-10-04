@@ -14,7 +14,7 @@
 import type { Browser, Page } from 'playwright';
 import { createGame, PARAMS, type BotPolicy } from '../src/engine';
 import { advance, BOT_FIRMS, endSession, MAX_FIRMS_BY_MODE, publishResults, toggleDisclosure, toggleSummit } from '../src/firebase/orchestrator';
-import { boardCapacity, boardPageCount, boardPageSize, filterByTicker, lobbyColumns, resultPageCounts, resultsPositionLabel } from '../src/ui/layout';
+import { boardCapacity, boardPageCount, boardPageSize, filterByTicker, lobbyColumns } from '../src/ui/layout';
 import { adminSet } from './emulator-rules';
 import { BASE, adminGet, check, fail, shot, signUp, snapPlay, snapProjector, runWithStack, waitText, watchPage, checkPhone } from './lib/e2e-kit';
 import { memoryCtx, setAt, type Json } from './lib/memory-io';
@@ -53,7 +53,7 @@ async function build(n: number, facUid: string, lit = false): Promise<Built> {
   const state = createGame(settings, [], 1000 + n, PARAMS);
   const db: Json = {
     meta: { code: 'SCAL', title: `Scale ${n}`, createdAt: 1, facilitatorUid: facUid, settings: { mode, timerSec: 900, autoResolve: false, revealThreshold: false, litRoom: lit } },
-    public: { phase: 'lobby', round: 0, paused: false, disclosure: false, T: state.T, M: 0, collapsed: false, joinLocked: false, revealStep: 0, revealSub: 0 },
+    public: { phase: 'lobby', round: 0, paused: false, disclosure: false, T: state.T, M: 0, collapsed: false, joinLocked: false, revealStep: 0 },
     engine: { ...state, params: PARAMS, rngNotes: null, cfCache: null },
   };
   const humans: string[] = [];
@@ -177,30 +177,57 @@ async function boardChecks(page: Page, n: number, name: string, wantPage: number
 }
 
 async function results(page: Page, g: string, n: number, tag = ''): Promise<void> {
-  const counts = resultPageCounts(n);
   await page.goto('about:blank');
   await page.goto(`${BASE}#/results/${g}`);
   await waitText(page, /FINAL BOARD/, `results ${n}: panel 1 loads`, 20_000, '.scr');
-  for (let step = 0; step < counts.length; step++) {
-    for (let sub = 0; sub < (counts[step] ?? 1); sub++) {
-      await adminSet(`games/${g}/public/revealStep`, step);
-      await adminSet(`games/${g}/public/revealSub`, sub);
-      const label = resultsPositionLabel(counts, step, sub);
-      const ok = await page
-        .waitForFunction((want) => document.querySelector('[data-results-pos]')?.textContent === want, label, { timeout: 10_000 })
-        .then(() => true, () => false);
-      check(ok, `results ${n}: top bar shows ${label}`);
-      await page.waitForTimeout(250);
-      const name = `scale-${tag}${n}-results-${step + 1}-${sub + 1}`;
-      await snapProjector(page, name);
-      const marks = await page.evaluate(() => Array.from(document.querySelectorAll('svg [data-firm], .cmp-row[data-firm]')).map((e) => (e as HTMLElement).dataset.firm ?? ''));
-      if (step === 0) {
-        const per = Math.ceil(n / counts[0]!);
-        check(marks.length === Math.min(per, n - sub * per), `results ${n} FINAL BOARD page ${sub + 1}: ${marks.length} firms drawn`);
+  for (let step = 0; step < 6; step++) {
+    await adminSet(`games/${g}/public/revealStep`, step);
+    const label = `${step + 1}/6`;
+    const ok = await page
+      .waitForFunction((want) => document.querySelector('[data-results-pos]')?.textContent === want, label, { timeout: 10_000 })
+      .then(() => true, () => false);
+    check(ok, `results ${n}: top bar shows ${label}`);
+    await page.waitForTimeout(250);
+    const name = `scale-${tag}${n}-results-${step + 1}`;
+    await snapProjector(page, name);
+    const marks = await page.evaluate(() => Array.from(document.querySelectorAll('svg [data-firm], .cmp-row[data-firm]')).map((e) => (e as HTMLElement).dataset.firm ?? ''));
+    if (step === 0 || step === 2) {
+      const what = step === 0 ? 'FINAL BOARD' : 'COUNTERFACTUAL';
+      check(marks.length === n, `results ${n} ${what}: all ${n} firms drawn (${marks.length})`);
+      // A long list scrolls (§14.4): End reaches the last firm, Home returns, and the heading stays in view.
+      const scroll = await page.evaluate(() => {
+        const el = document.querySelector<HTMLElement>('[data-res-scroll]');
+        return el ? { scrolls: el.scrollHeight > el.clientHeight + 1 } : null;
+      });
+      // FINAL BOARD draws rows that fit without a scroll area; the comparison list always has one.
+      if (step === 2) check(scroll !== null, `results ${n} ${what}: the firm list sits in a scroll area`);
+      if (scroll?.scrolls) {
+        await page.keyboard.press('End');
+        await page.waitForTimeout(250);
+        const end = await page.evaluate(() => {
+          const el = document.querySelector<HTMLElement>('[data-res-scroll]')!;
+          const box = el.getBoundingClientRect();
+          const rows = Array.from(el.querySelectorAll<SVGGraphicsElement | HTMLElement>('[data-firm]'));
+          const last = rows[rows.length - 1]!.getBoundingClientRect();
+          const head = el.querySelector<HTMLElement>('.res-sticky-top')!.getBoundingClientRect();
+          const foot = el.querySelector<HTMLElement>('.res-sticky-bottom')?.getBoundingClientRect();
+          return {
+            top: el.scrollTop,
+            lastVisible: last.top >= head.bottom - 1 && last.bottom <= (foot ? foot.top : box.bottom) + 1,
+            headPinned: Math.abs(head.top - box.top) < 1.5,
+          };
+        });
+        check(end.top > 0 && end.lastVisible, `results ${n} ${what}: End scrolls to the last firm`);
+        check(end.headPinned, `results ${n} ${what}: the heading stays in view while scrolled`);
+        await shot(page, `${name}-end`);
+        await page.keyboard.press('Home');
+        await page.waitForTimeout(150);
+        check((await page.evaluate(() => document.querySelector<HTMLElement>('[data-res-scroll]')!.scrollTop)) === 0, `results ${n} ${what}: Home scrolls back to the top`);
+      } else {
+        check(n <= 19, `results ${n} ${what}: ${n} firms fit without scrolling`);
       }
-      if (step === 2 && counts[2]! > 1 && sub > 0) check(marks.length > 0 && marks.length <= 32, `results ${n} COUNTERFACTUAL page ${sub + 1}: ${marks.length} firms compared`);
-      if (step === 3) check(marks.length === (n > 24 ? 13 : n), `results ${n} ATTRIBUTION: ${marks.length} rows (${n > 24 ? '12 + OTHERS' : 'every firm'})`);
     }
+    if (step === 3) check(marks.length === (n > 24 ? 13 : n), `results ${n} ATTRIBUTION: ${marks.length} rows (${n > 24 ? '12 + OTHERS' : 'every firm'})`);
   }
 }
 
@@ -248,7 +275,7 @@ async function phoneRun(browser: Browser, facPage: Page, facUid: string): Promis
   const state = createGame({ label: 'PHON', endMode: 'manual', minEnd: 10, maxEnd: 14, fixedEnd: null, disclosure: false, autoAuditP: 0 }, [], 77, PARAMS);
   const db: Json = {
     meta: { code: 'PHON', title: 'Phone 50', createdAt: 1, facilitatorUid: facUid, settings: { mode: 'multiplayer', timerSec: 900, autoResolve: false, revealThreshold: false, litRoom: false } },
-    public: { phase: 'lobby', round: 0, paused: false, disclosure: false, T: state.T, M: 0, collapsed: false, joinLocked: false, revealStep: 0, revealSub: 0 },
+    public: { phase: 'lobby', round: 0, paused: false, disclosure: false, T: state.T, M: 0, collapsed: false, joinLocked: false, revealStep: 0 },
     engine: { ...state, params: PARAMS, rngNotes: null, cfCache: null },
   };
   BOT_FIRMS.slice(0, 49).forEach((b, i) => setAt(db, `firms/b${String(i).padStart(2, '0')}`, { name: b.name, ticker: b.ticker, createdAt: 1000 + i, order: i, isBot: true, botPolicy: POLICIES[i % 4] }));

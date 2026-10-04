@@ -413,8 +413,7 @@ The facilitator's client runs resolution. There are no Cloud Functions, so the p
 /games/{gameId}/
   meta:         {code, title, createdAt, facilitatorUid, settings{...public subset, mode: 'team'|'multiplayer'}}
   public:       {phase, round, deadline, paused, disclosure, T, M, collapsed, collapseRound|null,
-                 joinLocked, resolvingBy|null, endedAt|null, revealStep (results panel index),
-                 revealSub (page within that panel, §14.4)}
+                 joinLocked, resolvingBy|null, endedAt|null, revealStep (results sequence index)}
   firms/{firmId}:        {name, ticker (4–6 chars), createdAt, order, isBot, botPolicy|null}
   firmSecrets/{firmId}:  {pin}                 (facilitator + members read; used by rules on join)
   firmsPublic/{firmId}:  {share, profit, valuation, rank, rankDelta, submittedRound, auto, insolvent, breachUntilRound}
@@ -570,9 +569,10 @@ On the projector the facilitator steps through panels with F9:
 
 Series are labelled on the chart; no abbreviations (SUST, ACT, DEPL) or prose legends.
 
-**Pages within panels** (Session 10). F9 steps through a panel's pages before moving to the next panel; Esc steps back. The top bar shows `3/6 · 2/3` (panel 3 of 6, page 2 of 3) when a panel has more than one page. Pages are balanced: P pages of at most K firms hold ceil(N / P) firms each, in rank order. Every page and column of one panel uses the same axis.
-- FINAL BOARD: up to 16 firms in one column; 17–32 in two columns; above 32, pages of at most 32 firms (two columns).
-- COUNTERFACTUAL: up to 16 firms as described above. Above 16, page 1 shows the three figures and the two trust paths across the full width; the following pages show the per-firm comparison across the full width in two columns, at most 32 firms per page.
+**Many firms** (Session 10; owner decision 2026-10-04: one scrolling column, no columns or pages). F9 and Esc step whole panels as before.
+- FINAL BOARD: one column, one row per firm in rank order. When rows would fall below 1.2 lines (about 20 firms on the projector), rows stay 1.5 lines tall and the list scrolls inside the panel. The column heading with the axis values stays at the top and the key at the bottom; the key row ends with "N firms · arrow keys scroll".
+- COUNTERFACTUAL: the three figures and the trust paths stay as above; the per-firm comparison scrolls inside its column, with its heading and axis kept in view.
+- Scrolling: mouse wheel or trackpad, or the arrow keys, Page Up, Page Down, Home and End on the results page. Each panel opens at the top.
 - ATTRIBUTION: up to 24 firms, one row per firm. Above 24, the 12 firms with the largest share of damage, then one `OTHERS` row with the combined shares of the rest; the heading states how many firms it combines. The `OTHERS` row shows its two shares as figures without bars, below a rule, so the axis serves the listed firms.
 - PACT RECORD: member lists follow the long-list rule (§14.1).
 5. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).

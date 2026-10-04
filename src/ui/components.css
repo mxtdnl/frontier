@@ -753,18 +753,31 @@
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   column-gap: 3ch;
 }
-/* Results columns (§14.4): one or two columns sharing one axis. */
-.res-cols {
+/* Results lists that scroll when the firms do not fit (§14.4); heading and axis stay in view. */
+.res-scroll {
   flex: 1 1 0;
   min-height: 0;
-  display: flex;
-  column-gap: 3ch;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) var(--panel);
 }
-.res-cols > .col {
-  flex: 1 1 0;
+.res-sticky-top,
+.res-sticky-bottom {
+  position: sticky;
+  z-index: 1;
+  background: var(--panel);
 }
-.cf-grid.is-single {
-  grid-template-columns: minmax(0, 1fr);
+.res-sticky-top {
+  top: 0;
+}
+.res-sticky-bottom {
+  bottom: 0;
+}
+.res-scroll > svg,
+.res-sticky-top > svg,
+.res-sticky-bottom > svg {
+  display: block;
 }
 .cmp-row {
   display: grid;

@@ -6,7 +6,7 @@ import { navigate, useRoute } from '../../router';
 import { usePublic, useResults } from '../../state';
 import { useMeta, useOrchestrator, useResultsPublisher } from '../../state/facilitator';
 import { niceDomain } from '../../ui/chart';
-import { counterfactualPages, fillColumns, finalBoardPages, resultColumns, resultPageCounts, resultsPositionLabel, tickerLine } from '../../ui/layout';
+import { tickerLine } from '../../ui/layout';
 import { DataTable, FKeyBar, HBar, LineChart, Panel, TopBar } from '../../ui/components';
 import { fmt, quarterLabel } from '../../ui/format';
 import { matchKey, type KeyAction } from '../../ui/keys';
@@ -26,6 +26,8 @@ import {
 } from './model';
 
 export { RESULT_PANELS };
+
+const SCROLL_KEYS: ReadonlySet<string> = new Set(['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End']);
 
 /** Results sequence (spec §14.4) on the projector, stepped with F9. Facilitator sign-in required. */
 export function Results() {
@@ -54,12 +56,8 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   const [notice, setNotice] = useState('');
   const busy = useRef(false);
   const step = ended && pub ? Math.min(RESULT_PANEL_COUNT - 1, Math.max(0, pub.revealStep)) : 0;
-  const counts = resultPageCounts(results ? Object.keys(results.final).length : 0);
-  const sub = ended && pub ? Math.min((counts[step] ?? 1) - 1, Math.max(0, pub.revealSub)) : 0;
   const stepRef = useRef(step);
   stepRef.current = step;
-  const subRef = useRef(sub);
-  subRef.current = sub;
 
   useLitRoom(meta?.settings.litRoom ?? false);
   useResultsPublisher(ctx, pub?.phase ?? null, (r: ActionResult) => setNotice(r.message));
@@ -91,7 +89,17 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
       if (a === 'advance' || a === 'board') {
         e.preventDefault();
         act(a);
-      } else if (e.key === 'Escape' && (stepRef.current > 0 || subRef.current > 0)) {
+      } else if (SCROLL_KEYS.has(e.key)) {
+        // A long FINAL BOARD or COUNTERFACTUAL list scrolls with the arrow, page and Home/End keys (§14.4).
+        const list = document.querySelector<HTMLElement>('[data-res-scroll]');
+        if (!list || list.scrollHeight <= list.clientHeight) return;
+        e.preventDefault();
+        const row = parseFloat(getComputedStyle(list).fontSize) * 1.35 * 1.5;
+        const pageBy = list.clientHeight * 0.8;
+        if (e.key === 'Home') list.scrollTop = 0;
+        else if (e.key === 'End') list.scrollTop = list.scrollHeight;
+        else list.scrollBy({ top: e.key === 'ArrowDown' ? row : e.key === 'ArrowUp' ? -row : e.key === 'PageDown' ? pageBy : -pageBy });
+      } else if (e.key === 'Escape' && stepRef.current > 0) {
         move(-1);
       }
     };
@@ -137,9 +145,9 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   } else {
     body = (
       <>
-        {step === 0 ? <FinalBoard r={results} page={sub} /> : null}
+        {step === 0 ? <FinalBoard r={results} /> : null}
         {step === 1 ? <TrustTrace r={results} /> : null}
-        {step === 2 ? <Counterfactual r={results} page={sub} /> : null}
+        {step === 2 ? <Counterfactual r={results} /> : null}
         {step === 3 ? <Attribution r={results} /> : null}
         {step === 4 ? <PactRecord r={results} /> : null}
         {step === 5 ? <Debrief /> : null}
@@ -153,7 +161,7 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
         <TopBar>
           <span>RESULTS</span>
           <span className="sep">|</span>
-          <span data-results-pos="">{ended ? resultsPositionLabel(counts, step, sub) : `0/${RESULT_PANEL_COUNT}`}</span>
+          <span data-results-pos="">{ended ? step + 1 : 0}/{RESULT_PANEL_COUNT}</span>
           <span className="sep">|</span>
           <span>{ended ? title : 'PENDING'}</span>
           <span className="grow topbar-notice" role="status" aria-live="polite">
@@ -170,22 +178,10 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   );
 }
 
-export function FinalBoard({ r, page = 0 }: { r: FinalResults; page?: number }) {
-  const all = finalBoardRows(r);
-  const pages = finalBoardPages(all.length);
-  const span = pages[Math.min(page, pages.length - 1)] ?? { start: 0, end: all.length };
-  const rows = all.slice(span.start, span.end);
-  const cols = fillColumns(rows, resultColumns(rows.length));
-  const where = pages.length > 1 ? ` · ranks ${span.start + 1}–${span.end} of ${all.length}` : '';
+export function FinalBoard({ r }: { r: FinalResults }) {
   return (
-    <Panel title="FINAL BOARD · ranked by final valuation" right={`peak → final valuation · ${r.rounds} QTR${where}`} bodyClassName="pad col">
-      <div className="res-cols" data-res-cols={cols.length}>
-        {cols.map((c, i) => (
-          <div key={i} className="col">
-            <Dumbbell rows={c} scaleRows={all} showKey={i === 0} slots={cols[0]?.length ?? c.length} />
-          </div>
-        ))}
-      </div>
+    <Panel title="FINAL BOARD · ranked by final valuation" right={`peak → final valuation · ${r.rounds} QTR`} bodyClassName="pad col">
+      <Dumbbell rows={finalBoardRows(r)} />
     </Panel>
   );
 }
@@ -225,7 +221,7 @@ function Figure({ label, value, sub, tone }: { label: string; value: string; sub
   );
 }
 
-export function Counterfactual({ r, page = 0 }: { r: FinalResults; page?: number }) {
+export function Counterfactual({ r }: { r: FinalResults }) {
   const firms = rankedFirms(r);
   const f = headlineFigures(r);
   const alt = PARAMS.BOT_SUSTAINABLE;
@@ -234,25 +230,7 @@ export function Counterfactual({ r, page = 0 }: { r: FinalResults; page?: number
     Math.max(0, ...firms.flatMap((x) => [x.valuation, x.counterfactual])),
     4,
   );
-  const layout = counterfactualPages(firms.length);
   const right = `same incident draws · every firm at pace ${alt.pace}, safety ${alt.safety}`;
-  // Above 16 firms (§14.4): page 1 holds the figures and trust paths, later pages the per-firm comparison.
-  if (layout.split && page > 0) {
-    const span = layout.compare[Math.min(page - 1, layout.compare.length - 1)] ?? { start: 0, end: firms.length };
-    const rows = firms.slice(span.start, span.end);
-    const cols = fillColumns(rows, resultColumns(rows.length));
-    return (
-      <Panel title="COUNTERFACTUAL · per firm" right={`ranks ${span.start + 1}–${span.end} of ${firms.length} · ${right}`} bodyClassName="pad col">
-        <div className="res-cols" data-res-cols={cols.length}>
-          {cols.map((c, i) => (
-            <div key={i} className="col">
-              <CompareList firms={c} domain={domain} />
-            </div>
-          ))}
-        </div>
-      </Panel>
-    );
-  }
   return (
     <Panel title="COUNTERFACTUAL" right={right} bodyClassName="pad col">
       <div className="figs">
@@ -260,7 +238,7 @@ export function Counterfactual({ r, page = 0 }: { r: FinalResults; page?: number
         <Figure label="ALTERNATIVE" value={fmt(f.alternative, 0)} sub={`pace ${alt.pace}, safety ${alt.safety}`} tone="wire" />
         <Figure label={f.change.label} value={`${f.change.glyph}${fmt(f.change.amount, 0)}`} sub={f.change.sub} tone={f.change.label === 'VALUE ADDED' ? 'up' : 'down'} />
       </div>
-      <div className={`cf-grid${layout.split ? ' is-single' : ''}`}>
+      <div className="cf-grid">
         <div className="col">
           <div className="dim">PUBLIC TRUST · 0–100</div>
           <LineChart
@@ -274,58 +252,58 @@ export function Counterfactual({ r, page = 0 }: { r: FinalResults; page?: number
             description="Public trust by quarter: the actual path against the alternative path, gap hatched"
           />
         </div>
-        {layout.split ? null : (
-          <div className="col">
-            <CompareList firms={firms} domain={domain} />
-          </div>
-        )}
+        <div className="col">
+          <CompareList firms={firms} domain={domain} />
+        </div>
       </div>
-      {layout.split ? <p className="dim">Press F9 for the comparison by firm.</p> : null}
     </Panel>
   );
 }
 
-/** Per-firm actual bar from zero with the alternative as a marker, on the panel's shared axis. */
+/**
+ * Per-firm actual bar from zero with the alternative as a marker. With more firms than fit, the
+ * list scrolls; its heading and axis stay in view (§14.4).
+ */
 function CompareList({ firms, domain }: { firms: ReturnType<typeof rankedFirms>; domain: readonly [number, number] }) {
   const zeroAt = ((0 - domain[0]) / (domain[1] - domain[0])) * 100;
   return (
-    <>
-          <div className="cmp-row dim">
-            <span>FIRM</span>
-            <span>ACTUAL FROM 0</span>
-            <span className="num">ACTUAL</span>
-            <span className="num wire-c">┃ ALTERNATIVE</span>
-          </div>
-          {firms.map((x) => (
-            <div key={x.firmId} className="cmp-row" data-firm={x.ticker}>
-              <span>{x.ticker}</span>
-              <HBar
-                label=""
-                labelW={0}
-                textW={0}
-                value={x.valuation}
-                domain={domain}
-                marker={x.counterfactual}
-                markerTone="wire"
-                tone="signal"
-                text=""
-                describe={`${x.ticker} actual ${fmt(x.valuation, 0)}, alternative ${fmt(x.counterfactual, 0)}`}
-              />
-              <span className={`num${x.valuation < 0 ? ' t-down' : ''}`}>{fmt(x.valuation, 0)}</span>
-              <span className="num wire-c">{fmt(x.counterfactual, 0)}</span>
-            </div>
-          ))}
-          <div className="cmp-row dim">
-            <span />
-            <span className="cmp-axis">
-              <span>{fmt(domain[0], 0)}</span>
-              {domain[0] < 0 ? <span style={{ left: `${zeroAt.toFixed(2)}%` }}>0</span> : null}
-              <span>{fmt(domain[1], 0)}</span>
-            </span>
-            <span />
-            <span />
-          </div>
-    </>
+    <div className="res-scroll" data-res-scroll="" tabIndex={0} aria-label={`Actual and alternative valuation for ${firms.length} firms. Scroll for every firm.`}>
+      <div className="cmp-row dim res-sticky-top">
+        <span>FIRM</span>
+        <span>ACTUAL FROM 0</span>
+        <span className="num">ACTUAL</span>
+        <span className="num wire-c">┃ ALTERNATIVE</span>
+      </div>
+      {firms.map((x) => (
+        <div key={x.firmId} className="cmp-row" data-firm={x.ticker}>
+          <span>{x.ticker}</span>
+          <HBar
+            label=""
+            labelW={0}
+            textW={0}
+            value={x.valuation}
+            domain={domain}
+            marker={x.counterfactual}
+            markerTone="wire"
+            tone="signal"
+            text=""
+            describe={`${x.ticker} actual ${fmt(x.valuation, 0)}, alternative ${fmt(x.counterfactual, 0)}`}
+          />
+          <span className={`num${x.valuation < 0 ? ' t-down' : ''}`}>{fmt(x.valuation, 0)}</span>
+          <span className="num wire-c">{fmt(x.counterfactual, 0)}</span>
+        </div>
+      ))}
+      <div className="cmp-row dim res-sticky-bottom">
+        <span />
+        <span className="cmp-axis">
+          <span>{fmt(domain[0], 0)}</span>
+          {domain[0] < 0 ? <span style={{ left: `${zeroAt.toFixed(2)}%` }}>0</span> : null}
+          <span>{fmt(domain[1], 0)}</span>
+        </span>
+        <span />
+        <span />
+      </div>
+    </div>
   );
 }
 
