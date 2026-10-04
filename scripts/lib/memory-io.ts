@@ -36,8 +36,8 @@ export function setAt(root: Json, path: string, value: unknown): void {
 export const getAt = (root: Json, path: string): unknown =>
   path.split('/').reduce<unknown>((n, k) => (n && typeof n === 'object' ? (n as Json)[k] : undefined), root);
 
-/** An orchestrator context over `db` (the contents of `games/{g}`), with a settable clock. */
-export function memoryCtx(db: Json, uid: string, clock: { t: number }): Ctx {
+/** An orchestrator context over `db` (the contents of `games/{g}`), with a settable clock. `onUpdate` sees every multi-path write. */
+export function memoryCtx(db: Json, uid: string, clock: { t: number }, onUpdate?: (patch: Record<string, unknown>) => void): Ctx {
   const io: OrchestratorIO = {
     async transactPublic(step) {
       const current = fromPublic(storeAndRead(db.public));
@@ -67,6 +67,7 @@ export function memoryCtx(db: Json, uid: string, clock: { t: number }): Ctx {
       return { committed: true, value: next };
     },
     async update(patch) {
+      onUpdate?.(patch);
       for (const [path, value] of Object.entries(patch)) setAt(db, path, storeAndRead(value) ?? null);
     },
   };
