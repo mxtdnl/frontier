@@ -557,3 +557,83 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 
 **Next steps**
 - Session 12: colour, chrome and screen-level clarity. When it adds `--signal-dim` and `--grid`, switch the chart hatch (`.lc-hatch`) and gridlines (`.lc-grid`) in `src/ui/components.css` to them.
+
+## 2026-10-04 — Session 10: scale to 40–50 participants (team and multiplayer modes)
+
+**Owner decisions (2026-10-04)**
+- Keep the current game as **team mode** (2–16 firms, 1–5 devices each) and check that 50 devices across 16 teams works. Add **multiplayer mode**: up to 50 firms of one person each.
+- Multiplayer mode does not stop a second device joining a firm (option A). The PIN lets a person rejoin from a replacement device. No rules change.
+
+**Spec changes** (written into `docs/spec.md` before the code): §2 and §5.4 (mode setting and limits), §8.1 (calibration at N = 16, 20, 30, 40, 50), §12 (`meta.settings.mode`, `public.revealSub`), §14.1 (board rows by count, paged board, board tags on one line, lobby columns, long member lists), §14.2 (console control strip, firms table sort and filters), §14.3 (POACH filter, pact member expand, join flow by mode), §14.4 (pages within results panels), §16.5 (board page cut).
+
+**Done**
+- **Mode.** A MODE panel on `#/new`. The firm limit is per mode (16 or 50, bots included); the lobby refuses to start above it. The mode and its limit show on the console. **Add 10 mixed** adds bot firms quickly. There are now 50 fictional bot firm names. In multiplayer mode the join screen leads with **Found your firm** and offers **Rejoin your firm with its PIN**; the PIN panel explains the rejoin. Long join lists gain a ticker filter.
+- **Calibration.** No parameter change. C1–C4 pass at every N from 4 to 50 (200 seeds). Logged in `docs/CALIBRATION.md`.
+- **Layout rules** (`src/ui/layout.ts`, pure, unit-tested): board capacity and pages, pinned rows, board tags, lobby columns, list truncation, ticker filter, results pages and stepping.
+- **Projector board.**
+  - Above 16 firms: pages of 10, two-line rows, an instant cut every 8 s, and a `PAGE 2/5` marker.
+  - Rotation holds for 30 s after a key and while the command line is focused. Each reveal starts on page 1.
+  - The leader and the largest mover (3+ places) are pinned above the page.
+- **Lobby:** above 16 firms, ticker and device count in up to 4 columns.
+- **Results:** F9 steps through pages within a panel; the top bar shows `3/6 · 2/3`.
+  - FINAL BOARD: two columns above 16 firms, pages above 32, one shared axis, rows aligned across columns.
+  - COUNTERFACTUAL: above 16 firms, figures and trust paths on page 1, then the per-firm comparison.
+  - ATTRIBUTION: above 24 firms, the top 12 plus an OTHERS row.
+  - PACT RECORD: long member lists truncated.
+- **Console.**
+  - A control strip (F6–F10, phase, quarter, commit count, notice) stays at the top of the window.
+  - The Firms table scrolls inside its panel (at most 20 rows), with an **ON** column, **SORT** FIRM / CMT / ONLINE, and **SHOW** NOT COMMITTED / OFFLINE.
+- **Phone.** The POACH picker gains a ticker filter above 8 targets and scrolls inside the sheet. A pact with more than 12 members shows `+N more`, a button that expands the list.
+- **Bot clients.** `--firms` up to 50; new `--devices-per-firm 1-5` (teammates join with the PIN, every device commits).
+- **New runs**
+  - `npm run test:e2e:scale` (615 checks)
+    - Sessions of 2, 12, 16, 17, 24, 32, 40 and 50 firms are built by the real orchestrator in memory and written to the emulator in one admin write each.
+    - Projector checks cover the lobby, open and reveal boards (pages 1, 2 and last), summit, the PACT view and every results page, plus lit-room mode at 12, 16, 24 and 50 firms. They run at 1280×720 and 1920×1080, including a check for cut-off table cells.
+    - Console strip and filters are checked.
+    - A phone at 360×640 founds the 50th firm through the multiplayer join screen and uses POACH with 49 targets and a 30-member pact.
+    - The board was also observed rotating after 8 s and holding after a key press.
+  - `npm run test:e2e:scale-run` (181 checks, `reports/scale-run.md`): two 14-quarter sessions created through `#/new`, each with a summit and pact.
+    - Multiplayer: 49 bot clients plus 1 human, 50 firms on 50 devices.
+    - Team mode: 15 bot firms × 3 devices plus a human firm on 5 devices, 16 firms on 50 devices.
+    - Every quarter's stored result equals an in-memory replay.
+
+**Measurements** (emulator, cloud container; the live database adds network time)
+- **F9 to reveal:** slowest 317 ms at 50 firms, 194 ms at 16 firms.
+- **Largest resolution write:** 361 KB at 50 firms (quarter 14), 121 KB at 16 firms. It grows about 19 KB per quarter at 50 firms, because the facilitator-only `engine` node carries the history. A 30-quarter session at 50 firms was not measured; extrapolated, about 670 KB.
+- **What each phone downloads per quarter at 50 firms:** `rounds/{r}` about 6.3 KB and `firmsPublic` about 10 KB. `rounds/{r}` was not split: every value in it is already public, and the size is small.
+- **Wire:** 26 entries in the 50-firm session. The ticker shows the latest 3 and the WIRE view the latest 14, so no change was needed. The pact-formed headline names only the proposer.
+
+**Defects found by the new runs, and fixed**
+1. **Board clipped under the summit banner at 12 firms**, and **at 16 firms in lit-room mode with disclosure on** (tags wrapped and grew the rows). Both predate this session.
+   - Two-line capacity now depends on the grid (36 or 32 rows) and the banner: 12 / 11 / 10 / 9.
+   - Board tags stay on one line in priority order (BREACH, INSOLV, AUTO, BOT, pacts), with a dim `+N` for the rest.
+2. **PACT view:** the AUDIT cell ("Q1 Y2 AUTO · 2 breaches") and the PACT tag cell cut off their text. Columns widened. The narrow summit pact table drops the AUDIT column so members have room. Member lists wrap without indenting.
+3. **Console:** a panel edge showed beside the new control strip. It is now covered.
+
+**Choices and deviations from the Session 10 proposals (with reasons)**
+1. **Results columns.** The proposal was "ceil(firms / 8) columns, capped at 3". Since Session 11 the panels are full-width SVG charts. Three columns would leave a dumbbell plot about 11 characters wide. So: one column to 16 firms (team mode unchanged), two to 32, then pages.
+2. **Pinned rows** are capped by the free two-line slots: 2 as standard, 1 under the summit banner, none in lit-room mode. Showing every firm that moved 3 places is impossible at 50 firms (about 15 change rank per quarter).
+3. **`?page=N` on `#/screen`** opens the paged board on page N. It is used by the layout checks; rotation continues from there.
+4. **MAX_FIRMS is not enforced in the database rules.** Counting children is not possible in Realtime Database rules without a counter node (from memory, not re-checked). The lobby start check and REMOVE cover it, as for 16 firms before.
+5. **Mode names appear only on `#/new` and `#/control`.** "Player" is banned on the projector and phones (§15.3).
+
+**Test results**
+- `npm run typecheck` passes. `npm test`: 394 passed (was 354). `lint:copy` and `lint:design` pass. `npm run build` succeeds.
+- `npm run test:rules`: 160 passed.
+- `npm run test:e2e`: 253 passed. `test:e2e:rehearsal`: 123 passed. `test:e2e:hardening`: 44 passed. `test:e2e:long`: 117 passed.
+- `npm run test:a11y`: 100 in all 30 snapshots.
+- New: `test:e2e:scale` 615 passed; `test:e2e:scale-run` 181 passed.
+- Two fixes to the e2e scripts during the session:
+  - The rehearsal and 30-quarter scripts matched the bot clients' old "ready" message. Updated.
+  - In team mode a bot's third device can still commit after the board shows every firm committed, so the scale run waits 3.5 s before pressing F9.
+
+**Open issues**
+- **Firebase connection limit not verified.** The Firebase documentation host (`firebase.google.com`) is blocked by this environment's network proxy. From memory (unverified): the Spark plan allows 100 simultaneous Realtime Database connections. Either mode at 50 people needs about 52–55 (one per open tab). The owner must confirm the figure (RUNBOOK section 9).
+- **Firebase single-write size limit not verified** (same reason). The largest measured write is 361 KB.
+- **Mixed rooms reach the moratorium later at large N** (`docs/CALIBRATION.md`, Session 10). This is an observation; no pass condition is affected.
+- In lit-room mode with disclosure on, the board has room for one tag per row; the rest show as `+N`.
+- Sessions 12–15 change the board, results and console layouts. They must keep these paging and column rules (SESSIONS.md says so).
+
+**Next steps**
+- Owner: confirm the connection limit; try a multiplayer session on the live site with in-app bot firms (`#/new` → Multiplayer mode → **Add 10 mixed** four or five times).
+- Session 12: colour, chrome and screen-level clarity.
