@@ -30,8 +30,12 @@ import type {
 
 export type Phase = 'lobby' | 'briefing' | 'open' | 'resolving' | 'reveal' | 'summit' | 'ended';
 
+/** Team mode: up to 16 firms of 1–5 devices. Multiplayer mode: up to 50 one-person firms (spec §2, §5.4). */
+export type SessionMode = 'team' | 'multiplayer';
+
 /** Settings safe for every participant to read. Hidden settings live only in `engine`. */
 export interface PublicSettings {
+  mode: SessionMode;
   timerSec: number;
   autoResolve: boolean;
   /** Show the τ line on the results screen (§5.4). */
@@ -61,8 +65,10 @@ export interface PublicNode {
   joinLocked: boolean;
   resolvingBy: string | null;
   endedAt: number | null;
-  /** Results sequence index (§14.4). */
+  /** Results panel index (§14.4). */
   revealStep: number;
+  /** Page within the results panel (§14.4, Session 10); 0 when the panel has one page. */
+  revealSub: number;
   /** Phase to return to when a summit ends (`open` or `reveal`); null outside a summit. */
   resumePhase: ResumePhase | null;
   /** Time left on the round timer while it is paused or a summit is running; null otherwise. */
@@ -238,7 +244,7 @@ export function fromMeta(v: Raw): MetaNode | null {
     title: str(v.title),
     createdAt: num(v.createdAt),
     facilitatorUid: str(v.facilitatorUid),
-    settings: { timerSec: num(s.timerSec, 120), autoResolve: bool(s.autoResolve), revealThreshold: bool(s.revealThreshold), litRoom: bool(s.litRoom) },
+    settings: { mode: s.mode === 'multiplayer' ? 'multiplayer' : 'team', timerSec: num(s.timerSec, 120), autoResolve: bool(s.autoResolve), revealThreshold: bool(s.revealThreshold), litRoom: bool(s.litRoom) },
   };
 }
 
@@ -258,6 +264,7 @@ export function fromPublic(v: Raw): PublicNode | null {
     resolvingBy: strOrNull(v.resolvingBy),
     endedAt: numOrNull(v.endedAt),
     revealStep: num(v.revealStep),
+    revealSub: num(v.revealSub),
     resumePhase: v.resumePhase === 'open' || v.resumePhase === 'reveal' ? v.resumePhase : null,
     pausedRemainingMs: numOrNull(v.pausedRemainingMs),
   };

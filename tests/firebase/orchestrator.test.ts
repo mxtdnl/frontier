@@ -91,6 +91,7 @@ interface Opts {
   seed?: number;
   timerSec?: number;
   uid?: string;
+  mode?: 'team' | 'multiplayer';
 }
 
 function world(o: Opts = {}): World {
@@ -114,9 +115,9 @@ function world(o: Opts = {}): World {
   const settings = { label: 'ABCD', endMode, minEnd: 10, maxEnd: 14, fixedEnd: endMode === 'fixed' ? (o.fixedEnd ?? 3) : null, disclosure: false, autoAuditP: 0.25 };
   const state = createGame(settings, [], seed, PARAMS);
   const db: Json = {
-    meta: { code: 'ABCD', title: 'Session ABCD', createdAt: 1, facilitatorUid: 'fac', settings: { timerSec: o.timerSec ?? 120, autoResolve: false, revealThreshold: false, litRoom: false } },
+    meta: { code: 'ABCD', title: 'Session ABCD', createdAt: 1, facilitatorUid: 'fac', settings: { mode: o.mode ?? 'team', timerSec: o.timerSec ?? 120, autoResolve: false, revealThreshold: false, litRoom: false } },
     public: {
-      phase: 'lobby', round: 0, paused: false, disclosure: false, T: state.T, M: 0, collapsed: false, joinLocked: false, revealStep: 0,
+      phase: 'lobby', round: 0, paused: false, disclosure: false, T: state.T, M: 0, collapsed: false, joinLocked: false, revealStep: 0, revealSub: 0,
     },
     firms,
     engine: { ...state, params: PARAMS },
@@ -249,6 +250,29 @@ describe('phase machine', () => {
     // F9 on an ended session steps the results panels instead (§14.4).
     expect((await advance(w.ctx)).ok).toBe(true);
     expect(w.pub().revealStep).toBe(1);
+  });
+
+  it('steps through the pages of a results panel before the next panel (spec §14.4)', async () => {
+    const w = world({ endMode: 'fixed', fixedEnd: 1, humans: 48, bots: ['standard', 'greedy'], mode: 'multiplayer' });
+    await toOpen(w);
+    expect((await advance(w.ctx)).ok).toBe(true); // resolve
+    expect((await advance(w.ctx)).ok).toBe(true); // → ended
+    expect(w.pub().phase).toBe('ended');
+    const seen: string[] = [`${w.pub().revealStep}.${w.pub().revealSub}`];
+    let last = '';
+    for (let i = 0; i < 12; i++) {
+      const r = await advance(w.ctx);
+      if (!r.ok) {
+        last = r.message;
+        break;
+      }
+      seen.push(`${w.pub().revealStep}.${w.pub().revealSub}`);
+    }
+    expect(seen).toEqual(['0.0', '0.1', '1.0', '2.0', '2.1', '2.2', '3.0', '4.0', '5.0']);
+    expect(last).toBe('This is the last results panel.');
+    expect((await stepResults(w.ctx, -1)).message).toBe('Results panel 5 of 6.');
+    expect((await stepResults(w.ctx, -1)).message).toBe('Results panel 4 of 6.');
+    expect((await stepResults(w.ctx, -1)).message).toBe('Results panel 3 of 6, page 3 of 3.');
   });
 
   it('stops after round 30 in manual mode', async () => {
@@ -963,9 +987,18 @@ describe('remove a firm (Danger panel, spec §14.2)', () => {
 
   it('lets a session with more than the maximum firms start once extras are removed', async () => {
     const w = world({ humans: 17, bots: [] });
-    expect((await advance(w.ctx)).message).toMatch(/17 firms formed; the maximum is 16/);
+    expect((await advance(w.ctx)).message).toMatch(/17 firms formed; the maximum in team mode is 16/);
     expect((await removeFirm(w.ctx, 'hum16')).ok).toBe(true);
     expect((await advance(w.ctx)).ok).toBe(true);
+  });
+
+  it('allows up to 50 firms in multiplayer mode and refuses 51 (spec §5.4)', async () => {
+    const w = world({ humans: 50, bots: [], mode: 'multiplayer' });
+    expect((await advance(w.ctx)).ok).toBe(true);
+    expect(w.engine().firms).toHaveLength(50);
+    const over = world({ humans: 51, bots: [], mode: 'multiplayer' });
+    expect((await advance(over.ctx)).message).toMatch(/51 firms formed; the maximum in multiplayer mode is 50/);
+    expect(over.pub().phase).toBe('lobby');
   });
 
   it('refuses after the lobby, so the market is never rebuilt mid-session', async () => {

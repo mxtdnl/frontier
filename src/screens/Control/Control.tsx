@@ -12,6 +12,7 @@ import {
   setPaused,
   toggleDisclosure,
   toggleSummit,
+  MAX_FIRMS_BY_MODE,
   type ActionResult,
   type Seen,
 } from '../../firebase/orchestrator';
@@ -319,6 +320,12 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
               )}
               <span className="dim">AUTO-RESOLVE</span>
               <span>{meta.settings.autoResolve ? 'ON' : 'OFF'}</span>
+            </div>
+            <div className="row">
+              <span className="dim">MODE</span>
+              <span data-mode={meta.settings.mode}>
+                {meta.settings.mode === 'multiplayer' ? 'Multiplayer mode' : 'Team mode'}, at most {MAX_FIRMS_BY_MODE[meta.settings.mode]} firms
+              </span>
             </div>
             <div className="row">
               <button type="button" className="btn" disabled={!isOpen} onClick={() => run(() => addTime(ctx, -30_000))}>−30 s</button>
