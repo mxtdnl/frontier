@@ -1,5 +1,6 @@
 /** Pure helpers for the results panels (spec §14.4). */
 import type { FinalResults, FirmFinal, PactFinal } from '../../engine';
+import { ATTRIBUTION_ALL_MAX, ATTRIBUTION_TOP, tickerLine } from '../../ui/layout';
 
 export const RESULT_PANELS = ['FINAL BOARD', 'TRUST TRACE', 'COUNTERFACTUAL', 'ATTRIBUTION', 'PACT RECORD', 'DEBRIEF'] as const;
 
@@ -100,6 +101,30 @@ export function attributionRows(r: FinalResults): { rows: ButterflyRow[]; anyPos
   };
 }
 
+/** OTHERS row id in a shortened attribution chart. */
+export const OTHERS_ID = '__others';
+
+/**
+ * Attribution as drawn (§14.4): every firm up to 24; above, the 12 largest shares of damage
+ * and one OTHERS row with the combined shares of the rest (`others` firms).
+ */
+export function attributionView(r: FinalResults): { rows: ButterflyRow[]; anyPositive: boolean; others: ButterflyRow | null; combined: number } {
+  const all = attributionRows(r);
+  if (all.rows.length <= ATTRIBUTION_ALL_MAX) return { ...all, others: null, combined: 0 };
+  const rest = all.rows.slice(ATTRIBUTION_TOP);
+  return {
+    rows: all.rows.slice(0, ATTRIBUTION_TOP),
+    anyPositive: all.anyPositive,
+    others: {
+      firmId: OTHERS_ID,
+      ticker: 'OTHERS',
+      damage: rest.reduce((a, x) => a + x.damage, 0),
+      value: rest.reduce((a, x) => a + x.value, 0),
+    },
+    combined: rest.length,
+  };
+}
+
 export function tickerOf(r: FinalResults, firmId: string): string {
   return r.final[firmId]?.ticker ?? '?';
 }
@@ -114,7 +139,7 @@ export interface PactLine {
 export function pactLines(r: FinalResults): PactLine[] {
   return r.pacts.map((pact) => ({
     pact,
-    members: pact.members.map((id) => tickerOf(r, id)).join(' ') || '–',
+    members: tickerLine(pact.members.map((id) => tickerOf(r, id))) || '–',
     undetectedBy: Object.entries(pact.perFirm)
       .filter(([, v]) => v.undetected > 0)
       .map(([id, v]) => `${tickerOf(r, id)} ${v.undetected}`),

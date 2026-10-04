@@ -1,18 +1,21 @@
 import { PARAMS } from '../../engine';
 import { DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, Tag, type Column } from '../../ui/components';
 import { fmt, fmtInt, fmtShare } from '../../ui/format';
+import { boardMode, boardPage } from '../../ui/layout';
 import { committedCount, marketCeiling, previousTrust, trustSeries, type BoardRow, type ScreenData } from './model';
 
 interface BoardProps {
   rows: ReadonlyArray<BoardRow>;
   disclosure: boolean;
   reveal: boolean;
+  /** Rotation counter for the paged board; wraps over the page count. */
+  page?: number;
 }
 
 export function boardColumns(disclosure: boolean, reveal: boolean): Column<BoardRow>[] {
   const prev = (s: string) => (reveal ? s : undefined);
   const cols: Column<BoardRow>[] = [
-    { key: 'rank', label: '#', w: 3, render: (_f, i) => i + 1 },
+    { key: 'rank', label: '#', w: 3, render: (f) => f.rank },
     { key: 'firm', label: 'FIRM', w: 7, render: (f) => f.ticker },
     {
       key: 'share',
@@ -77,18 +80,30 @@ export function boardColumns(disclosure: boolean, reveal: boolean): Column<Board
   return cols;
 }
 
-export function BoardPanel({ rows, disclosure, reveal }: BoardProps) {
+/** Places a firm moved at the last resolution (positive or negative). */
+const moveOf = (f: BoardRow): number => f.prevIndex - (f.rank - 1);
+
+export function BoardPanel({ rows, disclosure, reveal, page = 0 }: BoardProps) {
+  // §14.1: two-line rows up to 12 firms, one-line rows to 16, then pages of 10 with up to 2 pinned rows.
+  const mode = boardMode(rows.length);
+  const shown = boardPage(rows.map((f) => ({ ...f, move: moveOf(f) })), page);
+  const pinned = new Set(shown.pinned.map((f) => f.id));
+  const lastPinned = shown.pinned[shown.pinned.length - 1]?.id;
+  const cmt = `${committedCount(rows)}/${rows.length} CMT`;
   return (
-    <Panel title="BOARD" right={`${committedCount(rows)}/${rows.length} CMT`}>
-      <DataTable
-        caption="Firm board"
-        // Two-line rows fit up to 12 firms; 13 to 16 firms (the supported maximum) use one line so no row is clipped.
-        tall={rows.length <= 12}
-        columns={boardColumns(disclosure, reveal)}
-        rows={rows}
-        rowKey={(f) => f.id}
-        prevIndex={reveal ? (f) => f.prevIndex : undefined}
-      />
+    <Panel title="BOARD" right={mode === 'paged' ? `PAGE ${shown.page + 1}/${shown.pages} · ${cmt}` : cmt}>
+      <div data-board-mode={mode} data-board-page={shown.page + 1} data-board-pages={shown.pages} style={{ display: 'contents' }}>
+        <DataTable
+          caption={mode === 'paged' ? `Firm board, page ${shown.page + 1} of ${shown.pages}` : 'Firm board'}
+          tall={mode !== 'compact'}
+          columns={boardColumns(disclosure, reveal)}
+          rows={[...shown.pinned, ...shown.rows]}
+          rowKey={(f) => f.id}
+          // The swap animates moves within one table, so it runs only when every firm is on it.
+          prevIndex={reveal && mode !== 'paged' ? (f) => f.prevIndex : undefined}
+          rowClass={(f) => (f.id === lastPinned ? 'pinned pin-last' : pinned.has(f.id) ? 'pinned' : undefined)}
+        />
+      </div>
       <p className="dim" style={{ marginTop: '1lh' }}>
         BOT automated firm · AUTO default settings applied · INSOLV forced to lowest pace · BREACH pact terms breached
       </p>

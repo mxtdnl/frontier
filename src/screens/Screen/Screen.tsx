@@ -7,6 +7,7 @@ import { CommandLine, Countdown, FKeyBar, Panel, Ticker, TopBar, type CommandLin
 import { parseCommand } from '../../ui/commands';
 import { fmt, quarterLabel } from '../../ui/format';
 import { matchKey, type KeyAction } from '../../ui/keys';
+import { BOARD_HOLD_MS, BOARD_ROTATE_MS, boardMode } from '../../ui/layout';
 import { useLitRoom } from '../../ui/litRoom';
 import { playReveal } from '../../ui/reveal';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
@@ -168,8 +169,35 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
     [say],
   );
 
+  // Paged board (§14.1): an instant cut every 8 s, held while the command line is focused and for 30 s after a key.
+  const [boardTick, setBoardTick] = useState(0);
+  const lastKeyAt = useRef(0);
+  const lastFlipAt = useRef(0);
+  // Each reveal starts on page 1, set during render so the reveal runs on the rows it shows.
+  const revealRound = pub?.phase === 'reveal' ? pub.round : null;
+  const [pageResetFor, setPageResetFor] = useState<number | null>(null);
+  if (revealRound !== null && revealRound !== pageResetFor) {
+    setPageResetFor(revealRound);
+    setBoardTick(0);
+  }
+  const firmCount = Object.keys(firms).length;
+  const paged = boardMode(firmCount) === 'paged' && view.kind === 'board';
+  useEffect(() => {
+    if (!paged) return undefined;
+    lastFlipAt.current = Date.now();
+    const id = window.setInterval(() => {
+      const now = Date.now();
+      if (cmd.current?.isFocused()) return;
+      if (now - lastKeyAt.current < BOARD_HOLD_MS || now - lastFlipAt.current < BOARD_ROTATE_MS) return;
+      lastFlipAt.current = now;
+      setBoardTick((t) => t + 1);
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [paged]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      lastKeyAt.current = Date.now();
       const focused = cmd.current?.isFocused() ?? false;
       const a = matchKey(e, focused);
       if (a) {
@@ -206,6 +234,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
     const before = prevPhase.current;
     prevPhase.current = phase;
     if (phase !== 'reveal' || (before !== 'open' && before !== 'resolving') || view.kind !== 'board' || !root.current) return;
+    lastFlipAt.current = Date.now();
     const run = playReveal(root.current);
     return () => run.cancel();
   }, [phase, pub?.round, view.kind]);
@@ -268,7 +297,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   } else if (view.kind === 'board') {
     main = (
       <div className="scr-main">
-        <BoardPanel rows={rows} disclosure={pub.disclosure} reveal={reveal} />
+        <BoardPanel rows={rows} disclosure={pub.disclosure} reveal={reveal} page={boardTick} />
         {pub.phase === 'summit' ? (
           <PactsView data={data} emphasis />
         ) : pub.phase === 'ended' ? (

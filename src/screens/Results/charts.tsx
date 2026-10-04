@@ -13,8 +13,16 @@ function rowLayout(H: number, lh: number, n: number, key: boolean) {
   return { top, rowH, axisY: top + rowH * n + lh * 0.7, keyY: top + rowH * n + lh * 1.9 };
 }
 
+interface DumbbellProps {
+  rows: ReadonlyArray<DumbbellRow>;
+  /** Rows that set the axis; every column and page of the panel passes all firms, so they share one axis. */
+  scaleRows?: ReadonlyArray<DumbbellRow>;
+  /** Draw the key row (the first column only). */
+  showKey?: boolean;
+}
+
 /** Peak (hollow square) to final (solid square) per firm on one axis that includes zero. */
-export function Dumbbell({ rows }: { rows: ReadonlyArray<DumbbellRow> }) {
+export function Dumbbell({ rows, scaleRows = rows, showKey = true }: DumbbellProps) {
   const [ref, { w: W, h: H, fs }] = useChartSize<HTMLDivElement>();
   const cw = fs * CH;
   const lh = fs * 1.35;
@@ -22,13 +30,13 @@ export function Dumbbell({ rows }: { rows: ReadonlyArray<DumbbellRow> }) {
   const plotL = cw * 12;
   const finalR = W - cw * 13;
   const plotR = finalR - cw * 12;
-  const all = rows.flatMap((r) => [r.final, r.peak]);
+  const all = scaleRows.flatMap((r) => [r.final, r.peak]);
   const { domain, step } = niceDomain(Math.min(0, ...all), Math.max(0, ...all), Math.max(2, Math.floor((plotR - plotL) / (cw * 9))));
   const ticks = niceTicks(domain, step);
   const dec = tickDecimals(ticks);
   const X = linearScale(domain, [plotL, plotR]);
   const sq = Math.max(4, Math.min(rowH * 0.5, fs * 0.7));
-  const anyNeg = rows.some((r) => r.final < 0);
+  const anyNeg = scaleRows.some((r) => r.final < 0);
   const out: ReactElement[] = [];
 
   out.push(
@@ -71,9 +79,11 @@ export function Dumbbell({ rows }: { rows: ReadonlyArray<DumbbellRow> }) {
     out.push(<text key={`kt${id}`} x={kx + k + cw} y={keyY} dominantBaseline="central">{label}</text>);
     kx += k + cw * (label.length + 3);
   };
-  keyItem('p', 'lc-pt-hollow', 'PEAK');
-  keyItem('f', 'lc-f-signal', 'FINAL');
-  if (anyNeg) keyItem('n', 'lc-f-down', 'FINAL BELOW ZERO');
+  if (showKey) {
+    keyItem('p', 'lc-pt-hollow', 'PEAK');
+    keyItem('f', 'lc-f-signal', 'FINAL');
+    if (anyNeg) keyItem('n', 'lc-f-down', 'FINAL BELOW ZERO');
+  }
 
   return (
     <div ref={ref} className="lchart" style={{ flex: '1 1 0', minHeight: '8lh' }}>
@@ -84,12 +94,20 @@ export function Dumbbell({ rows }: { rows: ReadonlyArray<DumbbellRow> }) {
   );
 }
 
+interface ButterflyProps {
+  rows: ReadonlyArray<ButterflyRow>;
+  anyPositive: boolean;
+  /** Combined shares of the firms not listed (§14.4, above 24 firms): figures only, so the scale serves the listed firms. */
+  others?: ButterflyRow | null;
+}
+
 /** Share of damage to the left in red, share of value to the right in amber, ticker in the middle. */
-export function Butterfly({ rows, anyPositive }: { rows: ReadonlyArray<ButterflyRow>; anyPositive: boolean }) {
+export function Butterfly({ rows, anyPositive, others = null }: ButterflyProps) {
   const [ref, { w: W, h: H, fs }] = useChartSize<HTMLDivElement>();
   const cw = fs * CH;
   const lh = fs * 1.35;
-  const { top, rowH, axisY } = rowLayout(H, lh, rows.length, false);
+  const { top, rowH, axisY: rowsEnd } = rowLayout(H, lh, rows.length + (others ? 1 : 0), false);
+  const axisY = others ? rowsEnd - rowH : rowsEnd;
   const mid = W / 2;
   const inner = cw * 4.5;
   const half = mid - inner - cw * 8;
@@ -136,6 +154,19 @@ export function Butterfly({ rows, anyPositive }: { rows: ReadonlyArray<Butterfly
       </g>,
     );
   });
+  if (others) {
+    const y = axisY + lh * 0.7 + rowH * 0.5;
+    out.push(
+      <g key="others" data-firm={others.ticker} data-others="">
+        <line className="lc-grid" x1={0} x2={W} y1={axisY + lh * 0.6} y2={axisY + lh * 0.6} />
+        <text className="lc-strong lc-name" x={mid} y={y} textAnchor="middle" dominantBaseline="central">{others.ticker}</text>
+        <text className="lc-t-down" x={mid - inner} y={y} textAnchor="end" dominantBaseline="central">{fmtShare(others.damage)}</text>
+        {anyPositive ? (
+          <text className="lc-t-signal" x={mid + inner} y={y} dominantBaseline="central">{fmtShare(others.value)}</text>
+        ) : null}
+      </g>,
+    );
+  }
   if (!anyPositive) {
     out.push(
       <text key="none" className="lc-strong" data-note="no-positive" x={(mid + inner + W) / 2} y={regionMid} textAnchor="middle" dominantBaseline="central">

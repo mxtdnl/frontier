@@ -517,7 +517,7 @@ The layout is built on a monospace character grid (§16.2). Regions:
 - The URL.
 - Firms appearing live with member counts. Up to 16 firms: one table (ticker, name, member count). Above 16: compact cells (ticker and member count, `BOT` for a bot firm) in min(4, ceil(N / 16)) columns, filled down each column. The code, QR code and URL stay visible.
 
-**Long member lists** (PACT view, audit picker, summit and results): a list of more than 12 tickers shows the first 10 and `+N more`.
+**Long member lists** (PACT view, audit picker, summit and results): a list of more than 12 tickers shows the first 10 and `+N more`. Member cells wrap rather than clip. Beside the board at a summit, the pact table omits the AUDIT column so the members have room.
 
 **Reveal state.** One orchestrated motion moment, described in §16.5.
 
@@ -571,7 +571,7 @@ Series are labelled on the chart; no abbreviations (SUST, ACT, DEPL) or prose le
 **Pages within panels** (Session 10). F9 steps through a panel's pages before moving to the next panel; Esc steps back. The top bar shows `3/6 · 2/3` (panel 3 of 6, page 2 of 3) when a panel has more than one page. Pages are balanced: P pages of at most K firms hold ceil(N / P) firms each, in rank order. Every page and column of one panel uses the same axis.
 - FINAL BOARD: up to 16 firms in one column; 17–32 in two columns; above 32, pages of at most 32 firms (two columns).
 - COUNTERFACTUAL: up to 16 firms as described above. Above 16, page 1 shows the three figures and the two trust paths across the full width; the following pages show the per-firm comparison across the full width in two columns, at most 32 firms per page.
-- ATTRIBUTION: up to 24 firms, one row per firm. Above 24, the 12 firms with the largest share of damage, then one `OTHERS` row with the combined shares of the rest; the heading states how many firms it combines.
+- ATTRIBUTION: up to 24 firms, one row per firm. Above 24, the 12 firms with the largest share of damage, then one `OTHERS` row with the combined shares of the rest; the heading states how many firms it combines. The `OTHERS` row shows its two shares as figures without bars, below a rule, so the axis serves the listed firms.
 - PACT RECORD: member lists follow the long-list rule (§14.1).
 5. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).
 6. **DEBRIEF**: the five prompts in §15.5.

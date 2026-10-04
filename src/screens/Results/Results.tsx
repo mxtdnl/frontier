@@ -6,6 +6,7 @@ import { navigate, useRoute } from '../../router';
 import { usePublic, useResults } from '../../state';
 import { useMeta, useOrchestrator, useResultsPublisher } from '../../state/facilitator';
 import { niceDomain } from '../../ui/chart';
+import { counterfactualPages, fillColumns, finalBoardPages, resultColumns, resultPageCounts, resultsPositionLabel, tickerLine } from '../../ui/layout';
 import { DataTable, FKeyBar, HBar, LineChart, Panel, TopBar } from '../../ui/components';
 import { fmt, quarterLabel } from '../../ui/format';
 import { matchKey, type KeyAction } from '../../ui/keys';
@@ -15,7 +16,7 @@ import { Butterfly, Dumbbell } from './charts';
 import {
   DEBRIEF_PROMPTS,
   RESULT_PANELS,
-  attributionRows,
+  attributionView,
   counterfactualTrustSeries,
   finalBoardRows,
   headlineFigures,
@@ -53,8 +54,12 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   const [notice, setNotice] = useState('');
   const busy = useRef(false);
   const step = ended && pub ? Math.min(RESULT_PANEL_COUNT - 1, Math.max(0, pub.revealStep)) : 0;
+  const counts = resultPageCounts(results ? Object.keys(results.final).length : 0);
+  const sub = ended && pub ? Math.min((counts[step] ?? 1) - 1, Math.max(0, pub.revealSub)) : 0;
   const stepRef = useRef(step);
   stepRef.current = step;
+  const subRef = useRef(sub);
+  subRef.current = sub;
 
   useLitRoom(meta?.settings.litRoom ?? false);
   useResultsPublisher(ctx, pub?.phase ?? null, (r: ActionResult) => setNotice(r.message));
@@ -86,7 +91,7 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
       if (a === 'advance' || a === 'board') {
         e.preventDefault();
         act(a);
-      } else if (e.key === 'Escape' && stepRef.current > 0) {
+      } else if (e.key === 'Escape' && (stepRef.current > 0 || subRef.current > 0)) {
         move(-1);
       }
     };
@@ -132,9 +137,9 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   } else {
     body = (
       <>
-        {step === 0 ? <FinalBoard r={results} /> : null}
+        {step === 0 ? <FinalBoard r={results} page={sub} /> : null}
         {step === 1 ? <TrustTrace r={results} /> : null}
-        {step === 2 ? <Counterfactual r={results} /> : null}
+        {step === 2 ? <Counterfactual r={results} page={sub} /> : null}
         {step === 3 ? <Attribution r={results} /> : null}
         {step === 4 ? <PactRecord r={results} /> : null}
         {step === 5 ? <Debrief /> : null}
@@ -148,7 +153,7 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
         <TopBar>
           <span>RESULTS</span>
           <span className="sep">|</span>
-          <span>{ended ? step + 1 : 0}/{RESULT_PANEL_COUNT}</span>
+          <span data-results-pos="">{ended ? resultsPositionLabel(counts, step, sub) : `0/${RESULT_PANEL_COUNT}`}</span>
           <span className="sep">|</span>
           <span>{ended ? title : 'PENDING'}</span>
           <span className="grow topbar-notice" role="status" aria-live="polite">
@@ -165,10 +170,22 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   );
 }
 
-export function FinalBoard({ r }: { r: FinalResults }) {
+export function FinalBoard({ r, page = 0 }: { r: FinalResults; page?: number }) {
+  const all = finalBoardRows(r);
+  const pages = finalBoardPages(all.length);
+  const span = pages[Math.min(page, pages.length - 1)] ?? { start: 0, end: all.length };
+  const rows = all.slice(span.start, span.end);
+  const cols = fillColumns(rows, resultColumns(rows.length));
+  const where = pages.length > 1 ? ` · ranks ${span.start + 1}–${span.end} of ${all.length}` : '';
   return (
-    <Panel title="FINAL BOARD · ranked by final valuation" right={`peak → final valuation · ${r.rounds} QTR`} bodyClassName="pad col">
-      <Dumbbell rows={finalBoardRows(r)} />
+    <Panel title="FINAL BOARD · ranked by final valuation" right={`peak → final valuation · ${r.rounds} QTR${where}`} bodyClassName="pad col">
+      <div className="res-cols" data-res-cols={cols.length}>
+        {cols.map((c, i) => (
+          <div key={i} className="col">
+            <Dumbbell rows={c} scaleRows={all} showKey={i === 0} />
+          </div>
+        ))}
+      </div>
     </Panel>
   );
 }
@@ -208,7 +225,7 @@ function Figure({ label, value, sub, tone }: { label: string; value: string; sub
   );
 }
 
-export function Counterfactual({ r }: { r: FinalResults }) {
+export function Counterfactual({ r, page = 0 }: { r: FinalResults; page?: number }) {
   const firms = rankedFirms(r);
   const f = headlineFigures(r);
   const alt = PARAMS.BOT_SUSTAINABLE;
@@ -217,15 +234,33 @@ export function Counterfactual({ r }: { r: FinalResults }) {
     Math.max(0, ...firms.flatMap((x) => [x.valuation, x.counterfactual])),
     4,
   );
-  const zeroAt = ((0 - domain[0]) / (domain[1] - domain[0])) * 100;
+  const layout = counterfactualPages(firms.length);
+  const right = `same incident draws · every firm at pace ${alt.pace}, safety ${alt.safety}`;
+  // Above 16 firms (§14.4): page 1 holds the figures and trust paths, later pages the per-firm comparison.
+  if (layout.split && page > 0) {
+    const span = layout.compare[Math.min(page - 1, layout.compare.length - 1)] ?? { start: 0, end: firms.length };
+    const rows = firms.slice(span.start, span.end);
+    const cols = fillColumns(rows, resultColumns(rows.length));
+    return (
+      <Panel title="COUNTERFACTUAL · per firm" right={`ranks ${span.start + 1}–${span.end} of ${firms.length} · ${right}`} bodyClassName="pad col">
+        <div className="res-cols" data-res-cols={cols.length}>
+          {cols.map((c, i) => (
+            <div key={i} className="col">
+              <CompareList firms={c} domain={domain} />
+            </div>
+          ))}
+        </div>
+      </Panel>
+    );
+  }
   return (
-    <Panel title="COUNTERFACTUAL" right={`same incident draws · every firm at pace ${alt.pace}, safety ${alt.safety}`} bodyClassName="pad col">
+    <Panel title="COUNTERFACTUAL" right={right} bodyClassName="pad col">
       <div className="figs">
         <Figure label="INDUSTRY VALUE" value={fmt(f.actual, 0)} sub="actual, all firms" tone={f.actual < 0 ? 'down' : undefined} />
         <Figure label="ALTERNATIVE" value={fmt(f.alternative, 0)} sub={`pace ${alt.pace}, safety ${alt.safety}`} tone="wire" />
         <Figure label={f.change.label} value={`${f.change.glyph}${fmt(f.change.amount, 0)}`} sub={f.change.sub} tone={f.change.label === 'VALUE ADDED' ? 'up' : 'down'} />
       </div>
-      <div className="cf-grid">
+      <div className={`cf-grid${layout.split ? ' is-single' : ''}`}>
         <div className="col">
           <div className="dim">PUBLIC TRUST · 0–100</div>
           <LineChart
@@ -239,7 +274,22 @@ export function Counterfactual({ r }: { r: FinalResults }) {
             description="Public trust by quarter: the actual path against the alternative path, gap hatched"
           />
         </div>
-        <div className="col">
+        {layout.split ? null : (
+          <div className="col">
+            <CompareList firms={firms} domain={domain} />
+          </div>
+        )}
+      </div>
+      {layout.split ? <p className="dim">Press F9 for the comparison by firm.</p> : null}
+    </Panel>
+  );
+}
+
+/** Per-firm actual bar from zero with the alternative as a marker, on the panel's shared axis. */
+function CompareList({ firms, domain }: { firms: ReturnType<typeof rankedFirms>; domain: readonly [number, number] }) {
+  const zeroAt = ((0 - domain[0]) / (domain[1] - domain[0])) * 100;
+  return (
+    <>
           <div className="cmp-row dim">
             <span>FIRM</span>
             <span>ACTUAL FROM 0</span>
@@ -275,17 +325,19 @@ export function Counterfactual({ r }: { r: FinalResults }) {
             <span />
             <span />
           </div>
-        </div>
-      </div>
-    </Panel>
+    </>
   );
 }
 
 export function Attribution({ r }: { r: FinalResults }) {
-  const { rows, anyPositive } = attributionRows(r);
+  const { rows, anyPositive, others, combined } = attributionView(r);
   return (
-    <Panel title="ATTRIBUTION · share of damage against share of value" right="ranked by share of damage" bodyClassName="pad col">
-      <Butterfly rows={rows} anyPositive={anyPositive} />
+    <Panel
+      title="ATTRIBUTION · share of damage against share of value"
+      right={others ? `the ${rows.length} largest shares of damage · OTHERS combines ${combined} firms` : 'ranked by share of damage'}
+      bodyClassName="pad col"
+    >
+      <Butterfly rows={rows} anyPositive={anyPositive} others={others} />
     </Panel>
   );
 }
@@ -305,11 +357,11 @@ export function PactRecord({ r }: { r: FinalResults }) {
             columns={[
               { key: 'id', label: 'PACT', w: 9, render: (l) => l.pact.name },
               { key: 't', label: 'TERMS', w: 28, render: (l) => `max pace ${l.pact.terms.maxPace ?? '–'} · min safety ${l.pact.terms.minSafety ?? '–'}` },
-              { key: 'm', label: 'MEMBERS', w: 28, render: (l) => l.members },
+              { key: 'm', label: 'MEMBERS', w: 28, className: 'tags', render: (l) => l.members },
               { key: 'd', label: 'DETECTED', w: 12, align: 'r', render: (l) => l.pact.detected },
               { key: 'u', label: 'UNDETECTED', w: 14, align: 'r', render: (l) => l.pact.undetected },
               { key: 'sp', label: '', w: 3, render: () => '' },
-              { key: 'b', label: 'BY FIRM', w: 0, render: (l) => l.undetectedBy.join(' · ') || '–' },
+              { key: 'b', label: 'BY FIRM', w: 0, className: 'tags', render: (l) => tickerLine(l.undetectedBy, ' · ') || '–' },
             ]}
           />
           <p className="dim">Counts are quarters in which a member broke the terms. Undetected means no audit examined that quarter.</p>
