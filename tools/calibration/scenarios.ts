@@ -16,7 +16,7 @@ import {
   type RoundOutputs,
 } from '../../src/engine';
 
-export const NS = [4, 6, 8, 10, 12] as const;
+export const NS = [4, 6, 8, 10, 12, 16, 20, 30, 40, 50] as const;
 export const ROUNDS = 14;
 export const LONG_ROUNDS = 30;
 
