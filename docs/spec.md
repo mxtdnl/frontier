@@ -511,6 +511,8 @@ The layout is built on a monospace character grid (§16.2). Regions:
   - Each reveal returns to page 1.
   - Above the page, separated by a rule, pinned rows show firms that are not on the current page: the leader, then the firm with the largest rank change of 3 places or more. Pinned rows use the two-line slots the page leaves free: 2 as standard, 1 under the summit banner, none in lit-room mode. Pinned rows keep their real rank number.
 
+**Board tags** stay on one line, in priority order: `BREACH`, `INSOLV`, `AUTO`, `BOT`, then pact tags. Tags that do not fit the column show as a dim `+N` (most often in lit-room mode with disclosure on), so a row never grows past its height (Session 10).
+
 **Lobby state.**
 - A large join code.
 - A QR code, generated client-side.
