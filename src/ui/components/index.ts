@@ -4,7 +4,7 @@ export { CommandLine, type CommandLineHandle } from './CommandLine';
 export { Panel } from './Panel';
 export { DataTable, type Column } from './DataTable';
 export { Delta } from './Delta';
-export { StepSparkline, stepPath, type Series } from './StepSparkline';
+export { LineChart, type ChartSeries, type ChartTone } from './LineChart';
 export { HBar } from './HBar';
 export { Ticker } from './Ticker';
 export { Segmented4, type SegOption } from './Segmented4';

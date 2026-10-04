@@ -1,5 +1,5 @@
 import { COMMAND_HELP } from '../../ui/commands';
-import { DataTable, Delta, Panel, QR, StepSparkline, Tag } from '../../ui/components';
+import { DataTable, Delta, LineChart, Panel, QR, Tag } from '../../ui/components';
 import { fmt, fmtShare, quarterLabel } from '../../ui/format';
 import { KEY_BINDINGS } from '../../ui/keys';
 import { BRIEFING_LINES } from './briefing';
@@ -9,32 +9,21 @@ export function TrustView({ data }: { data: ScreenData }) {
   const series = trustSeries(data.rounds);
   const delta = data.pub.round === 0 ? 0 : data.pub.T - previousTrust(data.rounds);
   return (
-    <Panel title="TRST · PUBLIC TRUST HISTORY">
+    <Panel title="TRST · PUBLIC TRUST HISTORY" bodyClassName="col">
       <div className="row" style={{ paddingTop: '0.5lh', alignItems: 'flex-end' }}>
         <div className="big signal">{fmt(data.pub.T)}</div>
         <div>
           <Delta value={delta} /> <span className="dim">QoQ</span>
         </div>
       </div>
-      <div className="chart" style={{ marginTop: '1lh' }}>
-        <div className="chart-y" style={{ height: '16lh' }}>
-          <span>100</span>
-          <span>50</span>
-          <span>0</span>
-        </div>
-        <StepSparkline
+      <div className="col" style={{ flex: '1 1 0', margin: '1lh 0' }} data-trust-chart="">
+        <LineChart
           series={[{ values: series, label: 'Trust', tone: 'signal' }]}
-          min={0}
-          max={100}
-          w={130}
-          h={16}
-          count={Math.max(series.length, 2)}
+          domain="trust"
+          changeStrip
+          alarmDrop={5}
           description="Public trust by quarter"
         />
-        <div className="chart-x">
-          <span>START</span>
-          <span>{series.length > 1 ? quarterLabel(series.length - 1) : ''}</span>
-        </div>
       </div>
     </Panel>
   );
@@ -140,8 +129,6 @@ export function FirmView({ ticker, data }: { ticker: string; data: ScreenData })
     );
   }
   const hist = valuationSeries(f.id, data.rounds);
-  const lo = Math.min(...hist);
-  const hi = Math.max(...hist);
   return (
     <Panel title={`FIRM · ${f.ticker}`} bodyClassName="pad">
       <div className="stack">
@@ -152,25 +139,12 @@ export function FirmView({ ticker, data }: { ticker: string; data: ScreenData })
           <span className="dim">VAL</span> <span>{fmt(f.value)}</span>
           <Delta value={f.dValue} />
         </div>
-        <div className="chart">
-          <div className="chart-y" style={{ height: '14lh' }}>
-            <span>{fmt(hi, 0)}</span>
-            <span>{fmt(lo, 0)}</span>
-          </div>
-          <StepSparkline
-            series={[{ values: hist, label: 'Valuation', tone: 'wire' }]}
-            min={lo}
-            max={hi}
-            w={100}
-            h={14}
-            count={Math.max(hist.length, 2)}
-            description={`${f.ticker} valuation by quarter`}
-          />
-          <div className="chart-x">
-            <span>START</span>
-            <span>{hist.length > 1 ? quarterLabel(hist.length - 1) : ''}</span>
-          </div>
-        </div>
+        <LineChart
+          series={[{ values: hist, label: 'Valuation', tone: 'wire' }]}
+          domain="zero"
+          height="16lh"
+          description={`${f.ticker} valuation by quarter, from ${fmt(hist[0] ?? 0)} to ${fmt(hist[hist.length - 1] ?? 0)}`}
+        />
         <div className="row">
           {f.pacts.map((p) => (
             <Tag key={p} pact={p} />

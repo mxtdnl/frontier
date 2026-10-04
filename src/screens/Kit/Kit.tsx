@@ -15,7 +15,7 @@ import {
   QR,
   SafetySlider,
   Segmented4,
-  StepSparkline,
+  LineChart,
   Tag,
   Ticker,
   TopBar,
@@ -161,25 +161,27 @@ export function Kit() {
           />
         </Panel>
 
-        <Panel title="STEPSPARKLINE / HBAR" bodyClassName="pad">
+        <Panel title="LINECHART / HBAR" bodyClassName="pad">
           <div className="stack">
-            <StepSparkline series={[{ values: TRUST_HISTORY, label: 'Trust' }]} min={0} max={100} w={40} h={5} description="Trust by quarter" />
-            <StepSparkline
+            <LineChart series={[{ values: TRUST_HISTORY, label: 'Trust' }]} domain="trust" changeStrip alarmDrop={5} height="14lh" description="Trust by quarter with change strip" />
+            <LineChart
               series={[
-                { values: TRUST_HISTORY, label: 'A', tone: 'wire' },
-                { values: [90, 90, 88, 88, 85, 85, 80], label: 'B', tone: 'dim' },
+                { values: TRUST_HISTORY, label: 'ACTUAL', tone: 'signal' },
+                { values: [90, 90.4, 90.9, 91.2, 91.6, 92, 92.3], label: 'ALTERNATIVE', tone: 'wire' },
               ]}
-              min={0}
-              max={100}
-              w={40}
-              h={5}
-              markAt={4}
-              refLine={50}
-              description="Two series with marker and reference line"
+              domain="trust"
+              hatchBetween
+              endLabels
+              marker={{ index: 4, label: 'MORATORIUM Q4 Y1' }}
+              reference={{ value: 50, label: 'Reference line at 50', band: true }}
+              height="14lh"
+              description="Two series with hatch, marker and reference line"
             />
+            <LineChart series={[{ values: [150, 120, 60, -20, -75], label: 'Valuation', tone: 'wire' }]} domain="zero" height="10lh" description="Valuation crossing zero" />
+            <LineChart series={[{ values: [150], label: 'Valuation', tone: 'signal' }]} domain="zero" startQuarter={1} height="4lh" description="One quarter" />
             <HBar label="MKT" value={0.79} text="1,184" />
             <HBar label="VAL" value={0.4} text="40.0%" tone="signal" marker={0.7} />
-            <HBar label="DMG" value={0.22} text="22.0%" tone="down" />
+            <HBar label="DMG" value={-35} domain={[-50, 100]} text="−35.0" tone="signal" marker={60} markerTone="wire" />
           </div>
         </Panel>
 

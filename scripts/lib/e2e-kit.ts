@@ -98,6 +98,63 @@ export async function checkProjector(page: Page, label: string): Promise<void> {
   if (r.clipped.length) fail(`${label}: clipped ${r.clipped.join(' | ')}`);
 }
 
+/**
+ * Chart geometry on the page (spec §16.3): every line chart's line runs from the left to the right end of its axis,
+ * every y label sits on the gridline it names, every SVG chart fits its container, and every results chart has visible
+ * marks for each firm.
+ */
+export async function checkCharts(page: Page, label: string): Promise<void> {
+  const r = await page.evaluate(() => {
+    const problems: string[] = [];
+    let charts = 0;
+    document.querySelectorAll<SVGSVGElement>('svg[data-chart]').forEach((svg, k) => {
+      charts++;
+      const kind = svg.dataset.chart ?? '?';
+      const host = svg.parentElement as HTMLElement;
+      const box = svg.getBoundingClientRect();
+      const hostBox = host.getBoundingClientRect();
+      if (box.width < 20 || box.height < 20) problems.push(`${kind}#${k} is ${Math.round(box.width)}x${Math.round(box.height)}`);
+      if (box.width > hostBox.width + 1 || box.height > hostBox.height + 1) problems.push(`${kind}#${k} is larger than its container`);
+      const fs = parseFloat(getComputedStyle(svg).fontSize);
+      if (kind === 'line') {
+        const left = Number(svg.dataset.plotLeft);
+        const right = Number(svg.dataset.plotRight);
+        svg.querySelectorAll<SVGPathElement>('path.lc-line').forEach((path, j) => {
+          const b = path.getBBox();
+          if (Math.abs(b.x - left) > 1.5 || Math.abs(b.x + b.width - right) > 1.5) {
+            problems.push(`line#${k}.${j} spans ${b.x.toFixed(1)}–${(b.x + b.width).toFixed(1)}, axis ${left.toFixed(1)}–${right.toFixed(1)}`);
+          }
+        });
+        svg.querySelectorAll<SVGTextElement>('text.lc-ytick').forEach((t) => {
+          const b = t.getBBox();
+          const mid = b.y + b.height / 2;
+          const want = Number(t.dataset.y);
+          if (Math.abs(mid - want) > fs * 0.2) problems.push(`label "${t.textContent}" centred at ${mid.toFixed(1)}, value at ${want.toFixed(1)}`);
+        });
+      }
+      // No named helper functions in here: tsx wraps them in a __name call that does not exist in the page.
+      const visible: Record<string, number> = {};
+      svg.querySelectorAll<SVGGraphicsElement>('[data-mark]').forEach((m) => {
+        const b = m.getBBox();
+        if (b.width > 0 && b.height > 0) visible[m.dataset.mark ?? ''] = (visible[m.dataset.mark ?? ''] ?? 0) + 1;
+      });
+      const rows = svg.querySelectorAll('g[data-firm]').length;
+      if (kind === 'dumbbell' && (rows === 0 || visible.final !== rows || visible.peak !== rows)) problems.push(`dumbbell: ${rows} firms, missing marks`);
+      if (kind === 'butterfly') {
+        if (rows === 0 || visible.damage !== rows) problems.push(`butterfly: ${rows} firms, missing damage bars`);
+        if (visible.value !== rows && !svg.querySelector('[data-note="no-positive"]')) problems.push('butterfly: value side has neither bars nor the no-positive note');
+      }
+    });
+    document.querySelectorAll<HTMLElement>('.cmp-row[data-firm]').forEach((row) => {
+      const fill = row.querySelector<HTMLElement>('.hbar-fill');
+      const marker = row.querySelector<HTMLElement>('.hbar-marker');
+      if (!fill || fill.getBoundingClientRect().width < 0.5 || !marker) problems.push(`comparison ${row.dataset.firm}: no visible bar or marker`);
+    });
+    return { charts, problems };
+  });
+  if (r.problems.length) fail(`${label}: charts: ${r.problems.join(' | ')}`);
+}
+
 /** Captures the projector at both required sizes, then restores the working size. */
 export async function snapProjector(page: Page, name: string): Promise<void> {
   for (const [w, h] of [[1280, 720], [1920, 1080]] as const) {
@@ -105,6 +162,7 @@ export async function snapProjector(page: Page, name: string): Promise<void> {
     await page.waitForTimeout(200);
     await shot(page, name);
     await checkProjector(page, `projector ${name} ${w}x${h}`);
+    await checkCharts(page, `projector ${name} ${w}x${h}`);
   }
   await page.setViewportSize({ width: 1280, height: 720 });
 }
@@ -171,6 +229,7 @@ export async function snapPlay(page: Page, name: string): Promise<void> {
     await page.waitForTimeout(150);
     await shot(page, name);
     await checkPhone(page, `${name} ${w}x${hgt}`);
+    await checkCharts(page, `${name} ${w}x${hgt}`);
   }
   await page.setViewportSize(base);
 }

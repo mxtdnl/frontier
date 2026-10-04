@@ -510,3 +510,50 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 **Tests:** `npm run typecheck` passes; `npm test` 316 passed.
 
 **Next:** Session 11.
+
+## 2026-10-03 — Session 11: chart foundation and results defects
+
+**Spec changes** (each one is a spec change approved by the owner on 2026-10-03 (UI audit); written into `docs/spec.md` before the code):
+- §16.3: `StepSparkline` replaced by `LineChart` (straight segments, quarter markers, in-chart axes on the data's scale, right-hand value axis, end tag, optional change strip, reference line, vertical marker and hatch; y domain `trust` 0–100 or zero-based; "1 quarter resolved" for a single point; τ never passed to a projector or phone chart). `HBar` is drawn from a visible zero line, negatives to the left in `--down`.
+- §16.4: a flat 45° hatch in a token colour is allowed between two compared series and below a revealed τ line.
+- §14.1 (trust region) and §14.3 (BOOK) now name the line chart.
+- §10: headline figures are INDUSTRY VALUE, ALTERNATIVE and VALUE LOST (VALUE ADDED ▲ when the actual total beats the alternative). The percentage appears only when the actual industry total is positive; otherwise "industry finished below zero". When no firm finishes above zero, the attribution value side reads "No firm finished with positive value". Engine definitions unchanged.
+- §14.4: panels 1–4 described as dumbbell, line chart with labelled moratorium marker and τ band, three figures with a hatched gap and a zero-based per-firm comparison, and a butterfly. No SUST, ACT or DEPL.
+
+**Done**
+- `src/ui/chart.ts` (pure): `linearScale`, `niceStep`, `niceDomain`, `niceTicks`, `tickDecimals`, `yDomain`, `xPositions` (first point on the left end of the axis, last on the right end), `linePath`, `bandPath`, `quarterTicks`, `changes`, `largestDrop`, `alarmIndices`, `placeLabels`, `clampSpan`, `fitLabels`.
+- `LineChart` (`src/ui/components/LineChart.tsx`) with `useChartSize` (ResizeObserver; the SVG is laid out in real pixels, so labels, ticks and data share one scale). `StepSparkline` and its test are deleted.
+- `HBar` takes a signed value and a domain; the zero line is always drawn.
+- Uses replaced: projector trust panel and `TRUST` view (change strip on, red markers for falls of 5 or more, largest fall labelled, no τ), `FIRM` view (zero-based), phone BOOK (zero-based; one quarter shows "1 quarter resolved"), the kit.
+- Results (`src/screens/Results/`): FINAL BOARD dumbbell; TRUST TRACE line chart with change strip, labelled MORATORIUM marker, τ line plus hatched band only when published; COUNTERFACTUAL three figures, trust chart with both lines labelled at their ends and the gap hatched, per-firm comparison (actual bar from zero, cyan tick at the alternative); ATTRIBUTION butterfly. New pure builders `headlineFigures`, `finalBoardRows`, `attributionRows`; `barFraction` and `destroyedShare` removed.
+- RUNBOOK debrief notes for panels 1–4 updated to the new charts.
+- **Tests**
+  - `tests/ui/chart.test.ts` (31 tests) replaces `tests/ui/sparkline.test.ts`: scales, nice ticks including a domain crossing zero and an all-negative domain, path, band, quarter ticks, changes, drops, alarms, one-point series, label placement.
+  - `tests/ui/results.test.ts`: negative valuations, a negative industry total, actual above the alternative, no firm above zero, the abbreviations gone, the τ band only when published, the moratorium marker.
+  - `tests/ui/trust-charts.test.ts`: renders the projector trust panel, the `TRUST` view and the `FIRM` view with "Reveal threshold" on and records every `LineChart` prop: no reference line, band or τ.
+  - e2e: new `checkCharts` runs at every projector and phone screenshot size. It fails if a chart's line does not reach both ends of its axis, a y label is more than 0.2 em from the gridline it names, a chart overflows its container, or a results chart lacks a mark for any firm. Panel text checks updated; a τ-revealed screenshot of panel 2 added.
+
+**Choices (spec silent)**
+1. A trust chart before quarter 1 has one point (the opening value) and shows "No quarter resolved yet"; "1 quarter resolved" is shown when the one point is a resolved quarter (phone BOOK after quarter 1).
+2. The x axis labels the first point (`START`, or the quarter for BOOK) and each year boundary (`Y2` after Q4, as in the audit mock-up); labels that would overlap are dropped.
+3. The hatch uses `--dim` (and `--down` under τ) because `--signal-dim` arrives in Session 12.
+4. The results trust trace also shows the change strip, as in the audit mock-up.
+5. Panel headline sentences and filling the projector height are left to Session 14, which names them; panels 1 and 4 still leave space below the chart.
+
+**Defect found in the e2e script, and fixed**
+- "the summit selects the PACTS tab" read the tab's state the instant the summit banner appeared. The phone switches tab in an effect just after that render, so the check could run first. It now waits up to 5 s for the tab to be selected. The app is unchanged.
+
+**Test results**
+- `npm run typecheck` passes. `npm test`: 354 passed (was 316). `lint:copy` and `lint:design` pass. `npm run build` succeeds.
+- `npm run test:e2e`: 253 checks passed (was 252), including the new chart checks at 1280×720, 1920×1080, 360×640, 390×844 and 1440×900.
+- `npm run test:e2e:rehearsal`: 123 checks passed. Every final valuation in the rehearsal is negative; panels 1, 3 and 4 now show marks for all nine firms, and panel 4 shows "No firm finished with positive value".
+- `npm run test:rules`, `test:e2e:long`, `test:e2e:hardening` and `test:a11y` were not re-run: no rules, data paths or participant controls changed. The BOOK chart is the only phone change.
+- Screenshots reviewed (`shots/e2e-results-*`, `e2e-rehearsal-results-*`, `e2e-trust-*`, `e2e-reveal-*`, `e2e-firm-*`, `e2e-play-book-*`, `e2e-rehearsal-collapse-*`): labels sit on their gridlines, lines reach both ends of the axis, no gradients, glow or rounded corners. One fix made during review: change-strip bars were narrowed so the last bar no longer touches the strip's 0 label.
+
+**Open issues**
+- Results panels 1 and 4 use the top half of the projector with few firms; Session 14 sizes panels to the screen height.
+- Near the bottom of the trust axis, the lower series' end label (ACTUAL at 0.0 in the rehearsal) sits close to the last marker. Readable, but tight.
+- The firebase CLI was missing from the container at the start of this session and was installed with `npm install -g firebase-tools` as CLAUDE.md says. The environment setup script may need checking.
+
+**Next steps**
+- Session 12: colour, chrome and screen-level clarity. When it adds `--signal-dim` and `--grid`, switch the chart hatch (`.lc-hatch`) and gridlines (`.lc-grid`) in `src/ui/components.css` to them.
