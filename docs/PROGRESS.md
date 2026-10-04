@@ -589,13 +589,13 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 - **Phone.** The POACH picker gains a ticker filter above 8 targets and scrolls inside the sheet. A pact with more than 12 members shows `+N more`, a button that expands the list.
 - **Bot clients.** `--firms` up to 50; new `--devices-per-firm 1-5` (teammates join with the PIN, every device commits).
 - **New runs**
-  - `npm run test:e2e:scale` (615 checks)
+  - `npm run test:e2e:scale` (661 checks)
     - Sessions of 2, 12, 16, 17, 24, 32, 40 and 50 firms are built by the real orchestrator in memory and written to the emulator in one admin write each.
     - Projector checks cover the lobby, open and reveal boards (pages 1, 2 and last), summit, the PACT view and all six results panels (scrolling to the last firm and back where a list scrolls), plus lit-room mode at 12, 16, 24 and 50 firms. They run at 1280×720 and 1920×1080, including a check for cut-off table cells.
     - Console strip and filters are checked.
     - A phone at 360×640 founds the 50th firm through the multiplayer join screen and uses POACH with 49 targets and a 30-member pact.
     - The board was also observed rotating after 8 s and holding after a key press.
-  - `npm run test:e2e:scale-run` (181 checks, `reports/scale-run.md`): two 14-quarter sessions created through `#/new`, each with a summit and pact.
+  - `npm run test:e2e:scale-run` (182 checks, `reports/scale-run.md`): two 14-quarter sessions created through `#/new`, each with a summit and pact.
     - Multiplayer: 49 bot clients plus 1 human, 50 firms on 50 devices.
     - Team mode: 15 bot firms × 3 devices plus a human firm on 5 devices, 16 firms on 50 devices.
     - Every quarter's stored result equals an in-memory replay.
@@ -621,11 +621,12 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 5. **Mode names appear only on `#/new` and `#/control`.** "Player" is banned on the projector and phones (§15.3).
 
 **Test results**
-- `npm run typecheck` passes. `npm test`: 394 passed (was 354). `lint:copy` and `lint:design` pass. `npm run build` succeeds.
+- `npm run typecheck` passes. `npm test`: 388 passed (was 354). `lint:copy` and `lint:design` pass. `npm run build` succeeds.
 - `npm run test:rules`: 160 passed.
 - `npm run test:e2e`: 253 passed. `test:e2e:rehearsal`: 123 passed. `test:e2e:hardening`: 44 passed. `test:e2e:long`: 117 passed.
 - `npm run test:a11y`: 100 in all 30 snapshots.
-- New: `test:e2e:scale` 615 passed; `test:e2e:scale-run` 181 passed.
+- New: `test:e2e:scale` 661 passed; `test:e2e:scale-run` 182 passed.
+- After the switch to scrolling results, `npm test`, `test:e2e`, `test:e2e:rehearsal`, `test:e2e:scale` and `test:e2e:scale-run` were run again and pass. `test:rules`, `test:e2e:hardening`, `test:e2e:long` and `test:a11y` were not re-run after that change: it touches only the projector's results panels, which those runs do not check.
 - Two fixes to the e2e scripts during the session:
   - The rehearsal and 30-quarter scripts matched the bot clients' old "ready" message. Updated.
   - In team mode a bot's third device can still commit after the board shows every firm committed, so the scale run waits 3.5 s before pressing F9.
