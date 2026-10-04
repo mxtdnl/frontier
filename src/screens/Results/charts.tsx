@@ -13,12 +13,17 @@ function rowLayout(H: number, lh: number, n: number, key: boolean) {
   return { top, rowH, axisY: top + rowH * n + lh * 0.7, keyY: top + rowH * n + lh * 1.9 };
 }
 
+/** Rows that would be shorter than this make the dumbbell scroll instead of shrinking (§14.4). */
+const MIN_ROW_LH = 1.2;
+/** Row height while scrolling. */
+const SCROLL_ROW_LH = 1.5;
+
 /** Peak (hollow square) to final (solid square) per firm on one axis that includes zero. */
 export function Dumbbell({ rows }: { rows: ReadonlyArray<DumbbellRow> }) {
-  const [ref, { w: W, h: H, fs }] = useChartSize<HTMLDivElement>();
+  // Measured inside the scrollbar, so the header, rows and key share one width when the list scrolls.
+  const [ref, { w: W, h: H, fs }] = useChartSize<HTMLDivElement>({ inner: true });
   const cw = fs * CH;
   const lh = fs * 1.35;
-  const { top, rowH, axisY, keyY } = rowLayout(H, lh, rows.length, true);
   const plotL = cw * 12;
   const finalR = W - cw * 13;
   const plotR = finalR - cw * 12;
@@ -27,69 +32,118 @@ export function Dumbbell({ rows }: { rows: ReadonlyArray<DumbbellRow> }) {
   const ticks = niceTicks(domain, step);
   const dec = tickDecimals(ticks);
   const X = linearScale(domain, [plotL, plotR]);
-  const sq = Math.max(4, Math.min(rowH * 0.5, fs * 0.7));
   const anyNeg = rows.some((r) => r.final < 0);
-  const out: ReactElement[] = [];
+  const fits = (H - lh * 4) / Math.max(1, rows.length) >= lh * MIN_ROW_LH;
+  const label = `Peak to final valuation for ${rows.length} firms, ranked by final valuation`;
 
-  out.push(
-    <text key="h1" x={0} y={lh / 2} dominantBaseline="central">#</text>,
-    <text key="h2" x={cw * 4} y={lh / 2} dominantBaseline="central">FIRM</text>,
-    <text key="h3" x={finalR} y={lh / 2} textAnchor="end" dominantBaseline="central">FINAL</text>,
-    <text key="h4" x={W} y={lh / 2} textAnchor="end" dominantBaseline="central">FROM PEAK</text>,
-  );
-  ticks.forEach((t) => {
-    const x = X(t);
-    out.push(<line key={`g${t}`} className={t === 0 ? 'lc-zero' : 'lc-grid'} x1={x} x2={x} y1={top - lh * 0.3} y2={axisY - lh * 0.6} />);
-    out.push(
-      <text key={`gt${t}`} className={t === 0 ? 'lc-strong' : undefined} x={x} y={axisY} textAnchor="middle" dominantBaseline="central">
+  const heading = (y: number): ReactElement[] => [
+    <text key="h1" x={0} y={y} dominantBaseline="central">#</text>,
+    <text key="h2" x={cw * 4} y={y} dominantBaseline="central">FIRM</text>,
+    <text key="h3" x={finalR} y={y} textAnchor="end" dominantBaseline="central">FINAL</text>,
+    <text key="h4" x={W} y={y} textAnchor="end" dominantBaseline="central">FROM PEAK</text>,
+  ];
+  const tickLabels = (y: number): ReactElement[] =>
+    ticks.map((t) => (
+      <text key={`gt${t}`} className={t === 0 ? 'lc-strong' : undefined} x={X(t)} y={y} textAnchor="middle" dominantBaseline="central">
         {fmt(t, dec)}
-      </text>,
-    );
-  });
-  rows.forEach((r, i) => {
-    const y = top + rowH * (i + 0.5);
-    const neg = r.final < 0;
-    const atPeak = r.fromPeak > -0.05;
-    out.push(
-      <g key={r.firmId} data-firm={r.ticker}>
-        <text x={0} y={y} dominantBaseline="central">{r.rank}</text>
-        <text className="lc-strong lc-name" x={cw * 4} y={y} dominantBaseline="central">{r.ticker}</text>
-        <line className={`lc-row-line ${neg ? 'is-down' : 'is-signal'}`} x1={X(r.peak)} x2={X(r.final)} y1={y} y2={y} />
-        <rect className="lc-pt-hollow" data-mark="peak" x={X(r.peak) - sq / 2} y={y - sq / 2} width={sq} height={sq} />
-        <rect className={neg ? 'lc-f-down' : 'lc-f-signal'} data-mark="final" x={X(r.final) - sq * 0.6} y={y - sq * 0.6} width={sq * 1.2} height={sq * 1.2} />
-        <text className={neg ? 'lc-t-down' : 'lc-strong'} x={finalR} y={y} textAnchor="end" dominantBaseline="central">{fmt(r.final)}</text>
-        <text className={atPeak ? undefined : 'lc-t-down'} x={W} y={y} textAnchor="end" dominantBaseline="central">
-          {atPeak ? 'at peak' : `▼${fmt(-r.fromPeak)}`}
-        </text>
-      </g>,
-    );
-  });
-  const k = sq;
-  let kx = plotL;
-  const keyItem = (id: string, cls: string, label: string) => {
-    out.push(<rect key={`k${id}`} className={cls} x={kx} y={keyY - k / 2} width={k} height={k} />);
-    out.push(<text key={`kt${id}`} x={kx + k + cw} y={keyY} dominantBaseline="central">{label}</text>);
-    kx += k + cw * (label.length + 3);
+      </text>
+    ));
+  const gridlines = (y1: number, y2: number): ReactElement[] =>
+    ticks.map((t) => <line key={`g${t}`} className={t === 0 ? 'lc-zero' : 'lc-grid'} x1={X(t)} x2={X(t)} y1={y1} y2={y2} />);
+  const rowMarks = (top: number, rowH: number): ReactElement[] => {
+    const sq = Math.max(4, Math.min(rowH * 0.5, fs * 0.7));
+    return rows.map((r, i) => {
+      const y = top + rowH * (i + 0.5);
+      const neg = r.final < 0;
+      const atPeak = r.fromPeak > -0.05;
+      return (
+        <g key={r.firmId} data-firm={r.ticker}>
+          <text x={0} y={y} dominantBaseline="central">{r.rank}</text>
+          <text className="lc-strong lc-name" x={cw * 4} y={y} dominantBaseline="central">{r.ticker}</text>
+          <line className={`lc-row-line ${neg ? 'is-down' : 'is-signal'}`} x1={X(r.peak)} x2={X(r.final)} y1={y} y2={y} />
+          <rect className="lc-pt-hollow" data-mark="peak" x={X(r.peak) - sq / 2} y={y - sq / 2} width={sq} height={sq} />
+          <rect className={neg ? 'lc-f-down' : 'lc-f-signal'} data-mark="final" x={X(r.final) - sq * 0.6} y={y - sq * 0.6} width={sq * 1.2} height={sq * 1.2} />
+          <text className={neg ? 'lc-t-down' : 'lc-strong'} x={finalR} y={y} textAnchor="end" dominantBaseline="central">{fmt(r.final)}</text>
+          <text className={atPeak ? undefined : 'lc-t-down'} x={W} y={y} textAnchor="end" dominantBaseline="central">
+            {atPeak ? 'at peak' : `▼${fmt(-r.fromPeak)}`}
+          </text>
+        </g>
+      );
+    });
   };
-  keyItem('p', 'lc-pt-hollow', 'PEAK');
-  keyItem('f', 'lc-f-signal', 'FINAL');
-  if (anyNeg) keyItem('n', 'lc-f-down', 'FINAL BELOW ZERO');
+  const keyMarks = (y: number): ReactElement[] => {
+    const k = Math.max(4, fs * 0.7);
+    const out: ReactElement[] = [];
+    let kx = plotL;
+    const item = (id: string, cls: string, text: string) => {
+      out.push(<rect key={`k${id}`} className={cls} x={kx} y={y - k / 2} width={k} height={k} />);
+      out.push(<text key={`kt${id}`} x={kx + k + cw} y={y} dominantBaseline="central">{text}</text>);
+      kx += k + cw * (text.length + 3);
+    };
+    item('p', 'lc-pt-hollow', 'PEAK');
+    item('f', 'lc-f-signal', 'FINAL');
+    if (anyNeg) item('n', 'lc-f-down', 'FINAL BELOW ZERO');
+    return out;
+  };
 
+  if (fits) {
+    const { top, rowH, axisY, keyY } = rowLayout(H, lh, rows.length, true);
+    return (
+      <div ref={ref} className="lchart" style={{ flex: '1 1 0', minHeight: '8lh' }}>
+        <svg className="lc" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" data-chart="dumbbell" aria-label={label} focusable="false">
+          {heading(lh / 2)}
+          {gridlines(top - lh * 0.3, axisY - lh * 0.6)}
+          {tickLabels(axisY)}
+          {rowMarks(top, rowH)}
+          {keyMarks(keyY)}
+        </svg>
+      </div>
+    );
+  }
+
+  // Too many firms for readable rows (§14.4): the list scrolls; the heading with the axis values and the key stay in view.
+  const headH = lh * 2.4;
+  const keyH = lh * 1.4;
+  const rowH = lh * SCROLL_ROW_LH;
+  const bodyH = rowH * rows.length + lh * 0.4;
   return (
-    <div ref={ref} className="lchart" style={{ flex: '1 1 0', minHeight: '8lh' }}>
-      <svg className="lc" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" data-chart="dumbbell" aria-label={`Peak to final valuation for ${rows.length} firms, ranked by final valuation`} focusable="false">
-        {out}
+    <div ref={ref} className="lchart res-scroll" data-res-scroll="" tabIndex={0} aria-label={`${label}. Scroll for every firm.`} style={{ flex: '1 1 0', minHeight: '8lh' }}>
+      <div className="res-sticky-top">
+        <svg className="lc" width={W} height={headH} viewBox={`0 0 ${W} ${headH}`} aria-hidden="true" focusable="false">
+          {heading(lh / 2)}
+          {tickLabels(lh * 1.7)}
+        </svg>
+      </div>
+      <svg className="lc" width={W} height={bodyH} viewBox={`0 0 ${W} ${bodyH}`} role="img" data-chart="dumbbell" aria-label={label} focusable="false">
+        {gridlines(0, bodyH)}
+        {rowMarks(lh * 0.2, rowH)}
       </svg>
+      <div className="res-sticky-bottom">
+        <svg className="lc" width={W} height={keyH} viewBox={`0 0 ${W} ${keyH}`} aria-hidden="true" focusable="false">
+          {keyMarks(keyH / 2)}
+          <text className="lc-t-dim" x={W} y={keyH / 2} textAnchor="end" dominantBaseline="central" data-scroll-hint="">
+            {rows.length} firms · arrow keys scroll
+          </text>
+        </svg>
+      </div>
     </div>
   );
 }
 
+interface ButterflyProps {
+  rows: ReadonlyArray<ButterflyRow>;
+  anyPositive: boolean;
+  /** Combined shares of the firms not listed (§14.4, above 24 firms): figures only, so the scale serves the listed firms. */
+  others?: ButterflyRow | null;
+}
+
 /** Share of damage to the left in red, share of value to the right in amber, ticker in the middle. */
-export function Butterfly({ rows, anyPositive }: { rows: ReadonlyArray<ButterflyRow>; anyPositive: boolean }) {
+export function Butterfly({ rows, anyPositive, others = null }: ButterflyProps) {
   const [ref, { w: W, h: H, fs }] = useChartSize<HTMLDivElement>();
   const cw = fs * CH;
   const lh = fs * 1.35;
-  const { top, rowH, axisY } = rowLayout(H, lh, rows.length, false);
+  const { top, rowH, axisY: rowsEnd } = rowLayout(H, lh, rows.length + (others ? 1 : 0), false);
+  const axisY = others ? rowsEnd - rowH : rowsEnd;
   const mid = W / 2;
   const inner = cw * 4.5;
   const half = mid - inner - cw * 8;
@@ -136,6 +190,19 @@ export function Butterfly({ rows, anyPositive }: { rows: ReadonlyArray<Butterfly
       </g>,
     );
   });
+  if (others) {
+    const y = axisY + lh * 0.7 + rowH * 0.5;
+    out.push(
+      <g key="others" data-firm={others.ticker} data-others="">
+        <line className="lc-grid" x1={0} x2={W} y1={axisY + lh * 0.6} y2={axisY + lh * 0.6} />
+        <text className="lc-strong lc-name" x={mid} y={y} textAnchor="middle" dominantBaseline="central">{others.ticker}</text>
+        <text className="lc-t-down" x={mid - inner} y={y} textAnchor="end" dominantBaseline="central">{fmtShare(others.damage)}</text>
+        {anyPositive ? (
+          <text className="lc-t-signal" x={mid + inner} y={y} dominantBaseline="central">{fmtShare(others.value)}</text>
+        ) : null}
+      </g>,
+    );
+  }
   if (!anyPositive) {
     out.push(
       <text key="none" className="lc-strong" data-note="no-positive" x={(mid + inner + W) / 2} y={regionMid} textAnchor="middle" dominantBaseline="central">

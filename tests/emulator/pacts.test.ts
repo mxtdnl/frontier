@@ -85,7 +85,7 @@ const run = async (what: string, fn: Promise<{ ok: boolean; message: string }>) 
 describe('set-up', () => {
   it('creates a session with two bot firms and no automatic audits, then forms two firms and opens quarter 1', async () => {
     const made = await createSession(fac.db, fac.uid, {
-      timerSec: 600, autoResolve: false, endMode: 'manual', minEnd: 10, maxEnd: 14, fixedEnd: 12, disclosure: false, autoAuditP: 0,
+      mode: 'team', timerSec: 600, autoResolve: false, endMode: 'manual', minEnd: 10, maxEnd: 14, fixedEnd: 12, disclosure: false, autoAuditP: 0,
       revealThreshold: false, litRoom: false, bots: ['cautious', 'standard'], seed: '2026',
     });
     g = made.gameId;

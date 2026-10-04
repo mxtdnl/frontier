@@ -114,7 +114,9 @@ export async function checkCharts(page: Page, label: string): Promise<void> {
       const box = svg.getBoundingClientRect();
       const hostBox = host.getBoundingClientRect();
       if (box.width < 20 || box.height < 20) problems.push(`${kind}#${k} is ${Math.round(box.width)}x${Math.round(box.height)}`);
-      if (box.width > hostBox.width + 1 || box.height > hostBox.height + 1) problems.push(`${kind}#${k} is larger than its container`);
+      // A results list that scrolls (§14.4) is taller than its scroll area by design; only its width must fit.
+      const scrolls = host.matches('[data-res-scroll]');
+      if (box.width > hostBox.width + 1 || (!scrolls && box.height > hostBox.height + 1)) problems.push(`${kind}#${k} is larger than its container`);
       const fs = parseFloat(getComputedStyle(svg).fontSize);
       if (kind === 'line') {
         const left = Number(svg.dataset.plotLeft);
@@ -138,7 +140,8 @@ export async function checkCharts(page: Page, label: string): Promise<void> {
         const b = m.getBBox();
         if (b.width > 0 && b.height > 0) visible[m.dataset.mark ?? ''] = (visible[m.dataset.mark ?? ''] ?? 0) + 1;
       });
-      const rows = svg.querySelectorAll('g[data-firm]').length;
+      // A shortened attribution chart's OTHERS row (§14.4) carries figures, not bars.
+      const rows = svg.querySelectorAll('g[data-firm]:not([data-others])').length;
       if (kind === 'dumbbell' && (rows === 0 || visible.final !== rows || visible.peak !== rows)) problems.push(`dumbbell: ${rows} firms, missing marks`);
       if (kind === 'butterfly') {
         if (rows === 0 || visible.damage !== rows) problems.push(`butterfly: ${rows} firms, missing damage bars`);

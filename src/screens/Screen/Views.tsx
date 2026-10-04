@@ -2,6 +2,7 @@ import { COMMAND_HELP } from '../../ui/commands';
 import { DataTable, Delta, LineChart, Panel, QR, Tag } from '../../ui/components';
 import { fmt, fmtShare, quarterLabel } from '../../ui/format';
 import { KEY_BINDINGS } from '../../ui/keys';
+import { fillColumns, lobbyColumns, tickerLine, truncateList } from '../../ui/layout';
 import { BRIEFING_LINES } from './briefing';
 import { boardRows, joinUrl, pactRows, previousTrust, trustSeries, valuationSeries, wireItems, type BoardRow, type PactRow, type ScreenData } from './model';
 
@@ -42,23 +43,30 @@ export function PactsView({ data, emphasis = false }: { data: ScreenData; emphas
           rows={rows}
           rowKey={(p) => p.id}
           columns={[
-            { key: 'id', label: 'PACT', w: 8, render: (p) => <Tag pact={p.name} /> },
+            { key: 'id', label: 'PACT', w: 9, render: (p) => <Tag pact={p.name} /> },
             { key: 'pace', label: 'MAXPACE', w: 9, align: 'r', render: (p) => p.maxPace ?? '–' },
             { key: 'safe', label: 'MINSAFE', w: 10, align: 'r', render: (p) => p.minSafety ?? '–' },
-            { key: 'audit', label: 'AUDIT', w: 22, render: (p) => <AuditCell audit={p.lastAudit} /> },
+            // Beside the board at a summit the panel is narrow; the members need the room more than the audit line.
+            ...(emphasis ? [] : [{ key: 'audit', label: 'AUDIT', w: 27, render: (p: PactRow) => <AuditCell audit={p.lastAudit} /> }]),
             {
               key: 'members',
               label: 'MEMBERS',
               w: 0,
-              render: (p) => (
-                <>
-                  {p.members.map((m) => (
-                    <span key={m.id} style={{ marginRight: '2ch' }}>
-                      {m.ticker} {m.breach ? <Tag kind="BREACH" /> : null}
-                    </span>
-                  ))}
-                </>
-              ),
+              className: 'tags',
+              render: (p) => {
+                const { shown, more } = truncateList(p.members);
+                return (
+                  // Wraps without indenting the next line, and never ends a line in a margin.
+                  <span className="wrap-list">
+                    {shown.map((m) => (
+                      <span key={m.id}>
+                        {m.ticker} {m.breach ? <Tag kind="BREACH" /> : null}
+                      </span>
+                    ))}
+                    {more > 0 ? <span className="dim" data-more={more}>+{more} more</span> : null}
+                  </span>
+                );
+              },
             },
           ]}
         />
@@ -93,7 +101,7 @@ export function AuditView({ data, onQueue }: AuditViewProps) {
             <button key={p.id} type="button" className="btn" style={{ justifyContent: 'flex-start', textAlign: 'left' }} onClick={() => onQueue(p.id)}>
               <span className="signal" style={{ width: '3ch', display: 'inline-block' }}>{i + 1}</span>
               <span style={{ width: '9ch', display: 'inline-block' }}>{p.name}</span>
-              <span className="dim">{p.members.map((m) => m.ticker).join(' ')}</span>
+              <span className="dim">{tickerLine(p.members.map((m) => m.ticker))}</span>
             </button>
           ))}
         </div>
@@ -190,6 +198,7 @@ export function LobbyView({ code, firms, memberCounts }: { code: string; firms: 
   const rows = Object.entries(firms)
     .sort(([, a], [, b]) => a.createdAt - b.createdAt)
     .map(([id, f]) => ({ id, ...f }));
+  const cols = lobbyColumns(rows.length);
   return (
     <>
       <Panel title="JOIN" bodyClassName="pad" style={{ width: 'var(--board-w)' }}>
@@ -208,16 +217,34 @@ export function LobbyView({ code, firms, memberCounts }: { code: string; firms: 
       </Panel>
       <Panel title="FIRMS" right={`${rows.length} FORMED`} bodyClassName="pad">
         {rows.length === 0 ? <p className="dim">No firms formed yet.</p> : null}
-        <DataTable
-          caption="Firms formed"
-          rows={rows}
-          rowKey={(f) => f.id}
-          columns={[
-            { key: 't', label: 'TICKER', w: 8, render: (f) => f.ticker },
-            { key: 'n', label: 'FIRM', w: 0, render: (f) => <>{f.name} {f.isBot ? <Tag kind="BOT" /> : null}</> },
-            { key: 'm', label: 'MBRS', w: 6, align: 'r', render: (f) => (f.isBot ? <span className="dim">{'–'}</span> : (memberCounts[f.id] ?? 0)) },
-          ]}
-        />
+        {cols === 0 ? (
+          <DataTable
+            caption="Firms formed"
+            rows={rows}
+            rowKey={(f) => f.id}
+            columns={[
+              { key: 't', label: 'TICKER', w: 8, render: (f) => f.ticker },
+              { key: 'n', label: 'FIRM', w: 0, render: (f) => <>{f.name} {f.isBot ? <Tag kind="BOT" /> : null}</> },
+              { key: 'm', label: 'MBRS', w: 6, align: 'r', render: (f) => (f.isBot ? <span className="dim">{'–'}</span> : (memberCounts[f.id] ?? 0)) },
+            ]}
+          />
+        ) : (
+          <>
+            <p className="dim">TICKER and devices joined. BOT marks an automated firm.</p>
+            <div className="lobby-cols" data-lobby-cols={cols}>
+              {fillColumns(rows, cols).map((col, c) => (
+                <div key={c} className="lobby-col" role="list" aria-label={`Firms formed, column ${c + 1}`}>
+                  {col.map((f) => (
+                    <div key={f.id} className="lobby-cell" role="listitem" data-firm={f.ticker}>
+                      <span>{f.ticker}</span>
+                      {f.isBot ? <span className="dim">BOT</span> : <span className="num">{memberCounts[f.id] ?? 0}</span>}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </Panel>
     </>
   );

@@ -28,7 +28,7 @@ const pub = (over: Partial<PublicNode> = {}): PublicNode => ({
 function data(over: Partial<ScreenData> = {}): ScreenData {
   return {
     pub: pub(),
-    meta: { code: 'ABCD', title: 't', createdAt: 0, facilitatorUid: 'f', settings: { timerSec: 120, autoResolve: false, revealThreshold: false, litRoom: false } },
+    meta: { code: 'ABCD', title: 't', createdAt: 0, facilitatorUid: 'f', settings: { mode: 'team', timerSec: 120, autoResolve: false, revealThreshold: false, litRoom: false } },
     firms: { a: firm('AAA', 1), b: firm('BBB', 2, true) },
     firmsPublic: {
       a: fp({ rank: 2, rankDelta: -1, valuation: 90, share: 0.4, profit: 5, submittedRound: 2 }),

@@ -12,7 +12,8 @@ export interface ChartSize {
 export const DEFAULT_CHART_SIZE: ChartSize = { w: 640, h: 320, fs: 16 };
 
 /** Measures an element with a ResizeObserver so a chart's SVG is laid out in real pixels at any container size. */
-export function useChartSize<T extends HTMLElement>(): [RefObject<T | null>, ChartSize] {
+export function useChartSize<T extends HTMLElement>(opts: { inner?: boolean } = {}): [RefObject<T | null>, ChartSize] {
+  const inner = opts.inner === true;
   const ref = useRef<T | null>(null);
   const [size, setSize] = useState<ChartSize>(DEFAULT_CHART_SIZE);
   useLayoutEffect(() => {
@@ -21,7 +22,10 @@ export function useChartSize<T extends HTMLElement>(): [RefObject<T | null>, Cha
     const measure = () => {
       const r = el.getBoundingClientRect();
       const fs = parseFloat(getComputedStyle(el).fontSize) || DEFAULT_CHART_SIZE.fs;
-      const next = { w: Math.max(1, Math.round(r.width)), h: Math.max(1, Math.round(r.height)), fs };
+      // `inner`: the content area inside any scrollbar, for a chart that scrolls within its container.
+      const w = inner ? el.clientWidth : r.width;
+      const h = inner ? el.clientHeight : r.height;
+      const next = { w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)), fs };
       setSize((s) => (s.w === next.w && s.h === next.h && s.fs === next.fs ? s : next));
     };
     measure();
@@ -29,7 +33,7 @@ export function useChartSize<T extends HTMLElement>(): [RefObject<T | null>, Cha
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [inner]);
   return [ref, size];
 }
 

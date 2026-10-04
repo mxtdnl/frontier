@@ -6,7 +6,7 @@ import { fromResults } from '../../src/firebase/schema';
 import { fmt, fmtShare, quarterLabel } from '../../src/ui/format';
 import { OwnResultsCard } from '../../src/screens/Results/OwnResultsCard';
 import { Attribution, Counterfactual, FinalBoard, PactRecord, TrustTrace } from '../../src/screens/Results/Results';
-import { attributionRows, counterfactualTrustSeries, finalBoardRows, headlineFigures, pactLines, rankedFirms, trustSeries } from '../../src/screens/Results/model';
+import { attributionRows, attributionView, counterfactualTrustSeries, finalBoardRows, headlineFigures, pactLines, rankedFirms, trustSeries } from '../../src/screens/Results/model';
 import type { FinalResults } from '../../src/engine';
 import { storeAndRead } from '../firebase/rtdb';
 import { dec, game } from '../engine/helpers';
@@ -259,5 +259,71 @@ describe('participant results card', () => {
   it('tells the participant when results cannot be read', () => {
     const out = html(createElement(OwnResultsCard, { ticker: 'ARCN', firmId: 'f0', results: null, unavailable: true, rank: null, valuation: null }));
     expect(out).toContain('cannot be read');
+  });
+});
+
+describe('results at 50 firms (spec §14.4, Session 10)', () => {
+  function play50(): EngineState {
+    let s = game(50, { seed: 7 });
+    const members = Object.fromEntries(s.firms.slice(0, 30).map((f) => [f.id, 1]));
+    s.pacts.push({ id: 'p1', name: nextPactName(s.pacts), proposer: 'f0', terms: { maxPace: 2, minSafety: null }, members, createdRound: 1, status: 'active' });
+    for (let r = 1; r <= 6; r++) {
+      s = resolveRound(s, Object.fromEntries(s.firms.map((f, i) => [f.id, i % 3 === 0 ? dec(4, 0) : dec(2, 15)])), PARAMS).state;
+    }
+    return s;
+  }
+  const r50 = fromResults(storeAndRead(buildResults(play50(), { revealTau: false }))) as FinalResults;
+  const marks = (h: string) => [...h.matchAll(/data-firm="([^"]+)"/g)].map((m) => m[1]);
+
+  it('draws every firm on one scrolling FINAL BOARD, in rank order, with the axis values kept in view', () => {
+    const h = html(createElement(FinalBoard, { r: r50 }));
+    expect(marks(h)).toEqual(rankedFirms(r50).map((f) => f.ticker));
+    expect(h).toContain('data-res-scroll');
+    expect(h).toContain('res-sticky-top');
+    expect(h).not.toContain('data-res-cols');
+  });
+
+  it('keeps the figures and trust paths on COUNTERFACTUAL and scrolls the per-firm comparison', () => {
+    const h = html(createElement(Counterfactual, { r: r50 }));
+    expect(h).toContain('INDUSTRY VALUE');
+    expect(h).toContain('data-res-scroll');
+    expect(marks(h)).toEqual(rankedFirms(r50).map((f) => f.ticker));
+  });
+
+  it('compares all 16 firms on COUNTERFACTUAL', () => {
+    const r16 = fromResults(storeAndRead(buildResults((() => {
+      let s = game(16, { seed: 3 });
+      for (let k = 1; k <= 3; k++) s = resolveRound(s, Object.fromEntries(s.firms.map((f) => [f.id, dec(3, 5)])), PARAMS).state;
+      return s;
+    })(), { revealTau: false }))) as FinalResults;
+    const h = html(createElement(Counterfactual, { r: r16 }));
+    expect(h).toContain('INDUSTRY VALUE');
+    expect(marks(h)).toHaveLength(16);
+  });
+
+  it('shows the 12 largest shares of damage and one OTHERS row on ATTRIBUTION', () => {
+    const v = attributionView(r50);
+    expect(v.rows).toHaveLength(12);
+    expect(v.combined).toBe(38);
+    const full = attributionRows(r50).rows;
+    expect(v.rows).toEqual(full.slice(0, 12));
+    expect(v.others?.damage).toBeCloseTo(full.slice(12).reduce((a, x) => a + x.damage, 0), 12);
+    expect(v.rows.reduce((a, x) => a + x.damage, 0) + (v.others?.damage ?? 0)).toBeCloseTo(1, 9);
+    const h = html(createElement(Attribution, { r: r50 }));
+    expect(h).toContain('OTHERS combines 38 firms');
+    expect(h).toContain('data-others=""');
+  });
+
+  it('keeps every firm on ATTRIBUTION up to 24', () => {
+    const small = read(false);
+    const v = attributionView(small);
+    expect(v.others).toBeNull();
+    expect(v.rows).toHaveLength(small.attribution.length);
+  });
+
+  it('truncates a 30-firm pact member list', () => {
+    const line = pactLines(r50)[0];
+    expect(line?.members).toMatch(/ \+20 more$/);
+    expect(line?.members.split(' ')).toHaveLength(12);
   });
 });

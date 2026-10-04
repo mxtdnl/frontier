@@ -5,6 +5,7 @@ import { isPermissionDenied, rememberSession, useParticipantAuth } from '../../f
 import { navigate, useRoute } from '../../router';
 import { useFirms, useMeta, useOwnMember, usePublic } from '../../state';
 import { Panel } from '../../ui/components';
+import { FILTER_ABOVE, filterByTicker } from '../../ui/layout';
 import {
   INITIALS_MAX,
   NAME_MAX,
@@ -118,14 +119,19 @@ function Choose({ uid, code, g, onChangeCode }: { uid: string; code: string; g: 
   const firms = firmsSub.data;
   const own = member.data ? firms[member.data.firmId] : undefined;
   const closed = pub.joinLocked || pub.phase === 'ended';
+  const solo = metaSub.data?.settings.mode === 'multiplayer';
 
   if (founded) {
     return (
       <main className="page stack" style={{ maxWidth: '60ch' }}>
         <h1 className="signal">{founded.ticker} FOUNDED</h1>
-        <Panel title="TEAM PIN" bodyClassName="pad">
+        <Panel title={solo ? 'FIRM PIN' : 'TEAM PIN'} bodyClassName="pad">
           <p className="big signal" aria-label={`PIN ${founded.pin.split('').join(' ')}`}>{founded.pin}</p>
-          <p>Teammates join {founded.name} with this PIN. It is also shown on the DESK tab.</p>
+          <p>
+            {solo
+              ? 'Keep this PIN. It lets you rejoin your firm from another device. It is also shown on the DESK tab.'
+              : `Teammates join ${founded.name} with this PIN. It is also shown on the DESK tab.`}
+          </p>
         </Panel>
         <button type="button" className="btn btn-signal btn-block" onClick={() => navigate(`#/play/${g}`)}>Open the desk</button>
       </main>
@@ -152,10 +158,18 @@ function Choose({ uid, code, g, onChangeCode }: { uid: string; code: string; g: 
           {pub.phase === 'ended' ? 'This session has ended.' : 'Joining is closed. Firms can no longer be founded or joined. Ask the facilitator.'}
         </p>
       ) : mode === 'choose' ? (
-        <div className="stack">
-          <button type="button" className="btn btn-signal btn-block" onClick={() => setMode('found')}>{own ? 'Found a new firm' : 'Found a firm'}</button>
-          <button type="button" className="btn btn-block" onClick={() => setMode('join')}>{own ? 'Join a different firm' : 'Join a firm'}</button>
-        </div>
+        solo ? (
+          <div className="stack">
+            <button type="button" className="btn btn-signal btn-block" onClick={() => setMode('found')}>{own ? 'Found a new firm' : 'Found your firm'}</button>
+            <p className="dim">Changed device? Rejoin with the PIN shown when you founded your firm.</p>
+            <button type="button" className="btn btn-block" onClick={() => setMode('join')}>Rejoin your firm with its PIN</button>
+          </div>
+        ) : (
+          <div className="stack">
+            <button type="button" className="btn btn-signal btn-block" onClick={() => setMode('found')}>{own ? 'Found a new firm' : 'Found a firm'}</button>
+            <button type="button" className="btn btn-block" onClick={() => setMode('join')}>{own ? 'Join a different firm' : 'Join a firm'}</button>
+          </div>
+        )
       ) : mode === 'found' ? (
         <FoundForm
           g={g}
@@ -166,7 +180,7 @@ function Choose({ uid, code, g, onChangeCode }: { uid: string; code: string; g: 
           onDone={setFounded}
         />
       ) : (
-        <JoinForm g={g} uid={uid} code={code} firms={firms} onBack={() => setMode('choose')} />
+        <JoinForm g={g} uid={uid} code={code} firms={firms} solo={solo} onBack={() => setMode('choose')} />
       )}
     </main>
   );
@@ -283,10 +297,12 @@ interface JoinProps {
   uid: string;
   code: string;
   firms: Record<string, { name: string; ticker: string; isBot: boolean }>;
+  /** Multiplayer mode: the PIN join is a rejoin from another device. */
+  solo: boolean;
   onBack: () => void;
 }
 
-function JoinForm({ g, uid, code, firms, onBack }: JoinProps) {
+function JoinForm({ g, uid, code, firms, solo, onBack }: JoinProps) {
   const list = useMemo(
     () =>
       Object.entries(firms)
@@ -296,6 +312,8 @@ function JoinForm({ g, uid, code, firms, onBack }: JoinProps) {
     [firms],
   );
   const [picked, setPicked] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const shown = filterByTicker(list, query);
   const [pin, setPin] = useState('');
   const [label, setLabel] = useState('');
   const [touched, setTouched] = useState(false);
@@ -327,11 +345,27 @@ function JoinForm({ g, uid, code, firms, onBack }: JoinProps) {
   };
 
   return (
-    <form className="stack" onSubmit={(e) => void submit(e)} noValidate aria-label="Join a firm">
+    <form className="stack" onSubmit={(e) => void submit(e)} noValidate aria-label={solo ? 'Rejoin your firm' : 'Join a firm'}>
       {list.length === 0 ? <p className="notice" role="status">No firms have been founded yet. Found one, or wait for a teammate to do so.</p> : null}
+      {list.length > FILTER_ABOVE ? (
+        <div className="field">
+          <label htmlFor="firm-filter">Find a firm by ticker</label>
+          <input
+            id="firm-filter"
+            type="text"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            maxLength={6}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <span className="dim" role="status">{shown.length} of {list.length} firms shown</span>
+        </div>
+      ) : null}
       <fieldset className="stack" style={{ gap: 0 }}>
         <legend className="dim">FIRM</legend>
-        {list.map((f) => (
+        {shown.map((f) => (
           <label key={f.id} className="field check">
             <input type="radio" name="firm" checked={picked === f.id} onChange={() => setPicked(f.id)} />
             <span>{f.ticker} · {f.name}</span>
@@ -359,7 +393,7 @@ function JoinForm({ g, uid, code, firms, onBack }: JoinProps) {
       </div>
       <InitialsField value={label} onChange={setLabel} />
       {error ? <p className="notice err" role="alert">{error}</p> : null}
-      <button type="submit" className="btn btn-signal btn-block" disabled={busy}>Join the firm</button>
+      <button type="submit" className="btn btn-signal btn-block" disabled={busy}>{solo ? 'Rejoin the firm' : 'Join the firm'}</button>
       <button type="button" className="btn btn-block" onClick={onBack}>Back</button>
     </form>
   );

@@ -30,8 +30,14 @@ describe('bot policies (spec §7)', () => {
 describe('bot arguments', () => {
   it('parses a full command line', () => {
     expect(parseArgs(['--game', 'KXMT', '--firms', '8', '--policy', 'mixed', '--delay', '0-2', '--seed', '5'])).toMatchObject({
-      game: 'KXMT', firms: 8, policy: 'mixed', delayMin: 0, delayMax: 2000, seed: 5, foundOnly: false,
+      game: 'KXMT', firms: 8, policy: 'mixed', delayMin: 0, delayMax: 2000, seed: 5, foundOnly: false, devicesPerFirm: 1,
     });
+  });
+  it('accepts 49 firms and up to 5 devices per firm (Session 10)', () => {
+    expect(parseArgs(['--game', 'x', '--firms', '49', '--devices-per-firm', '3'])).toMatchObject({ firms: 49, devicesPerFirm: 3 });
+    expect(typeof parseArgs(['--game', 'x', '--firms', '51'])).toBe('string');
+    expect(typeof parseArgs(['--game', 'x', '--devices-per-firm', '6'])).toBe('string');
+    expect(typeof parseArgs(['--game', 'x', '--devices-per-firm', '0'])).toBe('string');
   });
   it('rejects missing and bad values with a message', () => {
     expect(typeof parseArgs([])).toBe('string');
@@ -39,9 +45,9 @@ describe('bot arguments', () => {
     expect(typeof parseArgs(['--game', 'x', '--policy', 'reckless'])).toBe('string');
     expect(typeof parseArgs(['--game', 'x', '--delay', '5-1'])).toBe('string');
   });
-  it('makes valid unique tickers for 16 firms', () => {
-    const t = Array.from({ length: 16 }, (_, i) => botTicker(i));
-    expect(new Set(t).size).toBe(16);
+  it('makes valid unique tickers for 50 firms', () => {
+    const t = Array.from({ length: 50 }, (_, i) => botTicker(i));
+    expect(new Set(t).size).toBe(50);
     t.forEach((x) => expect(x).toMatch(/^[A-Z]{3,6}$/));
   });
 });

@@ -90,7 +90,7 @@ const readPub = () => api.readPublic(fac.db, g);
 describe('orchestrator against the emulator', () => {
   it('creates a session: game, code, hidden engine node and bot firms, in one update', async () => {
     const made = await createSession(fac.db, fac.uid, {
-      timerSec: 60, autoResolve: false, endMode: 'fixed', minEnd: 10, maxEnd: 14, fixedEnd: 2, disclosure: false, autoAuditP: 0.25,
+      mode: 'team', timerSec: 60, autoResolve: false, endMode: 'fixed', minEnd: 10, maxEnd: 14, fixedEnd: 2, disclosure: false, autoAuditP: 0.25,
       revealThreshold: false, litRoom: false, bots: ['standard', 'greedy'], seed: '4242',
     });
     g = made.gameId;
@@ -112,7 +112,7 @@ describe('orchestrator against the emulator', () => {
     const made = await createSession(
       fac.db,
       fac.uid,
-      { timerSec: 60, autoResolve: false, endMode: 'manual', minEnd: 10, maxEnd: 14, fixedEnd: 12, disclosure: false, autoAuditP: 0.25, revealThreshold: false, litRoom: false, bots: [], seed: '' },
+      { mode: 'team', timerSec: 60, autoResolve: false, endMode: 'manual', minEnd: 10, maxEnd: 14, fixedEnd: 12, disclosure: false, autoAuditP: 0.25, revealThreshold: false, litRoom: false, bots: [], seed: '' },
       () => (calls++ < 2 ? code : 'ZZZZ'),
     );
     expect(made.code).toBe('ZZZZ');

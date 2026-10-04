@@ -78,8 +78,8 @@ await runWithStack(async (browser) => {
   bots.stdout?.on('data', (d: Buffer) => (botText += d.toString()));
   bots.stderr?.on('data', (d: Buffer) => (botText += d.toString()));
   try {
-    for (let i = 0; i < 120 && !/bot firm\(s\) ready/.test(botText); i++) await fac.waitForTimeout(500);
-    check(/8 bot firm\(s\) ready/.test(botText), `eight bot clients founded their firms${/ready/.test(botText) ? '' : ` (bots said: ${botText.slice(0, 300)})`}`);
+    for (let i = 0; i < 120 && !/bot firm\(s\) on \d+ device\(s\) ready/.test(botText); i++) await fac.waitForTimeout(500);
+    check(/8 bot firm\(s\) on 8 device\(s\) ready/.test(botText), `eight bot clients founded their firms${/ready/.test(botText) ? '' : ` (bots said: ${botText.slice(0, 300)})`}`);
 
     const hctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const human = watchPage(await hctx.newPage(), 'human', ignore);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { getFirebase } from '../../firebase/init';
-import { createSession, MAX_FIRMS } from '../../firebase/orchestrator';
+import { createSession, MAX_FIRMS_BY_MODE } from '../../firebase/orchestrator';
+import type { SessionMode } from '../../firebase/schema';
 import { navigate } from '../../router';
 import { Panel } from '../../ui/components';
 import { useLitRoom } from '../../ui/litRoom';
@@ -15,6 +16,7 @@ export function NewGame() {
 }
 
 function NewGameForm({ uid }: { uid: string }) {
+  const [mode, setMode] = useState<SessionMode>('team');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [timer, setTimer] = useState(120);
@@ -33,7 +35,9 @@ function NewGameForm({ uid }: { uid: string }) {
   useLitRoom(lit);
 
   const maxOk = maxEnd <= 30 && minEnd <= maxEnd && minEnd >= 1;
-  const valid = timer >= 10 && maxOk && auditP >= 0 && auditP <= 1 && (seedMode === 'random' || seed.trim() !== '');
+  const maxFirms = MAX_FIRMS_BY_MODE[mode];
+  const botsOk = bots.length <= maxFirms;
+  const valid = timer >= 10 && maxOk && botsOk && auditP >= 0 && auditP <= 1 && (seedMode === 'random' || seed.trim() !== '');
 
   const num = (set: (n: number) => void) => (e: React.ChangeEvent<HTMLInputElement>) => set(Number(e.target.value));
 
@@ -51,6 +55,7 @@ function NewGameForm({ uid }: { uid: string }) {
           setBusy(true);
           setError('');
           createSession(getFirebase().db, uid, {
+            mode,
             timerSec: timer,
             autoResolve: auto,
             endMode,
@@ -72,6 +77,25 @@ function NewGameForm({ uid }: { uid: string }) {
           );
         }}
       >
+        <Panel title="MODE" bodyClassName="pad">
+          <fieldset className="stack">
+            <legend className="dim">Mode</legend>
+            <label className="field check">
+              <input type="radio" name="mode" checked={mode === 'team'} onChange={() => setMode('team')} />
+              <span>Team mode: 2 to {MAX_FIRMS_BY_MODE.team} firms, 1 to 5 devices per firm</span>
+            </label>
+            <label className="field check">
+              <input type="radio" name="mode" checked={mode === 'multiplayer'} onChange={() => setMode('multiplayer')} />
+              <span>Multiplayer mode: 2 to {MAX_FIRMS_BY_MODE.multiplayer} firms, one person each</span>
+            </label>
+            <p className="dim">
+              {mode === 'team'
+                ? 'Teams share a firm: one person founds it and teammates join with its PIN.'
+                : 'Each person founds a firm. The PIN lets them rejoin from another device. Above 16 firms the board shows pages of 10.'}
+            </p>
+          </fieldset>
+        </Panel>
+
         <div className="cols-2">
           <Panel title="TIMING" bodyClassName="pad">
             <div className="stack">
@@ -150,7 +174,7 @@ function NewGameForm({ uid }: { uid: string }) {
           </Panel>
         </div>
 
-        <Panel title="BOT FIRMS" right={`${bots.length}`} bodyClassName="pad">
+        <Panel title="BOT FIRMS" right={`${bots.length}/${maxFirms}`} bodyClassName="pad">
           <div className="stack">
             <div className="row">
               {bots.map((p, i) => (
@@ -166,9 +190,22 @@ function NewGameForm({ uid }: { uid: string }) {
               ))}
             </div>
             <div className="row">
-              <button type="button" className="btn" onClick={() => setBots([...bots, 'standard'])} disabled={bots.length >= MAX_FIRMS}>Add bot firm</button>
+              <button type="button" className="btn" onClick={() => setBots([...bots, 'standard'])} disabled={bots.length >= maxFirms}>Add bot firm</button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setBots([...bots, ...Array.from({ length: Math.min(10, maxFirms - bots.length) }, (_, i) => POLICIES[(bots.length + i) % POLICIES.length] ?? 'standard')])}
+                disabled={bots.length >= maxFirms}
+              >
+                Add 10 mixed
+              </button>
               <button type="button" className="btn" onClick={() => setBots(bots.slice(0, -1))} disabled={bots.length === 0}>Remove last</button>
             </div>
+            {!botsOk ? (
+              <p className="notice err" role="alert">
+                {bots.length} bot firms is above the {maxFirms}-firm limit for this mode. Remove {bots.length - maxFirms}, or choose multiplayer mode.
+              </p>
+            ) : null}
           </div>
         </Panel>
 

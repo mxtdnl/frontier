@@ -1,10 +1,12 @@
 /**
  * Bot clients (spec §7, Session 8). Usage:
  *   npm run bots -- --game <id or join code> --firms 8 --policy mixed [--delay 1-6] [--seed 1] [--found-only]
+ *                   [--join-pacts] [--devices-per-firm 3]
  *
  * Each bot is an anonymous participant that founds its own firm during the lobby and then
  * commits a decision in every open quarter, after a random delay, using the real data layer
- * and the real security rules. It runs against the emulators (project `demo-frontier`) only;
+ * and the real security rules. With --devices-per-firm N, N − 1 more devices join each firm
+ * with its PIN (team mode load tests); every device keeps its own connection and commits. It runs against the emulators (project `demo-frontier`) only;
  * the cloud container cannot reach the live database. A rehearsal on the live site uses the
  * in-app bot firms instead (set at `#/new`).
  *
@@ -153,19 +155,32 @@ async function main(): Promise<void> {
 
   const policies = assignPolicies(o.policy, o.firms);
   const bots: Bot[] = [];
+  const founded: Array<{ index: number; firmId: string; pin: string }> = [];
   for (let i = 0; i < o.firms; i++) {
     const c = i === 0 ? first : await connect();
     const pin = api.generatePin();
     const firmId = await api.foundFirm(c.db, g, c.uid, { name: `Bot Firm ${i + 1}`, ticker: botTicker(i), pin, label: 'BT', order: 100 + i });
     bots.push({ index: i, policy: policies[i]!, db: c.db, auth: c.auth, uid: c.uid, firmId });
+    founded.push({ index: i, firmId, pin });
     log(`${botTicker(i)} founded as ${policies[i]!}`);
+  }
+  // Teammates join in parallel across firms; the join throttle allows one per firm per second.
+  for (let d = 2; d <= o.devicesPerFirm; d++) {
+    await Promise.all(
+      founded.map(async (f) => {
+        const c = await connect();
+        await api.joinFirm(c.db, g, c.uid, f.firmId, f.pin, `B${d}`);
+        bots.push({ index: f.index, policy: policies[f.index]!, db: c.db, auth: c.auth, uid: c.uid, firmId: f.firmId });
+      }),
+    );
+    log(`device ${d} joined each of ${founded.length} firms`);
   }
   if (o.foundOnly) {
     process.exit(0);
   }
-  log(`${bots.length} bot firm(s) ready in session ${g}. Waiting for quarters.`);
+  log(`${founded.length} bot firm(s) on ${bots.length} device(s) ready in session ${g}. Waiting for quarters.`);
   process.on('SIGINT', () => process.exit(0));
-  await Promise.all(bots.map((b) => play(b, g, o, mulberry32(o.seed * 1000 + b.index))));
+  await Promise.all(bots.map((b, k) => play(b, g, o, mulberry32(o.seed * 1000 + b.index + 100_000 * Math.floor(k / founded.length)))));
   log('Session ended.');
   process.exit(0);
 }

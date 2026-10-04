@@ -58,6 +58,7 @@ import {
   type PublicNode,
   type ResultsNode,
   type RoundNode,
+  type SessionMode,
 } from './schema';
 
 // ── I/O boundary ──────────────────────────────────────────────────────────────
@@ -112,7 +113,10 @@ const ok = (message: string): ActionResult => ({ ok: true, message });
 const fail = (message: string): ActionResult => ({ ok: false, message });
 
 export const MIN_FIRMS = 2;
-export const MAX_FIRMS = 16;
+/** Most firms per session by mode, human and bot together (spec §2, §5.4). */
+export const MAX_FIRMS_BY_MODE: Readonly<Record<SessionMode, number>> = { team: 16, multiplayer: 50 };
+/** The largest firm count any mode supports. */
+export const MAX_FIRMS = MAX_FIRMS_BY_MODE.multiplayer;
 
 export const INCOMPLETE = 'Resolution incomplete. The quarter stays in RESOLVING and nothing was written. Use Retry on the control console.';
 
@@ -225,9 +229,12 @@ async function ensureEngine(ctx: Ctx): Promise<{ ok: true; engine: EngineNode } 
 // ── Phase actions ─────────────────────────────────────────────────────────────
 
 export async function startBriefing(ctx: Ctx): Promise<ActionResult> {
-  const count = Object.keys(await ctx.io.readFirms()).length;
+  const [firms, meta] = await Promise.all([ctx.io.readFirms(), ctx.io.readMeta()]);
+  const count = Object.keys(firms).length;
+  const mode = meta?.settings.mode ?? 'team';
+  const max = MAX_FIRMS_BY_MODE[mode];
   if (count < MIN_FIRMS) return fail(`At least ${MIN_FIRMS} firms are needed to start; ${count} formed. Wait for more teams or add bot firms.`);
-  if (count > MAX_FIRMS) return fail(`${count} firms formed; the maximum is ${MAX_FIRMS}. Remove firms before starting.`);
+  if (count > max) return fail(`${count} firms formed; the maximum in ${mode} mode is ${max}. Remove firms before starting.`);
   const t = await transition(ctx, toBriefing);
   if (!t.ok) return t;
   const e = await ensureEngine(ctx);
@@ -626,9 +633,44 @@ export const BOT_FIRMS: ReadonlyArray<{ name: string; ticker: string }> = [
   { name: 'Norvane Group', ticker: 'NRVN' },
   { name: 'Orrin Compute', ticker: 'ORRN' },
   { name: 'Pallet Research', ticker: 'PLTT' },
+  { name: 'Quillon Labs', ticker: 'QLLN' },
+  { name: 'Rhombic AI', ticker: 'RHMB' },
+  { name: 'Sallow Systems', ticker: 'SLLW' },
+  { name: 'Tamsin Compute', ticker: 'TMSN' },
+  { name: 'Umbral Works', ticker: 'UMBR' },
+  { name: 'Vantor Models', ticker: 'VNTR' },
+  { name: 'Wexley Data', ticker: 'WXLY' },
+  { name: 'Xerant Logic', ticker: 'XRNT' },
+  { name: 'Yarrow Research', ticker: 'YRRW' },
+  { name: 'Zenor Cortex', ticker: 'ZNOR' },
+  { name: 'Alder Dynamics', ticker: 'ALDR' },
+  { name: 'Bracken Group', ticker: 'BRKN' },
+  { name: 'Corvel Labs', ticker: 'CRVL' },
+  { name: 'Dunmore AI', ticker: 'DNMR' },
+  { name: 'Eskar Systems', ticker: 'ESKR' },
+  { name: 'Felwick Compute', ticker: 'FLWK' },
+  { name: 'Garnet Works', ticker: 'GRNT' },
+  { name: 'Holm Models', ticker: 'HOLM' },
+  { name: 'Inglen Data', ticker: 'INGL' },
+  { name: 'Jessamy Logic', ticker: 'JSSM' },
+  { name: 'Kelda Research', ticker: 'KELD' },
+  { name: 'Larch Cortex', ticker: 'LRCH' },
+  { name: 'Mallory Dynamics', ticker: 'MLRY' },
+  { name: 'Nethan Group', ticker: 'NTHN' },
+  { name: 'Osric Labs', ticker: 'OSRC' },
+  { name: 'Penrith AI', ticker: 'PNRT' },
+  { name: 'Quarrel Systems', ticker: 'QRRL' },
+  { name: 'Rowan Compute', ticker: 'RWAN' },
+  { name: 'Sedge Works', ticker: 'SEDG' },
+  { name: 'Thorne Models', ticker: 'THRN' },
+  { name: 'Ulric Data', ticker: 'ULRC' },
+  { name: 'Verity Logic', ticker: 'VRTY' },
+  { name: 'Wren Research', ticker: 'WREN' },
+  { name: 'Yewdale Cortex', ticker: 'YWDL' },
 ];
 
 export interface NewSessionInput {
+  mode: SessionMode;
   timerSec: number;
   autoResolve: boolean;
   endMode: GameSettings['endMode'];
@@ -692,7 +734,7 @@ export async function createSession(
       title: `Session ${code}`,
       createdAt: Date.now(),
       facilitatorUid: uid,
-      settings: { timerSec: input.timerSec, autoResolve: input.autoResolve, revealThreshold: input.revealThreshold, litRoom: input.litRoom },
+      settings: { mode: input.mode, timerSec: input.timerSec, autoResolve: input.autoResolve, revealThreshold: input.revealThreshold, litRoom: input.litRoom },
     };
     const pub: PublicNode = {
       phase: 'lobby',

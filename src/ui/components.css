@@ -150,6 +150,13 @@
 .tbl.tall td {
   height: 2lh;
 }
+/* Paged board: a rule under the pinned rows, inside the row's own height. */
+.tbl tr.pin-last td {
+  border-bottom: var(--rule-w) solid var(--rule);
+}
+.tbl.tall tr.pin-last td {
+  height: calc(2lh - var(--rule-w));
+}
 .tbl tr.own td {
   color: var(--signal);
   font-weight: 600;
@@ -157,6 +164,14 @@
 .tbl td.tags {
   white-space: normal;
   line-height: var(--lh);
+}
+.wrap-list {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 2ch;
+}
+.tbl td.tags-line {
+  white-space: nowrap;
 }
 
 /* ---------- Delta ---------- */
@@ -633,6 +648,10 @@
   grid-template-columns: repeat(auto-fill, minmax(9ch, 1fr));
   gap: 1ch;
 }
+.target-list.is-long {
+  max-height: 12lh;
+  overflow-y: auto;
+}
 .target-list button {
   min-height: 44px;
   background: var(--base);
@@ -734,6 +753,32 @@
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   column-gap: 3ch;
 }
+/* Results lists that scroll when the firms do not fit (§14.4); heading and axis stay in view. */
+.res-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dim) var(--panel);
+}
+.res-sticky-top,
+.res-sticky-bottom {
+  position: sticky;
+  z-index: 1;
+  background: var(--panel);
+}
+.res-sticky-top {
+  top: 0;
+}
+.res-sticky-bottom {
+  bottom: 0;
+}
+.res-scroll > svg,
+.res-sticky-top > svg,
+.res-sticky-bottom > svg {
+  display: block;
+}
 .cmp-row {
   display: grid;
   grid-template-columns: 6ch minmax(0, 1fr) 8ch 14ch;
@@ -821,6 +866,27 @@
   position: relative;
   overflow-x: auto;
 }
+/* Console Firms panel (§14.2): at most 20 rows tall, scrolling inside the panel. */
+.scroll-y {
+  max-height: 21lh;
+  overflow-y: auto;
+}
+.scroll-y thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+/* Console control strip (§14.2): fixed at the top while the page scrolls. */
+.ctl-strip {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--base);
+  border-bottom: var(--rule-w) solid var(--rule);
+  /* Panels that follow one another sit one rule width to the left (.panel + .panel); cover their edge. */
+  margin: 0 calc(var(--rule-w) * -1);
+  padding: 0.5lh var(--rule-w);
+}
 
 /* ---------- Form fields ---------- */
 .field {
@@ -893,4 +959,20 @@ legend {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+}
+
+/* ---------- Lobby firm columns (§14.1, above 16 firms) ---------- */
+.lobby-cols {
+  display: flex;
+  column-gap: 1ch;
+  margin-top: 1lh;
+}
+.lobby-col {
+  width: 11ch;
+  flex: 0 0 auto;
+}
+.lobby-cell {
+  display: flex;
+  justify-content: space-between;
+  white-space: nowrap;
 }

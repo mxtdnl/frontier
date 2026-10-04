@@ -20,7 +20,7 @@ const roundNode = (over: Partial<RoundNode> = {}): RoundNode => ({ T: 70, dT: 0,
 function data(over: Partial<ScreenData> = {}): ScreenData {
   return {
     pub: pub(),
-    meta: { code: 'ABCD', title: 't', createdAt: 0, facilitatorUid: 'f', settings: { timerSec: 120, autoResolve: false, revealThreshold: false, litRoom: false } },
+    meta: { code: 'ABCD', title: 't', createdAt: 0, facilitatorUid: 'f', settings: { mode: 'team', timerSec: 120, autoResolve: false, revealThreshold: false, litRoom: false } },
     firms: { a: firm('AAA', 1), b: firm('BBB', 2) },
     firmsPublic: { a: fp({ rank: 1 }), b: fp({ rank: 2, breachUntilRound: 3 }) },
     rounds: { '1': roundNode(), '2': roundNode() },

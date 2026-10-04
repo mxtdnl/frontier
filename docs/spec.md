@@ -25,8 +25,9 @@ By the end of a session, students should be able to:
 
 | Item | Value |
 |---|---|
-| Firms | 2–16 supported; calibrated for 4–12 |
-| Team size | 1–5 devices per firm (any member can submit; last commit wins) |
+| Mode | **Team mode** (default): 2–16 firms, 1–5 devices per firm. **Multiplayer mode**: 2–50 firms of one person each (§5.4). Owner decision 2026-10-04 (Session 10) |
+| Firms | 2–16 in team mode, 2–50 in multiplayer mode; calibrated for 4–50 (§8.1) |
+| Team size | Team mode: 1–5 devices per firm (any member can submit; last commit wins). Multiplayer mode: one person per firm; the firm's PIN still lets that person rejoin from another device |
 | Round | One financial quarter |
 | Round timer | Default 120 s; facilitator can add ±30 s or pause |
 | Typical session | 8–14 quarters (35–60 min) plus a 20–30 min debrief |
@@ -124,6 +125,7 @@ A firm may not play the same card in consecutive quarters. Insolvent firms (§6.
 
 | Setting | Default |
 |---|---|
+| Mode | Team. `team`: at most 16 firms. `multiplayer`: at most 50 firms. The limit applies to human and bot firms together, and the lobby refuses to start above it. The names "Team mode" and "Multiplayer mode" appear only on `#/new` and `#/control`, never on the projector or on phones (§15.3 bans "player" there) |
 | Round timer | 120 s |
 | Auto-resolve at deadline | Off (submissions lock; facilitator presses F9) |
 | End mode | `random` 10–14 |
@@ -293,7 +295,7 @@ Bots are labelled `BOT` on every screen. They serve rehearsal, small classes and
 
 ### 8.1 Validity conditions
 
-All four must hold for N ∈ {4, 6, 8, 10, 12}, across at least 200 seeds per scenario, over 14 rounds. Thresholds are medians, with the stated percentile constraints.
+All four must hold for N ∈ {4, 6, 8, 10, 12, 16, 20, 30, 40, 50} (16–50 added for multiplayer mode, Session 10), across at least 200 seeds per scenario, over 14 rounds. Thresholds are medians, with the stated percentile constraints.
 
 | # | Scenario | Pass condition |
 |---|---|---|
@@ -409,7 +411,7 @@ The facilitator's client runs resolution. There are no Cloud Functions, so the p
 /facilitators/{uid}: true                      (set manually in the console)
 /codes/{CODE}: gameId                          (4-letter join code, A–Z without I/O)
 /games/{gameId}/
-  meta:         {code, title, createdAt, facilitatorUid, settings{...public subset}}
+  meta:         {code, title, createdAt, facilitatorUid, settings{...public subset, mode: 'team'|'multiplayer'}}
   public:       {phase, round, deadline, paused, disclosure, T, M, collapsed, collapseRound|null,
                  joinLocked, resolvingBy|null, endedAt|null, revealStep (results sequence index)}
   firms/{firmId}:        {name, ticker (4–6 chars), createdAt, order, isBot, botPolicy|null}
@@ -497,11 +499,26 @@ The layout is built on a monospace character grid (§16.2). Regions:
 - Every F-key action also has a letter alternative, because laptops often need Fn: Shift+A advance, Shift+S summit, Shift+D disclosure, Shift+E end.
 - Never bind F5, F11 or F12.
 
+**Board rows by firm count** (Session 10; the projector is a fixed character grid, 150 × 36 or 130 × 32 in lit-room mode, so these hold at 1280×720 and 1920×1080 alike):
+- Two-line rows while they fit: up to 12 firms as standard, 11 under the summit banner, 10 in lit-room mode, 9 in lit-room mode under the banner.
+- Above that, up to 16 firms: one-line rows.
+- 17 firms or more: a **paged board**.
+  - A page holds 10 firms in rank order (fewer only where fewer two-line rows fit: 9 in lit-room mode under the banner), so there are ceil(N / 10) pages. Rows stay two lines tall.
+  - The panel heading shows `PAGE 2/5`.
+  - Pages rotate every 8 s as an instant cut.
+  - Rotation holds while the command line is focused and for 30 s after any key press on the projector.
+  - Each reveal returns to page 1.
+  - Above the page, separated by a rule, pinned rows show firms that are not on the current page: the leader, then the firm with the largest rank change of 3 places or more. Pinned rows use the two-line slots the page leaves free: 2 as standard, 1 under the summit banner, none in lit-room mode. Pinned rows keep their real rank number.
+
+**Board tags** stay on one line, in priority order: `BREACH`, `INSOLV`, `AUTO`, `BOT`, then pact tags. Tags that do not fit the column show as a dim `+N` (most often in lit-room mode with disclosure on), so a row never grows past its height (Session 10).
+
 **Lobby state.**
 - A large join code.
 - A QR code, generated client-side.
 - The URL.
-- Firms appearing live with member counts.
+- Firms appearing live with member counts. Up to 16 firms: one table (ticker, name, member count). Above 16: compact cells (ticker and member count, `BOT` for a bot firm) in min(4, ceil(N / 16)) columns, filled down each column. The code, QR code and URL stay visible.
+
+**Long member lists** (PACT view, audit picker, summit and results): a list of more than 12 tickers shows the first 10 and `+N more`. Member cells wrap rather than clip. Beside the board at a summit, the pact table omits the AUDIT column so the members have room.
 
 **Reveal state.** One orchestrated motion moment, described in §16.5.
 
@@ -515,6 +532,13 @@ Panels:
 - **Export**: JSON and DATA lines.
 - **Danger**: remove a firm, lock joins, delete the game.
 
+Scale rules (Session 10):
+- A control strip stays fixed at the top of the window and is never scrolled away. It holds the F6 AUDIT, F7 DISCL, F8 SUMMIT, F9 ADVANCE and F10 END buttons, the phase, the quarter, the commit count and the latest notice.
+- The Firms panel is a compact table that scrolls inside the panel, at most 20 rows tall.
+- The table can be sorted by firm (creation order), commit status or devices online.
+- Two filters: NOT COMMITTED (open quarter only) and OFFLINE (no device online; bot firms excluded).
+- The session's mode and firm limit are shown in the Game panel.
+
 ### 14.3 Participant control centre (`#/play`) — mobile-first
 
 - Header: firm ticker, quarter, countdown, cash, last-quarter profit.
@@ -523,11 +547,16 @@ Panels:
   - **BOOK**: own P&L history and own valuation line chart (zero-based)
   - **PACTS**: propose, join, leave, terms, members
   - **WIRE**: the feed
-- DESK contents: pace selector (4 segments, ≥ 44 px targets); safety slider plus numeric stepper; card picker sheet, with a target list for POACH; an *Estimated cost this quarter* line; a *Public exposure* label; the commit button (signal amber, full width).
+- DESK contents: pace selector (4 segments, ≥ 44 px targets); safety slider plus numeric stepper; card picker sheet, with a target list for POACH (above 8 targets the list gains a ticker filter field and scrolls inside the sheet); an *Estimated cost this quarter* line; a *Public exposure* label; the commit button (signal amber, full width).
 - After commit: "Committed 14:02:11 · edit until close". The committing device's label is shown to teammates.
 - Reveal state: a quarter result card with revenue, costs, profit, Δshare, valuation, rank, incident or audit notices and the headlines.
 - Summit state: a banner, with the PACTS tab auto-selected.
 - `ended`: the own-firm results card (§14.4) and a "Watch the board" note.
+- PACTS member lists follow the long-list rule (§14.1); `+N more` is a button that shows the full list.
+
+**Join flow by mode** (`#/j/:code`):
+- Team mode: "Found a firm" and "Join a firm" (with the firm's PIN), as before.
+- Multiplayer mode: the screen leads with "Found your firm". A secondary button, "Rejoin your firm with its PIN", uses the same PIN join, so a person can move to a replacement device. After founding, the PIN panel reads "Keep this PIN. It lets you rejoin your firm from another device." The app does not stop a second device from joining (owner decision 2026-10-04, option A; no rules change).
 
 ### 14.4 Results (`#/results`)
 
@@ -539,6 +568,13 @@ On the projector the facilitator steps through panels with F9:
 4. **ATTRIBUTION**: a butterfly chart per firm: share of damage extending left in `--down`, share of value extending right in `--signal`, ticker in the middle, values at the bar ends. Negative-total rule in §10.
 
 Series are labelled on the chart; no abbreviations (SUST, ACT, DEPL) or prose legends.
+
+**Many firms** (Session 10; owner decision 2026-10-04: one scrolling column, no columns or pages). F9 and Esc step whole panels as before.
+- FINAL BOARD: one column, one row per firm in rank order. When rows would fall below 1.2 lines (about 20 firms on the projector), rows stay 1.5 lines tall and the list scrolls inside the panel. The column heading with the axis values stays at the top and the key at the bottom; the key row ends with "N firms · arrow keys scroll".
+- COUNTERFACTUAL: the three figures and the trust paths stay as above; the per-firm comparison scrolls inside its column, with its heading and axis kept in view.
+- Scrolling: mouse wheel or trackpad, or the arrow keys, Page Up, Page Down, Home and End on the results page. Each panel opens at the top.
+- ATTRIBUTION: up to 24 firms, one row per firm. Above 24, the 12 firms with the largest share of damage, then one `OTHERS` row with the combined shares of the rest; the heading states how many firms it combines. The `OTHERS` row shows its two shares as figures without bars, below a rule, so the axis serves the listed firms.
+- PACT RECORD: member lists follow the long-list rule (§14.1).
 5. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).
 6. **DEBRIEF**: the five prompts in §15.5.
 
@@ -679,6 +715,8 @@ Allowed exception: a flat 45° hatch (1 px lines in a token colour, no gradient 
 **Ticker:** constant slow scroll.
 
 **Reduced motion:** all of the above becomes instant, and the ticker becomes a static list of the latest 3 headlines.
+
+**Board pages:** when the board is paged (§14.1) the page changes every 8 s as an instant cut, with no transition. This is the only automatic change outside the reveal and the ticker (Session 10).
 
 **Elsewhere:** motion only in direct response to input.
 

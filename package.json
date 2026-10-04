@@ -20,6 +20,8 @@
     "emulators:rules": "tsx scripts/emulator-rules.ts",
     "test:e2e:rehearsal": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/e2e-rehearsal.ts\"",
     "test:e2e:long": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/e2e-long.ts\"",
+    "test:e2e:scale": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/e2e-scale.ts\"",
+    "test:e2e:scale-run": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/e2e-scale-run.ts\"",
     "test:e2e:hardening": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/e2e-hardening.ts\"",
     "test:a11y": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/lighthouse.ts\"",
     "audit:build": "tsx scripts/audit-build.ts"

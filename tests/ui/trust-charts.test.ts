@@ -28,7 +28,7 @@ const pub: PublicNode = {
 const data: ScreenData = {
   pub,
   // The facilitator has turned on "Reveal threshold": this must still never reach a projector chart.
-  meta: { code: 'ABCD', title: 't', createdAt: 0, facilitatorUid: 'f', settings: { timerSec: 120, autoResolve: false, revealThreshold: true, litRoom: false } },
+  meta: { code: 'ABCD', title: 't', createdAt: 0, facilitatorUid: 'f', settings: { mode: 'team', timerSec: 120, autoResolve: false, revealThreshold: true, litRoom: false } },
   firms: { a: firm('AAA', 1), b: firm('BBB', 2) },
   firmsPublic: { a: fp({ rank: 1, valuation: 90 }), b: fp({ rank: 2, valuation: -20 }) },
   rounds: {

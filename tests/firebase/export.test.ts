@@ -43,7 +43,7 @@ describe('export', () => {
     const file = assembleExport(
       {
         gameId: 'g1',
-        meta: { code: 'TEST', title: 'Session TEST', createdAt: 1, facilitatorUid: 'f', settings: { timerSec: 120, autoResolve: false, revealThreshold: false, litRoom: false } },
+        meta: { code: 'TEST', title: 'Session TEST', createdAt: 1, facilitatorUid: 'f', settings: { mode: 'team', timerSec: 120, autoResolve: false, revealThreshold: false, litRoom: false } },
         public: { phase: 'ended', round: 6, deadline: null, paused: false, disclosure: false, T: state.T, M: state.M, collapsed: state.collapsed, collapseRound: state.collapseRound, joinLocked: true, resolvingBy: null, endedAt: 5, revealStep: 0, resumePhase: null, pausedRemainingMs: null },
         firms: {},
         engine,
