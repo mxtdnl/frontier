@@ -563,8 +563,10 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 **Owner decisions (2026-10-04)**
 - Keep the current game as **team mode** (2–16 firms, 1–5 devices each) and check that 50 devices across 16 teams works. Add **multiplayer mode**: up to 50 firms of one person each.
 - Multiplayer mode does not stop a second device joining a firm (option A). The PIN lets a person rejoin from a replacement device. No rules change.
+- After reviewing the first version: long results lists scroll in one column rather than using two columns and pages.
+- Half the room greedy must reach the moratorium much sooner than now (2.5% of seeds by quarter 14 at 50 firms, 21.5% at 12). Session 16, added to `docs/SESSIONS.md`, recalibrates after the interface sessions 11–15.
 
-**Spec changes** (written into `docs/spec.md` before the code): §2 and §5.4 (mode setting and limits), §8.1 (calibration at N = 16, 20, 30, 40, 50), §12 (`meta.settings.mode`, `public.revealSub`), §14.1 (board rows by count, paged board, board tags on one line, lobby columns, long member lists), §14.2 (console control strip, firms table sort and filters), §14.3 (POACH filter, pact member expand, join flow by mode), §14.4 (pages within results panels), §16.5 (board page cut).
+**Spec changes** (written into `docs/spec.md` before the code): §2 and §5.4 (mode setting and limits), §8.1 (calibration at N = 16, 20, 30, 40, 50), §12 (`meta.settings.mode`), §14.1 (board rows by count, paged board, board tags on one line, lobby columns, long member lists), §14.2 (console control strip, firms table sort and filters), §14.3 (POACH filter, pact member expand, join flow by mode), §14.4 (long results lists scroll), §16.5 (board page cut).
 
 **Done**
 - **Mode.** A MODE panel on `#/new`. The firm limit is per mode (16 or 50, bots included); the lobby refuses to start above it. The mode and its limit show on the console. **Add 10 mixed** adds bot firms quickly. There are now 50 fictional bot firm names. In multiplayer mode the join screen leads with **Found your firm** and offers **Rejoin your firm with its PIN**; the PIN panel explains the rejoin. Long join lists gain a ticker filter.
@@ -575,9 +577,10 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
   - Rotation holds for 30 s after a key and while the command line is focused. Each reveal starts on page 1.
   - The leader and the largest mover (3+ places) are pinned above the page.
 - **Lobby:** above 16 firms, ticker and device count in up to 4 columns.
-- **Results:** F9 steps through pages within a panel; the top bar shows `3/6 · 2/3`.
-  - FINAL BOARD: two columns above 16 firms, pages above 32, one shared axis, rows aligned across columns.
-  - COUNTERFACTUAL: above 16 firms, figures and trust paths on page 1, then the per-firm comparison.
+- **Results** (owner decision 2026-10-04, after a first version with two columns and pages: one scrolling column instead):
+  - FINAL BOARD: one row per firm. When rows would fall below 1.2 lines (about 20 firms) the list scrolls inside the panel, with the heading, axis values and key kept in view and the hint "N firms · arrow keys scroll".
+  - COUNTERFACTUAL: the per-firm comparison scrolls in its column; figures and trust paths unchanged.
+  - Arrow keys, Page Up/Down and Home/End scroll on the results page; F9 and Esc still step whole panels.
   - ATTRIBUTION: above 24 firms, the top 12 plus an OTHERS row.
   - PACT RECORD: long member lists truncated.
 - **Console.**
@@ -588,7 +591,7 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 - **New runs**
   - `npm run test:e2e:scale` (615 checks)
     - Sessions of 2, 12, 16, 17, 24, 32, 40 and 50 firms are built by the real orchestrator in memory and written to the emulator in one admin write each.
-    - Projector checks cover the lobby, open and reveal boards (pages 1, 2 and last), summit, the PACT view and every results page, plus lit-room mode at 12, 16, 24 and 50 firms. They run at 1280×720 and 1920×1080, including a check for cut-off table cells.
+    - Projector checks cover the lobby, open and reveal boards (pages 1, 2 and last), summit, the PACT view and all six results panels (scrolling to the last firm and back where a list scrolls), plus lit-room mode at 12, 16, 24 and 50 firms. They run at 1280×720 and 1920×1080, including a check for cut-off table cells.
     - Console strip and filters are checked.
     - A phone at 360×640 founds the 50th firm through the multiplayer join screen and uses POACH with 49 targets and a 30-member pact.
     - The board was also observed rotating after 8 s and holding after a key press.
@@ -611,7 +614,7 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 3. **Console:** a panel edge showed beside the new control strip. It is now covered.
 
 **Choices and deviations from the Session 10 proposals (with reasons)**
-1. **Results columns.** The proposal was "ceil(firms / 8) columns, capped at 3". Since Session 11 the panels are full-width SVG charts. Three columns would leave a dumbbell plot about 11 characters wide. So: one column to 16 firms (team mode unchanged), two to 32, then pages.
+1. **Results columns.** The proposal was "ceil(firms / 8) columns, capped at 3". Since Session 11 the panels are full-width SVG charts that would be too narrow in columns. A first version used two columns and pages; the owner chose one scrolling column instead (2026-10-04).
 2. **Pinned rows** are capped by the free two-line slots: 2 as standard, 1 under the summit banner, none in lit-room mode. Showing every firm that moved 3 places is impossible at 50 firms (about 15 change rank per quarter).
 3. **`?page=N` on `#/screen`** opens the paged board on page N. It is used by the layout checks; rotation continues from there.
 4. **MAX_FIRMS is not enforced in the database rules.** Counting children is not possible in Realtime Database rules without a counter node (from memory, not re-checked). The lobby start check and REMOVE cover it, as for 16 firms before.
@@ -630,10 +633,10 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 **Open issues**
 - **Firebase connection limit not verified.** The Firebase documentation host (`firebase.google.com`) is blocked by this environment's network proxy. From memory (unverified): the Spark plan allows 100 simultaneous Realtime Database connections. Either mode at 50 people needs about 52–55 (one per open tab). The owner must confirm the figure (RUNBOOK section 9).
 - **Firebase single-write size limit not verified** (same reason). The largest measured write is 361 KB.
-- **Mixed rooms reach the moratorium later at large N** (`docs/CALIBRATION.md`, Session 10). This is an observation; no pass condition is affected.
+- **Mixed rooms reach the moratorium too late**, worst at large N (`docs/CALIBRATION.md`, Session 10). The owner finds this unacceptable; Session 16 recalibrates it.
 - In lit-room mode with disclosure on, the board has room for one tag per row; the rest show as `+N`.
 - Sessions 12–15 change the board, results and console layouts. They must keep these paging and column rules (SESSIONS.md says so).
 
 **Next steps**
 - Owner: confirm the connection limit; try a multiplayer session on the live site with in-app bot firms (`#/new` → Multiplayer mode → **Add 10 mixed** four or five times).
-- Session 12: colour, chrome and screen-level clarity.
+- Session 12: colour, chrome and screen-level clarity. Then 13–15, then Session 16 (recalibration).

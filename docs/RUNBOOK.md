@@ -191,7 +191,7 @@ What to check: the countdown is the same on laptop and phone; the board is reada
 ## 9. Running 40 to 50 people
 
 - **Teams of 3 to 5** (10 to 16 firms): use **team mode**. A test with 16 firms on 50 devices ran 14 quarters without errors (`reports/scale-run.md`).
-- **One person each** (up to 50 firms): use **multiplayer mode**. A test with 50 firms on 50 devices ran 14 quarters without errors. Expect a mixed room to reach the moratorium later than a small class (`docs/CALIBRATION.md`, Session 10).
+- **One person each** (up to 50 firms): use **multiplayer mode**. A test with 50 firms on 50 devices ran 14 quarters without errors. Until Session 16 recalibrates the model, expect a mixed room to reach the moratorium later than a small class, and often not within 14 quarters (`docs/CALIBRATION.md`, Session 10).
 - **Connection limit (check before the class).** Every open browser tab holds one live connection to the database: about 50 phones plus the projector and the console. The free (Spark) plan has a limit on simultaneous connections. This was **not verified** in Session 10 because the Firebase documentation could not be reached from the build environment. The limit is believed to be 100, but that has not been checked. To check it, open https://firebase.google.com/pricing and find the Realtime Database limit on simultaneous connections for the plan your project is on (the Firebase console shows which plan the project uses). The exact console clicks were not checked in Session 10.
 - Ask participants to keep one tab open each. A second tab, or a laptop and a phone at the same time, counts twice.
 

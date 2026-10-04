@@ -126,6 +126,6 @@ N = 4–12 are unchanged from Session 2.
 Why no change was needed: the 8/N factor (§6.3 steps 4 and 5) makes total draw and incident loss depend on average behaviour, and market size grows with N (§6.3 step 8), so per-firm economics stay close to N = 12. The exposure label cutoffs apply to the unscaled d_i and do not depend on N.
 
 Observations for the owner (diagnostics, no pass condition):
-- **Mixed rooms collapse later at large N.** With half the firms greedy, the share of seeds with a moratorium by quarter 14 falls from 21.5% at N = 12 to 2.5% at N = 50; by quarter 30 it stays near 73%. Incident shocks average out over more firms, so trust moves more smoothly. A 50-person session needs most of the room to push hard before quarter 14 for the moratorium to arrive within a normal session length.
+- **Mixed rooms collapse later at large N.** The owner finds this, and the 21.5% at N = 12, unacceptably low (2026-10-04); Session 16 in `docs/SESSIONS.md` recalibrates it. With half the firms greedy, the share of seeds with a moratorium by quarter 14 falls from 21.5% at N = 12 to 2.5% at N = 50; by quarter 30 it stays near 73%. Incident shocks average out over more firms, so trust moves more smoothly. A 50-person session needs most of the room to push hard before quarter 14 for the moratorium to arrive within a normal session length.
 - **Leaderboard churn rises with N**: 15 firms change rank per quarter at N = 50 (1.2 at N = 12). The paged board pins the largest mover (§14.1).
 - Card dominance stays below 10% for every card at every N.
