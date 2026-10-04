@@ -640,6 +640,10 @@
   grid-template-columns: repeat(auto-fill, minmax(9ch, 1fr));
   gap: 1ch;
 }
+.target-list.is-long {
+  max-height: 12lh;
+  overflow-y: auto;
+}
 .target-list button {
   min-height: 44px;
   background: var(--base);
@@ -840,6 +844,25 @@
 .scroll-x {
   position: relative;
   overflow-x: auto;
+}
+/* Console Firms panel (§14.2): at most 20 rows tall, scrolling inside the panel. */
+.scroll-y {
+  max-height: 21lh;
+  overflow-y: auto;
+}
+.scroll-y thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+/* Console control strip (§14.2): fixed at the top while the page scrolls. */
+.ctl-strip {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--base);
+  border-bottom: var(--rule-w) solid var(--rule);
+  padding: 0.5lh 0;
 }
 
 /* ---------- Form fields ---------- */

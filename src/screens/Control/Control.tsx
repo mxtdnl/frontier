@@ -38,6 +38,7 @@ import { fmt, fmtTime, quarterLabel } from '../../ui/format';
 import { matchKey } from '../../ui/keys';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
 import { DangerPanel, ExportPanel } from './ExportDanger';
+import { firmTable, onlineCount, type FirmFilters, type FirmSort } from './firms';
 
 /** Held value, masked until the control is pressed. Hidden values appear only on this route. */
 function HoldReveal({ label, value }: { label: string; value: string }) {
@@ -220,10 +221,13 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
             bot: f.isBot ? f.botPolicy : null,
             members: mine.map(([uidM, m]) => ({ uid: uidM, label: m.label || uidM.slice(0, 4), online: presence[uidM]?.online === true })),
             decision: decisions[id] ?? null,
+            committed: decisions[id] !== undefined,
           };
         }),
     [firms, members, presence, decisions],
   );
+  const [sort, setSort] = useState<FirmSort>('order');
+  const [filters, setFilters] = useState<FirmFilters>({ notCommitted: false, offline: false });
 
   if (pubSub.error || metaSub.error) {
     return (
@@ -264,15 +268,39 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
   const queued = new Set(engine?.pendingAudits ?? []);
   const auditLog = auditOutcomes(rounds, pacts, firms);
 
+  const tableRows = firmTable(rows, sort, filters, isOpen);
+  const sortButton = (key: FirmSort, label: string) => (
+    <button type="button" className="btn" aria-pressed={sort === key} onClick={() => setSort(key)}>
+      {label}
+    </button>
+  );
+
   return (
     <div className="page stack">
-      <header className="row">
-        <h1 className="signal">CONTROL</h1>
-        <span className="dim">{meta.title} · code {meta.code}</span>
-        <a href={`#/screen/${g}`}>SCREEN</a>
-        {pub.phase === 'ended' ? <a href={`#/results/${g}`}>RESULTS</a> : null}
-      </header>
-      <div role="status" aria-live="polite">{notice ? <p className="notice">{notice}</p> : null}</div>
+      {/* §14.2: the control strip stays in view while the page scrolls. */}
+      <div className="ctl-strip stack" data-control-strip="">
+        <header className="row">
+          <h1 className="signal">CONTROL</h1>
+          <span className="dim">{meta.title} · code {meta.code}</span>
+          <a href={`#/screen/${g}`}>SCREEN</a>
+          {pub.phase === 'ended' ? <a href={`#/results/${g}`}>RESULTS</a> : null}
+          <span className="dim">
+            {pub.phase.toUpperCase()}
+            {pub.round > 0 ? ` · ${quarterLabel(pub.round)}` : ''}
+            {isOpen ? ` · ${committed}/${rows.length} CMT` : ` · ${rows.length} FIRMS`}
+          </span>
+        </header>
+        <div className="row">
+          <button type="button" className="btn" aria-pressed={pub.disclosure} disabled={busyNow || pub.phase === 'ended'} onClick={() => run(() => toggleDisclosure(ctx, seenRef.current))}>
+            F7 DISCL {pub.disclosure ? 'ON' : 'OFF'}
+          </button>
+          <button type="button" className="btn" disabled={busyNow} onClick={() => run(() => toggleSummit(ctx, seenRef.current))}>F8 SUMMIT</button>
+          <button type="button" className="btn btn-signal" disabled={busyNow} onClick={() => run(() => advance(ctx, seenRef.current))}>F9 ADVANCE</button>
+          <button type="button" className="btn" disabled={busyNow} onClick={pressEnd}>F10 END</button>
+          <button type="button" className="btn" onClick={auditKey}>F6 AUDIT</button>
+        </div>
+        <div role="status" aria-live="polite">{notice ? <p className="notice">{notice}</p> : null}</div>
+      </div>
 
       {incomplete ? (
         <div className="notice err" role="alert">
@@ -344,31 +372,38 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
 
         <Panel title="CONTROLS" bodyClassName="pad">
           <div className="stack">
-            <div className="row">
-              <button type="button" className="btn" aria-pressed={pub.disclosure} disabled={busyNow || pub.phase === 'ended'} onClick={() => run(() => toggleDisclosure(ctx, seenRef.current))}>
-                F7 DISCL {pub.disclosure ? 'ON' : 'OFF'}
-              </button>
-              <button type="button" className="btn" disabled={busyNow} onClick={() => run(() => toggleSummit(ctx, seenRef.current))}>F8 SUMMIT</button>
-              <button type="button" className="btn btn-signal" disabled={busyNow} onClick={() => run(() => advance(ctx, seenRef.current))}>F9 ADVANCE</button>
-              <button type="button" className="btn" disabled={busyNow} onClick={pressEnd}>F10 END</button>
-            </div>
-            <div className="row">
-              <button type="button" className="btn" onClick={auditKey}>F6 AUDIT</button>
-              <span className="dim">Disclosure {pub.disclosure ? 'ON: PACE, SAFE and EXPO are published each quarter' : 'OFF: nothing is published'}.</span>
-            </div>
+            <p className="dim">The buttons stay at the top of this page while it scrolls. The F-keys and Shift+letters work here too.</p>
+            <p className="dim">Disclosure {pub.disclosure ? 'ON: PACE, SAFE and EXPO are published each quarter' : 'OFF: nothing is published'}.</p>
             <p className="dim">Press END twice within 3 s. ADVANCE resolves an open quarter, with AUTO defaults for firms that have not committed.</p>
           </div>
         </Panel>
       </div>
 
       <Panel title="FIRMS" right={isOpen ? `${committed}/${rows.length} CMT` : `${rows.length} FIRMS`} bodyClassName="pad">
-        <div className="scroll-x">
+        <div className="row" style={{ marginBottom: '0.5lh' }}>
+          <span className="dim">SORT</span>
+          {sortButton('order', 'FIRM')}
+          {sortButton('cmt', 'CMT')}
+          {sortButton('online', 'ONLINE')}
+          <span className="dim">SHOW</span>
+          <button type="button" className="btn" aria-pressed={filters.notCommitted} disabled={!isOpen} onClick={() => setFilters({ ...filters, notCommitted: !filters.notCommitted })}>
+            NOT COMMITTED
+          </button>
+          <button type="button" className="btn" aria-pressed={filters.offline} onClick={() => setFilters({ ...filters, offline: !filters.offline })}>
+            OFFLINE
+          </button>
+          <span className="dim" role="status" data-firms-shown={tableRows.length}>
+            {tableRows.length === rows.length ? `all ${rows.length}` : `${tableRows.length} of ${rows.length}`}
+          </span>
+        </div>
+        <div className="scroll-x scroll-y" data-firms-scroll="">
           <DataTable
             caption="Firm submissions and presence"
-            rows={rows}
+            rows={tableRows}
             rowKey={(f) => f.id}
             columns={[
               { key: 't', label: 'FIRM', w: 8, render: (f) => f.ticker },
+              { key: 'on', label: 'ON', w: 5, align: 'r', render: (f) => (f.bot ? <span className="dim">{'–'}</span> : `${onlineCount(f)}/${f.members.length}`) },
               {
                 key: 'p',
                 label: 'PRESENCE',

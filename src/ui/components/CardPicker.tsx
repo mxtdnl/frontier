@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { FILTER_ABOVE, filterByTicker } from '../layout';
 
 export interface CardInfo {
   id: string;
@@ -34,6 +35,9 @@ export function CardPicker({ cards, value, target, onChange, lastCard, lastTarge
     if (!open && d.open) d.close();
   }, [open]);
 
+  const [query, setQuery] = useState('');
+  const long = targets.length > FILTER_ABOVE;
+  const shown = long ? filterByTicker(targets, query) : targets;
   const current = cards.find((c) => c.id === value);
   const needsTarget = value === 'POACH';
   const ready = !needsTarget || target !== null;
@@ -89,8 +93,27 @@ export function CardPicker({ cards, value, target, onChange, lastCard, lastTarge
           {needsTarget ? (
             <div className="stack" style={{ gap: '0.5lh' }}>
               <span className="dim">TARGET · not the same target two quarters running</span>
-              <div className="target-list" role="radiogroup" aria-label="Poach target">
-                {targets.map((t) => {
+              {long ? (
+                <div className="field">
+                  <label htmlFor="poach-filter">Find a target by ticker</label>
+                  <input
+                    id="poach-filter"
+                    type="text"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    maxLength={6}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <span className="dim" role="status">
+                    {shown.length} of {targets.length} firms shown{target ? ` · selected ${target}` : ''}
+                  </span>
+                </div>
+              ) : null}
+              <div className={`target-list${long ? ' is-long' : ''}`} role="radiogroup" aria-label="Poach target">
+                {shown.length === 0 ? <span className="dim">No ticker contains those letters.</span> : null}
+                {shown.map((t) => {
                   const blocked = t.ticker === lastTarget;
                   return (
                     <button

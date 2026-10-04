@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Pace, Pact, PactTerms } from '../../engine';
 import type { FirmNode, Phase } from '../../firebase/schema';
 import { Panel, Segmented4, Tag } from '../../ui/components';
+import { truncateList } from '../../ui/layout';
 import { PACE_OPTIONS } from './model';
 import { DEFAULT_TERMS_FORM, canPropose, pactAction, sortPacts, termsFromForm, termsText, type TermsForm } from './pacts';
 
@@ -27,6 +28,7 @@ export function PactsTab(p: Props) {
   const [form, setForm] = useState<TermsForm>(DEFAULT_TERMS_FORM);
   const [formError, setFormError] = useState('');
   const [proposing, setProposing] = useState(false);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const allowed = canPropose(p.phase);
 
   const submit = () => {
@@ -109,6 +111,8 @@ export function PactsTab(p: Props) {
         const members = Object.keys(pact.members)
           .map((id) => p.firms[id]?.ticker ?? '?')
           .sort();
+        const { shown, more } = truncateList(members);
+        const full = expanded.has(pact.id);
         const action = pactAction(pact, p.ownFirmId);
         return (
           <Panel
@@ -120,7 +124,23 @@ export function PactsTab(p: Props) {
             <div className="stack">
               <dl className="kv">
                 <dt>Terms</dt><dd>{termsText(pact.terms)}</dd>
-                <dt>Members</dt><dd>{members.join(' ') || '–'}</dd>
+                <dt>Members</dt>
+                <dd>
+                  {(full ? members : shown).join(' ') || '–'}
+                  {more > 0 ? (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="btn"
+                        aria-expanded={full}
+                        onClick={() => setExpanded((e) => (full ? new Set([...e].filter((x) => x !== pact.id)) : new Set([...e, pact.id])))}
+                      >
+                        {full ? 'Show fewer' : `+${more} more`}
+                      </button>
+                    </>
+                  ) : null}
+                </dd>
                 <dt>Your firm</dt><dd>{p.ownFirmId in pact.members ? <Tag pact={pact.name} /> : 'Not a member'}</dd>
               </dl>
               {action === 'join' ? (
