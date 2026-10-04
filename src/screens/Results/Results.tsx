@@ -182,7 +182,7 @@ export function FinalBoard({ r, page = 0 }: { r: FinalResults; page?: number }) 
       <div className="res-cols" data-res-cols={cols.length}>
         {cols.map((c, i) => (
           <div key={i} className="col">
-            <Dumbbell rows={c} scaleRows={all} showKey={i === 0} />
+            <Dumbbell rows={c} scaleRows={all} showKey={i === 0} slots={cols[0]?.length ?? c.length} />
           </div>
         ))}
       </div>

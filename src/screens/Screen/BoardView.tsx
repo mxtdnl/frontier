@@ -1,7 +1,9 @@
 import { PARAMS } from '../../engine';
-import { DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, Tag, type Column } from '../../ui/components';
+import { DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, Tag, type Column, type TagKind } from '../../ui/components';
 import { fmt, fmtInt, fmtShare } from '../../ui/format';
-import { boardMode, boardPage } from '../../ui/layout';
+import { boardCapacity, boardMode, boardPage, boardTagWidth, fitTags } from '../../ui/layout';
+
+const TAG_KINDS: ReadonlyArray<string> = ['BOT', 'AUTO', 'BREACH', 'INSOLV'];
 import { committedCount, marketCeiling, previousTrust, trustSeries, type BoardRow, type ScreenData } from './model';
 
 interface BoardProps {
@@ -10,9 +12,24 @@ interface BoardProps {
   reveal: boolean;
   /** Rotation counter for the paged board; wraps over the page count. */
   page?: number;
+  /** Lit-room mode (fewer grid rows). */
+  lit?: boolean;
+  /** The summit banner takes two rows above the board. */
+  banner?: boolean;
 }
 
-export function boardColumns(disclosure: boolean, reveal: boolean): Column<BoardRow>[] {
+/** Board tags in priority order: alarms first, pact memberships last (§14.1). */
+export function boardTags(f: BoardRow): string[] {
+  return [
+    ...(f.breach ? ['BREACH'] : []),
+    ...(f.insolvent ? ['INSOLV'] : []),
+    ...(f.auto ? ['AUTO'] : []),
+    ...(f.bot ? ['BOT'] : []),
+    ...f.pacts,
+  ];
+}
+
+export function boardColumns(disclosure: boolean, reveal: boolean, lit = false): Column<BoardRow>[] {
   const prev = (s: string) => (reveal ? s : undefined);
   const cols: Column<BoardRow>[] = [
     { key: 'rank', label: '#', w: 3, render: (f) => f.rank },
@@ -60,22 +77,25 @@ export function boardColumns(disclosure: boolean, reveal: boolean): Column<Board
       { key: 'expo', label: 'EXPO', w: 6, align: 'r', render: (f) => (f.disclosed ? fmt(f.disclosed.expo) : '–') },
     );
   }
+  const tagW = boardTagWidth(
+    cols.reduce((a, c) => a + c.w, 0),
+    lit,
+  );
   cols.push({
     key: 'tags',
     label: '',
     w: 0,
-    className: 'tags',
-    render: (f) => (
-      <>
-        {f.bot ? <Tag kind="BOT" /> : null}
-        {f.auto ? <Tag kind="AUTO" /> : null}
-        {f.insolvent ? <Tag kind="INSOLV" /> : null}
-        {f.pacts.map((p) => (
-          <Tag key={p} pact={p} />
-        ))}
-        {f.breach ? <Tag kind="BREACH" /> : null}
-      </>
-    ),
+    className: 'tags-line',
+    render: (f) => {
+      // One line of tags, most important first; the rest are counted, so a row never grows (§14.1).
+      const { shown, more } = fitTags(boardTags(f), tagW);
+      return (
+        <>
+          {shown.map((t) => (TAG_KINDS.includes(t) ? <Tag key={t} kind={t as TagKind} /> : <Tag key={t} pact={t} />))}
+          {more > 0 ? <span className="dim" data-more-tags={more}>+{more}</span> : null}
+        </>
+      );
+    },
   });
   return cols;
 }
@@ -83,10 +103,11 @@ export function boardColumns(disclosure: boolean, reveal: boolean): Column<Board
 /** Places a firm moved at the last resolution (positive or negative). */
 const moveOf = (f: BoardRow): number => f.prevIndex - (f.rank - 1);
 
-export function BoardPanel({ rows, disclosure, reveal, page = 0 }: BoardProps) {
-  // §14.1: two-line rows up to 12 firms, one-line rows to 16, then pages of 10 with up to 2 pinned rows.
-  const mode = boardMode(rows.length);
-  const shown = boardPage(rows.map((f) => ({ ...f, move: moveOf(f) })), page);
+export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, banner = false }: BoardProps) {
+  // §14.1: two-line rows while they fit (12 as standard), one-line rows to 16, then pages of 10 with up to 2 pinned rows.
+  const cap = boardCapacity({ lit, banner });
+  const mode = boardMode(rows.length, cap);
+  const shown = boardPage(rows.map((f) => ({ ...f, move: moveOf(f) })), page, cap);
   const pinned = new Set(shown.pinned.map((f) => f.id));
   const lastPinned = shown.pinned[shown.pinned.length - 1]?.id;
   const cmt = `${committedCount(rows)}/${rows.length} CMT`;
@@ -96,7 +117,7 @@ export function BoardPanel({ rows, disclosure, reveal, page = 0 }: BoardProps) {
         <DataTable
           caption={mode === 'paged' ? `Firm board, page ${shown.page + 1} of ${shown.pages}` : 'Firm board'}
           tall={mode !== 'compact'}
-          columns={boardColumns(disclosure, reveal)}
+          columns={boardColumns(disclosure, reveal, lit)}
           rows={[...shown.pinned, ...shown.rows]}
           rowKey={(f) => f.id}
           // The swap animates moves within one table, so it runs only when every firm is on it.

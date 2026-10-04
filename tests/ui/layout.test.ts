@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   balancedPages,
+  boardCapacity,
+  boardTagWidth,
+  fitTags,
+  tagWidthCh,
   boardMode,
   boardPage,
   boardPageCount,
@@ -39,6 +43,38 @@ describe('board mode', () => {
     expect(boardPageCount(17)).toBe(2);
     expect(boardPageCount(40)).toBe(4);
     expect(boardPageCount(50)).toBe(5);
+  });
+});
+
+describe('board capacity (two-line rows that fit the grid)', () => {
+  it('is 12 as standard, 11 under the summit banner, 10 in lit-room mode and 9 in both', () => {
+    expect(boardCapacity()).toBe(12);
+    expect(boardCapacity({ banner: true })).toBe(11);
+    expect(boardCapacity({ lit: true })).toBe(10);
+    expect(boardCapacity({ lit: true, banner: true })).toBe(9);
+  });
+
+  it('switches to one-line rows sooner when fewer two-line rows fit', () => {
+    expect(boardMode(12, boardCapacity({ banner: true }))).toBe('compact');
+    expect(boardMode(11, boardCapacity({ banner: true }))).toBe('tall');
+    expect(boardMode(10, boardCapacity({ lit: true }))).toBe('tall');
+    expect(boardMode(16, boardCapacity({ lit: true, banner: true }))).toBe('compact');
+  });
+
+  it('never shows more two-line rows than fit, in any mode', () => {
+    for (const opts of [{}, { banner: true }, { lit: true }, { lit: true, banner: true }]) {
+      const cap = boardCapacity(opts);
+      for (const n of COUNTS.filter((c) => c > 16)) {
+        const rows = ranked(n, { [n]: -10, [Math.ceil(n / 2)]: 6, 15: 4 });
+        for (let i = 0; i < boardPageCount(n, cap); i++) {
+          const p = boardPage(rows, i, cap);
+          expect(p.rows.length + p.pinned.length).toBeLessThanOrEqual(cap);
+        }
+      }
+    }
+    expect(boardPageCount(50, boardCapacity({ lit: true, banner: true }))).toBe(6);
+    expect(boardPage(ranked(50), 3, boardCapacity({ banner: true })).pinned.map((r) => r.id)).toEqual(['f1']);
+    expect(boardPage(ranked(50), 3, boardCapacity({ lit: true })).pinned).toEqual([]);
   });
 });
 
@@ -206,5 +242,29 @@ describe('results pages', () => {
     expect(stepResultsPosition(c, 4, 0, 1)).toEqual({ step: 5, sub: 0 });
     expect(stepResultsPosition(c, 5, 0, 1)).toBe('This is the last results panel.');
     expect(resultsPositionLabel(c, 2, 0)).toBe('3/6');
+  });
+});
+
+describe('board tags on one line', () => {
+  it('keeps every tag when they fit', () => {
+    expect(fitTags(['BOT', 'PACT-A'], 30)).toEqual({ shown: ['BOT', 'PACT-A'], more: 0 });
+    expect(fitTags([], 5)).toEqual({ shown: [], more: 0 });
+  });
+
+  it('keeps the most important tags and counts the rest, never exceeding the width', () => {
+    const tags = ['BREACH', 'AUTO', 'PACT-A', 'PACT-B'];
+    for (const w of [8, 12, 16, 20, 26, 40]) {
+      const r = fitTags(tags, w);
+      expect(r.shown).toEqual(tags.slice(0, r.shown.length));
+      expect(r.shown.length + r.more).toBe(tags.length);
+      const used = r.shown.reduce((a, t) => a + tagWidthCh(t), 0) + (r.more > 0 ? `+${r.more}`.length + 1 : 0);
+      expect(used).toBeLessThanOrEqual(w);
+    }
+    expect(fitTags(tags, 12).shown).toEqual(['BREACH']);
+  });
+
+  it('leaves the tag column 25 ch as standard with disclosure, 12 ch in lit-room mode', () => {
+    expect(boardTagWidth(65, false)).toBe(25);
+    expect(boardTagWidth(65, true)).toBe(12);
   });
 });

@@ -500,16 +500,16 @@ The layout is built on a monospace character grid (§16.2). Regions:
 - Every F-key action also has a letter alternative, because laptops often need Fn: Shift+A advance, Shift+S summit, Shift+D disclosure, Shift+E end.
 - Never bind F5, F11 or F12.
 
-**Board rows by firm count** (Session 10; the projector is a fixed 150 × 36 character grid, so these hold at 1280×720 and 1920×1080 alike):
-- Up to 12 firms: two-line rows.
-- 13–16 firms: one-line rows.
+**Board rows by firm count** (Session 10; the projector is a fixed character grid, 150 × 36 or 130 × 32 in lit-room mode, so these hold at 1280×720 and 1920×1080 alike):
+- Two-line rows while they fit: up to 12 firms as standard, 11 under the summit banner, 10 in lit-room mode, 9 in lit-room mode under the banner.
+- Above that, up to 16 firms: one-line rows.
 - 17 firms or more: a **paged board**.
-  - A page holds 10 firms in rank order, so there are ceil(N / 10) pages. Rows stay two lines tall.
+  - A page holds 10 firms in rank order (fewer only where fewer two-line rows fit: 9 in lit-room mode under the banner), so there are ceil(N / 10) pages. Rows stay two lines tall.
   - The panel heading shows `PAGE 2/5`.
   - Pages rotate every 8 s as an instant cut.
   - Rotation holds while the command line is focused and for 30 s after any key press on the projector.
   - Each reveal returns to page 1.
-  - Above the page, separated by a rule, up to 2 pinned rows show firms that are not on the current page: the leader, then the firm with the largest rank change of 3 places or more. Pinned rows keep their real rank number.
+  - Above the page, separated by a rule, pinned rows show firms that are not on the current page: the leader, then the firm with the largest rank change of 3 places or more. Pinned rows use the two-line slots the page leaves free: 2 as standard, 1 under the summit banner, none in lit-room mode. Pinned rows keep their real rank number.
 
 **Lobby state.**
 - A large join code.

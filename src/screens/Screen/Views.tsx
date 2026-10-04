@@ -43,11 +43,11 @@ export function PactsView({ data, emphasis = false }: { data: ScreenData; emphas
           rows={rows}
           rowKey={(p) => p.id}
           columns={[
-            { key: 'id', label: 'PACT', w: 8, render: (p) => <Tag pact={p.name} /> },
+            { key: 'id', label: 'PACT', w: 9, render: (p) => <Tag pact={p.name} /> },
             { key: 'pace', label: 'MAXPACE', w: 9, align: 'r', render: (p) => p.maxPace ?? '–' },
             { key: 'safe', label: 'MINSAFE', w: 10, align: 'r', render: (p) => p.minSafety ?? '–' },
             // Beside the board at a summit the panel is narrow; the members need the room more than the audit line.
-            ...(emphasis ? [] : [{ key: 'audit', label: 'AUDIT', w: 22, render: (p: PactRow) => <AuditCell audit={p.lastAudit} /> }]),
+            ...(emphasis ? [] : [{ key: 'audit', label: 'AUDIT', w: 27, render: (p: PactRow) => <AuditCell audit={p.lastAudit} /> }]),
             {
               key: 'members',
               label: 'MEMBERS',
@@ -56,14 +56,15 @@ export function PactsView({ data, emphasis = false }: { data: ScreenData; emphas
               render: (p) => {
                 const { shown, more } = truncateList(p.members);
                 return (
-                  <>
+                  // Wraps without indenting the next line, and never ends a line in a margin.
+                  <span className="wrap-list">
                     {shown.map((m) => (
-                      <span key={m.id} style={{ marginRight: '2ch' }}>
+                      <span key={m.id}>
                         {m.ticker} {m.breach ? <Tag kind="BREACH" /> : null}
                       </span>
                     ))}
                     {more > 0 ? <span className="dim" data-more={more}>+{more} more</span> : null}
-                  </>
+                  </span>
                 );
               },
             },

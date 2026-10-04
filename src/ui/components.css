@@ -165,6 +165,14 @@
   white-space: normal;
   line-height: var(--lh);
 }
+.wrap-list {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 2ch;
+}
+.tbl td.tags-line {
+  white-space: nowrap;
+}
 
 /* ---------- Delta ---------- */
 .delta.pos {
@@ -862,7 +870,9 @@
   z-index: 2;
   background: var(--base);
   border-bottom: var(--rule-w) solid var(--rule);
-  padding: 0.5lh 0;
+  /* Panels that follow one another sit one rule width to the left (.panel + .panel); cover their edge. */
+  margin: 0 calc(var(--rule-w) * -1);
+  padding: 0.5lh var(--rule-w);
 }
 
 /* ---------- Form fields ---------- */

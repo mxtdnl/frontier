@@ -138,7 +138,8 @@ export async function checkCharts(page: Page, label: string): Promise<void> {
         const b = m.getBBox();
         if (b.width > 0 && b.height > 0) visible[m.dataset.mark ?? ''] = (visible[m.dataset.mark ?? ''] ?? 0) + 1;
       });
-      const rows = svg.querySelectorAll('g[data-firm]').length;
+      // A shortened attribution chart's OTHERS row (§14.4) carries figures, not bars.
+      const rows = svg.querySelectorAll('g[data-firm]:not([data-others])').length;
       if (kind === 'dumbbell' && (rows === 0 || visible.final !== rows || visible.peak !== rows)) problems.push(`dumbbell: ${rows} firms, missing marks`);
       if (kind === 'butterfly') {
         if (rows === 0 || visible.damage !== rows) problems.push(`butterfly: ${rows} firms, missing damage bars`);

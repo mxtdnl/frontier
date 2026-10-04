@@ -17,16 +17,18 @@ interface DumbbellProps {
   rows: ReadonlyArray<DumbbellRow>;
   /** Rows that set the axis; every column and page of the panel passes all firms, so they share one axis. */
   scaleRows?: ReadonlyArray<DumbbellRow>;
-  /** Draw the key row (the first column only). */
+  /** Draw the key row (the first column only; the others keep its space so rows line up). */
   showKey?: boolean;
+  /** Row slots to lay out, so columns with fewer rows keep the same row height. */
+  slots?: number;
 }
 
 /** Peak (hollow square) to final (solid square) per firm on one axis that includes zero. */
-export function Dumbbell({ rows, scaleRows = rows, showKey = true }: DumbbellProps) {
+export function Dumbbell({ rows, scaleRows = rows, showKey = true, slots = rows.length }: DumbbellProps) {
   const [ref, { w: W, h: H, fs }] = useChartSize<HTMLDivElement>();
   const cw = fs * CH;
   const lh = fs * 1.35;
-  const { top, rowH, axisY, keyY } = rowLayout(H, lh, rows.length, true);
+  const { top, rowH, axisY, keyY } = rowLayout(H, lh, Math.max(slots, rows.length), true);
   const plotL = cw * 12;
   const finalR = W - cw * 13;
   const plotR = finalR - cw * 12;

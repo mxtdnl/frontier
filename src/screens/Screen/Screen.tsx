@@ -7,7 +7,7 @@ import { CommandLine, Countdown, FKeyBar, Panel, Ticker, TopBar, type CommandLin
 import { parseCommand } from '../../ui/commands';
 import { fmt, quarterLabel } from '../../ui/format';
 import { matchKey, type KeyAction } from '../../ui/keys';
-import { BOARD_HOLD_MS, BOARD_ROTATE_MS, boardMode } from '../../ui/layout';
+import { BOARD_HOLD_MS, BOARD_ROTATE_MS, boardCapacity, boardMode } from '../../ui/layout';
 import { useLitRoom } from '../../ui/litRoom';
 import { playReveal } from '../../ui/reveal';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
@@ -170,18 +170,20 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   );
 
   // Paged board (§14.1): an instant cut every 8 s, held while the command line is focused and for 30 s after a key.
-  const [boardTick, setBoardTick] = useState(0);
+  // `?page=3` opens the paged board on page 3 (used by the layout checks; rotation carries on from there).
+  const [boardTick, setBoardTick] = useState(() => Math.max(0, Number(route.query.get('page') ?? '1') - 1) || 0);
   const lastKeyAt = useRef(0);
   const lastFlipAt = useRef(0);
-  // Each reveal starts on page 1, set during render so the reveal runs on the rows it shows.
-  const revealRound = pub?.phase === 'reveal' ? pub.round : null;
-  const [pageResetFor, setPageResetFor] = useState<number | null>(null);
-  if (revealRound !== null && revealRound !== pageResetFor) {
-    setPageResetFor(revealRound);
-    setBoardTick(0);
+  // A reveal this page watched starts on page 1, set during render so the reveal runs on the rows it shows.
+  const phaseNow = pub?.phase ?? null;
+  const [phaseSeen, setPhaseSeen] = useState(phaseNow);
+  if (phaseNow !== phaseSeen) {
+    setPhaseSeen(phaseNow);
+    if (phaseNow === 'reveal' && (phaseSeen === 'open' || phaseSeen === 'resolving')) setBoardTick(0);
   }
   const firmCount = Object.keys(firms).length;
-  const paged = boardMode(firmCount) === 'paged' && view.kind === 'board';
+  const cap = boardCapacity({ lit: metaSub.data?.settings.litRoom ?? false, banner: pub?.phase === 'summit' });
+  const paged = boardMode(firmCount, cap) === 'paged' && view.kind === 'board';
   useEffect(() => {
     if (!paged) return undefined;
     lastFlipAt.current = Date.now();
@@ -297,7 +299,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   } else if (view.kind === 'board') {
     main = (
       <div className="scr-main">
-        <BoardPanel rows={rows} disclosure={pub.disclosure} reveal={reveal} page={boardTick} />
+        <BoardPanel rows={rows} disclosure={pub.disclosure} reveal={reveal} page={boardTick} lit={meta.settings.litRoom} banner={pub.phase === 'summit'} />
         {pub.phase === 'summit' ? (
           <PactsView data={data} emphasis />
         ) : pub.phase === 'ended' ? (
