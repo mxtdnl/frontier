@@ -177,10 +177,10 @@ export interface ShareSegment {
   /** Share of the positive total, 0–1. */
   share: number;
   /** Fade step by rank, 0 (brightest) to 4. */
-  level: number;
+  fade: number;
 }
 
-export const SHARE_LEVELS = 5;
+export const SHARE_FADES = 5;
 
 /**
  * Market value share: firms above zero only, in value order (ties by ticker), each as its share of the positive
@@ -193,7 +193,7 @@ export function shareSegments(rows: ReadonlyArray<FirmRef & { value: number }>):
     id: r.id,
     ticker: r.ticker,
     share: r.value / total,
-    level: Math.min(SHARE_LEVELS - 1, Math.floor((i * SHARE_LEVELS) / pos.length)),
+    fade: Math.min(SHARE_FADES - 1, Math.floor((i * SHARE_FADES) / pos.length)),
   }));
   return { segments, below: rows.filter((r) => r.value < 0).length };
 }

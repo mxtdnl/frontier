@@ -22,7 +22,7 @@ export function ShareStrip({ segments, below, trackCh }: { segments: ReadonlyArr
           segments.map((s) => {
             const label = segmentLabel(s, trackCh);
             return (
-              <span key={s.id} className={`ss-seg ss-l${s.level}`} style={{ width: `${(s.share * 100).toFixed(3)}%` }} data-seg={s.ticker} data-share={s.share.toFixed(4)}>
+              <span key={s.id} className={`ss-seg ss-l${s.fade}`} style={{ width: `${(s.share * 100).toFixed(3)}%` }} data-seg={s.ticker} data-share={s.share.toFixed(4)}>
                 {label ? <span className="ss-text">{label}</span> : null}
               </span>
             );

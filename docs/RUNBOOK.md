@@ -72,13 +72,15 @@ Do this the day before, then again 15 minutes before class.
 
 **Each quarter.**
 1. Press **F9** (or **Shift+A**) to open the quarter. The timer starts.
-2. Watch the COMMITTED count on the board. Teams can change their decision until the timer ends.
+2. Watch the COMMITTED count in the top bar and the board heading; on the board a green box with a tick marks each firm that has committed. Teams can change their decision until the timer ends.
 3. Press **F9** to resolve. Teams that did not commit get the default decision and are marked AUTO. The board reveals the new results.
 4. Press **F9** again for the next quarter.
 
 **Reading the projector (Session 12).** The top bar shows the quarter, the phase as a coloured block with its word, the commit count, disclosure, and the countdown on the right. The line under it says in one sentence what is happening and what teams should do; after each reveal it summarises the quarter (trust change, who is 1st, incidents). The bar at the bottom shows only the keys that do something right now; the solid key is the one you most likely want next (usually **F9**, **F8** during a summit). Hidden keys still work if pressed. To type a command (`TRST`, `FIRM BTC`, `HELP`), just start typing: the command line appears in the top bar.
 
 **Board pages (above 16 firms).** The board shows 10 firms at a time and turns to the next page every 8 seconds; the heading reads `PAGE 2/5`. Above the page, the leader and the firm that moved most (3 places or more) stay pinned. Rotation holds for 30 seconds after you press any key, and while you type a command. Each reveal starts on page 1. Use `FIRM <TICKER>` for any one firm's history.
+
+**Firm performance (Session 13).** Across the top of the board, the VALUE SHARE strip shows each firm's share of the total value of firms above zero; the caption counts firms below zero. Each row shows MOVE (places gained ▲ or lost ▼ since last quarter), a valuation bar from zero (red to the left when below zero) and, when there is room, a TREND line of the last 14 quarters on one scale for every firm. With disclosure on the trend line is left out to make room. Type `FIRMS` for one small chart per firm on the same scale (pages of 16 above 16 firms, turning every 8 seconds), and `RANKS` for every firm's rank by quarter with the leader in amber and the biggest faller in red. Esc returns to the board.
 
 **Summit.** Press **F8** during an open quarter or a reveal. The timer pauses and decisions are refused ("Industry summit in session"). Teams can propose, join and leave pacts. Press **F8** again to return.
 
@@ -104,7 +106,7 @@ Do this the day before, then again 15 minutes before class.
 | F10 | Shift+E | End the session (press twice within 3 s) |
 | Esc | | Back to the board |
 
-Type in the command line at the top of the projector, then press Enter: `BOARD`, `TRST`, `PACT`, `WIRE`, `FIRM <TICKER>`, `HELP`. F1, F5, F11 and F12 do nothing in the app, so the browser keeps them.
+Type in the command line at the top of the projector, then press Enter: `BOARD`, `TRST`, `PACT`, `WIRE`, `FIRM <TICKER>`, `FIRMS`, `RANKS`, `HELP`. F1, F5, F11 and F12 do nothing in the app, so the browser keeps them.
 
 If a key press shows "Working on the last key. Press again in a moment.", the previous action is still finishing. Wait a second and press again.
 

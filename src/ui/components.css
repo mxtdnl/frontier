@@ -1114,9 +1114,13 @@ legend {
 }
 
 /* ---------- Board key strip (spec §14.1): one line, only the tags on screen ---------- */
+/* One line after a one-line gap; when the entries need more, they wrap into the gap row (Session 13), never further. */
 .key-strip {
   display: flex;
+  flex-wrap: wrap;
+  align-content: flex-end;
   gap: 0 2ch;
+  height: 2lh;
   color: var(--dim);
   white-space: nowrap;
   overflow: hidden;
@@ -1251,13 +1255,15 @@ legend {
   padding-right: 0.5ch;
   text-align: center;
 }
+/* Drawn inside the text line (1 em tall, centred), so a one-line row keeps its 1lh height. */
 .cmt-box {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 1.5ch;
-  height: 1.2em;
-  vertical-align: -0.2em;
+  height: 1em;
+  line-height: 1;
+  vertical-align: middle;
   background: var(--up);
   color: var(--signal-ink);
 }

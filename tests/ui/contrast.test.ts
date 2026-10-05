@@ -54,6 +54,17 @@ describe('WCAG AA contrast (spec §16.6)', () => {
       expect(lum(lit[k] as string), k).toBeGreaterThan(lum(base[k] as string));
     }
   });
+  it('black text stays above AA on every faded share-strip segment (Session 13)', () => {
+    // color-mix(in srgb, …) mixes the encoded channel values; the CSS lists one percentage per fade step.
+    const comp = readFileSync('src/ui/components.css', 'utf8');
+    const pcts = [...comp.matchAll(/color-mix\(in srgb, var\(--wire\) (\d+)%, var\(--panel\)\)/g)].map((m) => Number(m[1]));
+    expect(pcts).toEqual([91, 82, 73, 64]);
+    const mix = (a: string, b: string, p: number): string =>
+      '#' + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * p + parseInt(b.slice(i, i + 2), 16) * (1 - p)).toString(16).padStart(2, '0')).join('');
+    for (const t of [base, lit]) {
+      for (const p of [100, ...pcts]) expect(ratio(t['signal-ink'] as string, mix(t.wire as string, t.panel as string, p / 100)), `${p}%`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
   it('panels and rules separate from black better than tokens v1', () => {
     expect(ratio(base.panel as string, base.base as string)).toBeGreaterThan(1.2);
     expect(ratio(base.rule as string, base.panel as string)).toBeGreaterThan(1.4);

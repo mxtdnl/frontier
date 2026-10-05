@@ -46,8 +46,8 @@ const DISCLOSURE_W = { full: 21, short: 16 } as const;
 export function boardMnemonics(disclosure: boolean, lit: boolean): Array<{ tag: string; text: string }> {
   if (!disclosure || boardTagWidth(BASE_W + DISCLOSURE_W.full, lit) >= MIN_TAG_W) return [];
   return [
-    { tag: 'SAFE', text: 'safety spend' },
-    { tag: 'EXPO', text: 'public exposure' },
+    { tag: 'SAFE', text: 'safety' },
+    { tag: 'EXPO', text: 'exposure' },
   ];
 }
 
@@ -209,8 +209,8 @@ export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, ba
           rowClass={(f) => (f.id === lastPinned ? 'pinned pin-last' : pinned.has(f.id) ? 'pinned' : undefined)}
         />
       </div>
-      {/* Key strip (§14.1): one line, only the tags, marks and mnemonics on screen. */}
-      <p className="key-strip" data-key-strip="" style={{ marginTop: '1lh' }}>
+      {/* Key strip (§14.1): only the tags, marks and mnemonics on screen; a second line uses the gap row when needed. */}
+      <p className="key-strip" data-key-strip="">
         {key.map((k) => (
           <span key={k.tag}>
             <span className="key-tag">{k.tag === '✓' ? <span className="cmt-box"><GlyphCheck /></span> : k.tag}</span> {k.text}

@@ -207,6 +207,7 @@ async function performanceChecks(page: Page, n: number, name: string, want: { ba
     }).length;
     return {
       strip: !!strip,
+      none: !!strip?.querySelector('.ss-none'),
       segs: segs.length,
       below: Number(strip?.dataset.below ?? -1),
       off,
@@ -218,11 +219,11 @@ async function performanceChecks(page: Page, n: number, name: string, want: { ba
       boxes: document.querySelectorAll('[data-board-mode] [data-committed]').length,
       keyCut: (() => {
         const k = document.querySelector<HTMLElement>('[data-key-strip]');
-        return k ? k.scrollWidth > k.clientWidth + 1 : false;
+        return k ? k.scrollWidth > k.clientWidth + 1 || k.scrollHeight > k.clientHeight + 1 : false;
       })(),
     };
   });
-  check(r.strip && r.segs + r.below <= n && r.segs > 0, `${name}: value share strip with ${r.segs} segments, ${r.below} below zero`);
+  check(r.strip && r.segs + r.below <= n && (r.segs > 0 || r.none), `${name}: value share strip with ${r.segs} segments${r.none ? ' ("No firm above zero")' : ''}, ${r.below} below zero`);
   check(r.off.length === 0, `${name}: share segments as wide as their shares${r.off.length ? ` (${r.off.slice(0, 3).join(' | ')})` : ''}`);
   check(r.cut.length === 0, `${name}: no share label cut off${r.cut.length ? ` (${r.cut.join(' ')})` : ''}`);
   check(r.bars === (want.bar ? r.rows : 0), `${name}: ${want.bar ? 'a value bar on every row' : 'no value bar column'} (${r.bars}/${r.rows})`);

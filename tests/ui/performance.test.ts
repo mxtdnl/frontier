@@ -144,7 +144,7 @@ describe('share strip segments', () => {
 
   it('fades by rank in five steps', () => {
     const many = Array.from({ length: 10 }, (_, i) => ({ id: `f${i}`, ticker: `T${i}`, value: 100 - i }));
-    expect(shareSegments(many).segments.map((s) => s.level)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
+    expect(shareSegments(many).segments.map((s) => s.fade)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
   });
 
   it('is empty when no firm is above zero', () => {
