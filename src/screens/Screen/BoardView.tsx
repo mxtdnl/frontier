@@ -1,8 +1,9 @@
 import { PARAMS } from '../../engine';
-import { DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, Tag, type Column, type TagKind } from '../../ui/components';
+import { CommitMark, DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, RankMove, ShareStrip, Tag, TrendLine, ValueBar, type Column, type TagKind } from '../../ui/components';
 import { fmt, fmtInt, fmtShare } from '../../ui/format';
 import { BRIEFING_LINES } from './briefing';
-import { boardCapacity, boardMode, boardPage, boardTagWidth, fitTags } from '../../ui/layout';
+import { BOARD_W, boardCapacity, boardChartWidths, boardMode, boardPage, boardTagWidth, fitTags } from '../../ui/layout';
+import { shareSegments, sharedDomain, trendWindow } from '../../ui/performance';
 
 import { committedCount, marketCeiling, previousTrust, tagKey, trustSeries, type BoardRow, type ScreenData } from './model';
 
@@ -31,30 +32,58 @@ export function boardTags(f: BoardRow): string[] {
   ];
 }
 
-/** Width the tag column keeps before the headers fall back to mnemonics. */
+/** Width the tag column keeps before the disclosure headers fall back to mnemonics. */
 const MIN_TAG_W = 12;
-/** Fixed column widths: rank to COMMITTED (or CMT), then PACE, SAFETY and EXPOSURE (or SAFE and EXPO). */
-const FULL_W = { base: 51, disclosure: 21 } as const;
-const SHORT_W = { base: 46, disclosure: 16 } as const;
+/** Rank, MOVE, FIRM, SHARE, PROFIT, VALUE, CHANGE and the commit mark (§14.1, Session 13). */
+const BASE_W = 48;
+/** PACE, SAFETY and EXPOSURE, or PACE, SAFE and EXPO. */
+const DISCLOSURE_W = { full: 21, short: 16 } as const;
 
 /**
  * Mnemonic headers used where full words would squeeze the tags off the row (lit-room mode with
  * disclosure on). Each one is explained in the key strip, so every label is a word or keyed (§14.1).
  */
 export function boardMnemonics(disclosure: boolean, lit: boolean): Array<{ tag: string; text: string }> {
-  if (!disclosure || boardTagWidth(FULL_W.base + FULL_W.disclosure, lit) >= MIN_TAG_W) return [];
+  if (!disclosure || boardTagWidth(BASE_W + DISCLOSURE_W.full, lit) >= MIN_TAG_W) return [];
   return [
-    { tag: 'CMT', text: 'committed' },
-    { tag: 'SAFE', text: 'safety spend' },
-    { tag: 'EXPO', text: 'public exposure' },
+    { tag: 'SAFE', text: 'safety' },
+    { tag: 'EXPO', text: 'exposure' },
   ];
 }
 
-export function boardColumns(disclosure: boolean, reveal: boolean, lit = false): Column<BoardRow>[] {
+/** Width of the fixed (text) columns. */
+function fixedW(disclosure: boolean, lit: boolean): number {
+  if (!disclosure) return BASE_W;
+  return BASE_W + (boardMnemonics(disclosure, lit).length > 0 ? DISCLOSURE_W.short : DISCLOSURE_W.full);
+}
+
+/** Widths of the valuation bar and trend line in this mode; 0 hides the column (§14.1 width table). */
+export function boardChartW(disclosure: boolean, lit: boolean): { bar: number; trend: number } {
+  return boardChartWidths(boardTagWidth(fixedW(disclosure, lit), lit));
+}
+
+/** Shared scales: the bar over every firm's value, the trend line over every firm's last 14 quarters. */
+export interface BoardScales {
+  value: readonly [number, number];
+  trend: readonly [number, number];
+}
+
+export function boardScales(rows: ReadonlyArray<BoardRow>): BoardScales {
+  return {
+    value: sharedDomain(rows.map((r) => [r.value])),
+    trend: sharedDomain(rows.map((r) => trendWindow(r.history))),
+  };
+}
+
+const NO_SCALES: BoardScales = { value: [0, 1], trend: [0, 1] };
+
+export function boardColumns(disclosure: boolean, reveal: boolean, lit = false, scales: BoardScales = NO_SCALES): Column<BoardRow>[] {
   const prev = (s: string) => (reveal ? s : undefined);
   const short = boardMnemonics(disclosure, lit).length > 0;
+  const { bar, trend } = boardChartW(disclosure, lit);
   const cols: Column<BoardRow>[] = [
     { key: 'rank', label: '#', w: 3, render: (f) => f.rank },
+    { key: 'move', label: 'MOVE', w: 5, align: 'r', render: (f) => <RankMove move={moveOf(f)} /> },
     { key: 'firm', label: 'FIRM', w: 7, render: (f) => f.ticker },
     {
       key: 'share',
@@ -75,7 +104,11 @@ export function boardColumns(disclosure: boolean, reveal: boolean, lit = false):
       label: 'VALUE',
       w: 8,
       align: 'r',
-      render: (f) => <span data-roll="" data-prev={prev(fmt(f.prevValue))}>{fmt(f.value)}</span>,
+      render: (f) => (
+        <span data-roll="" data-prev={prev(fmt(f.prevValue))} className={f.value < 0 ? 'neg-c' : undefined}>
+          {fmt(f.value)}
+        </span>
+      ),
     },
     {
       key: 'chg',
@@ -86,12 +119,20 @@ export function boardColumns(disclosure: boolean, reveal: boolean, lit = false):
     },
     {
       key: 'cmt',
-      label: short ? 'CMT' : 'COMMITTED',
-      w: short ? 5 : 10,
-      align: 'r',
-      render: (f) => (f.committed ? <><span className="sr-only">committed</span><GlyphCheck /></> : <span className="dim">{'–'}</span>),
+      label: '✓',
+      head: (
+        <>
+          <span className="sr-only">committed</span>
+          <GlyphCheck />
+        </>
+      ),
+      w: 2,
+      className: 'cmt-cell',
+      render: (f) => <CommitMark committed={f.committed} />,
     },
   ];
+  if (bar > 0) cols.push({ key: 'bar', label: '', w: bar, className: 'chart-cell', render: (f) => <ValueBar value={f.value} domain={scales.value} /> });
+  if (trend > 0) cols.push({ key: 'trend', label: 'TREND', w: trend, className: 'chart-cell', render: (f) => <TrendLine values={trendWindow(f.history)} domain={scales.trend} /> });
   if (disclosure) {
     cols.push(
       { key: 'pace', label: 'PACE', w: 5, align: 'r', render: (f) => f.disclosed?.pace ?? '–' },
@@ -119,14 +160,20 @@ export function boardColumns(disclosure: boolean, reveal: boolean, lit = false):
   return cols;
 }
 
-/** Width of the board's tag column in ch: the board width less the fixed columns `boardColumns` builds. */
+/** Width of the board's tag column in ch: the board width less the columns `boardColumns` builds. */
 export function boardTagW(disclosure: boolean, lit: boolean): number {
-  const w = boardMnemonics(disclosure, lit).length > 0 ? SHORT_W : FULL_W;
-  return boardTagWidth(w.base + (disclosure ? w.disclosure : 0), lit);
+  const { bar, trend } = boardChartW(disclosure, lit);
+  return boardTagWidth(fixedW(disclosure, lit) + bar + trend, lit);
 }
 
 /** Places a firm moved at the last resolution (positive or negative). */
 const moveOf = (f: BoardRow): number => f.prevIndex - (f.rank - 1);
+
+/** Label and caption beside the share strip's segments (components.css `.share-strip`). */
+const STRIP_LABEL_W = 12;
+const STRIP_CAPTION_W = 14;
+/** Panel side padding. */
+const STRIP_INSET = 2;
 
 export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, banner = false }: BoardProps) {
   // §14.1: two-line rows while they fit (12 as standard), one-line rows to 16, then pages of 10 with up to 2 pinned rows.
@@ -139,14 +186,22 @@ export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, ba
   const visible = [...shown.pinned, ...shown.rows];
   const tagW = boardTagW(disclosure, lit);
   const fitted = visible.map((f) => fitTags(boardTags(f), tagW));
-  const key = [...boardMnemonics(disclosure, lit), ...tagKey(fitted.map((t) => t.shown), fitted.some((t) => t.more > 0))];
+  const key = [
+    ...(visible.some((f) => f.committed) ? [{ tag: '✓', text: 'committed' }] : []),
+    ...boardMnemonics(disclosure, lit),
+    ...tagKey(fitted.map((t) => t.shown), fitted.some((t) => t.more > 0)),
+  ];
+  // The strip and the scales cover every firm, not only the page shown.
+  const strip = shareSegments(rows.map((r) => ({ id: r.id, ticker: r.ticker, value: r.value })));
+  const trackCh = (lit ? BOARD_W.lit : BOARD_W.standard) - STRIP_INSET - STRIP_LABEL_W - (strip.below > 0 ? STRIP_CAPTION_W : 0);
   return (
     <Panel title="BOARD" right={mode === 'paged' ? `PAGE ${shown.page + 1}/${shown.pages} · ${cmt}` : cmt}>
+      <ShareStrip segments={strip.segments} below={strip.below} trackCh={trackCh} />
       <div data-board-mode={mode} data-board-page={shown.page + 1} data-board-pages={shown.pages} style={{ display: 'contents' }}>
         <DataTable
           caption={mode === 'paged' ? `Firm board, page ${shown.page + 1} of ${shown.pages}` : 'Firm board'}
           tall={mode !== 'compact'}
-          columns={boardColumns(disclosure, reveal, lit)}
+          columns={boardColumns(disclosure, reveal, lit, boardScales(rows))}
           rows={visible}
           rowKey={(f) => f.id}
           // The swap animates moves within one table, so it runs only when every firm is on it.
@@ -154,11 +209,11 @@ export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, ba
           rowClass={(f) => (f.id === lastPinned ? 'pinned pin-last' : pinned.has(f.id) ? 'pinned' : undefined)}
         />
       </div>
-      {/* Key strip (§14.1): one line, only the tags and mnemonics on screen. */}
-      <p className="key-strip" data-key-strip="" style={{ marginTop: '1lh' }}>
+      {/* Key strip (§14.1): only the tags, marks and mnemonics on screen; a second line uses the gap row when needed. */}
+      <p className="key-strip" data-key-strip="">
         {key.map((k) => (
           <span key={k.tag}>
-            <span className="key-tag">{k.tag}</span> {k.text}
+            <span className="key-tag">{k.tag === '✓' ? <span className="cmt-box"><GlyphCheck /></span> : k.tag}</span> {k.text}
           </span>
         ))}
       </p>

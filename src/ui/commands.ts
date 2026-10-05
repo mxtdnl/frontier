@@ -4,6 +4,8 @@ export type Command =
   | { kind: 'pacts' }
   | { kind: 'wire' }
   | { kind: 'help' }
+  | { kind: 'firms' }
+  | { kind: 'ranks' }
   | { kind: 'firm'; ticker: string }
   | { kind: 'error'; message: string };
 
@@ -13,6 +15,8 @@ export const COMMAND_HELP: ReadonlyArray<{ mnemonic: string; text: string }> = [
   { mnemonic: 'PACT', text: 'Pact table with members and terms' },
   { mnemonic: 'WIRE', text: 'Full headline log' },
   { mnemonic: 'FIRM <TICKER>', text: 'Public profile of one firm' },
+  { mnemonic: 'FIRMS', text: 'Every firm\'s valuation, same scale' },
+  { mnemonic: 'RANKS', text: 'Rank of every firm by quarter' },
   { mnemonic: 'HELP', text: 'This list' },
 ];
 
@@ -32,6 +36,10 @@ export function parseCommand(input: string): Command {
       return { kind: 'wire' };
     case 'HELP':
       return { kind: 'help' };
+    case 'FIRMS':
+      return { kind: 'firms' };
+    case 'RANKS':
+      return { kind: 'ranks' };
     case 'FIRM': {
       const ticker = rest[0] ?? '';
       if (!/^[A-Z]{3,6}$/.test(ticker)) {

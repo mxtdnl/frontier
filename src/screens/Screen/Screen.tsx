@@ -7,16 +7,16 @@ import { Brand, CommandLine, Countdown, FKeyBar, Panel, PhaseBlock, StatusLine, 
 import { parseCommand } from '../../ui/commands';
 import { fmt, quarterLabel } from '../../ui/format';
 import { matchKey, projectorKeys, type KeyAction } from '../../ui/keys';
-import { BOARD_HOLD_MS, BOARD_ROTATE_MS, boardCapacity, boardMode } from '../../ui/layout';
+import { BOARD_HOLD_MS, BOARD_ROTATE_MS, boardCapacity, boardMode, firmsGrid } from '../../ui/layout';
 import { useLitRoom } from '../../ui/litRoom';
 import { playReveal } from '../../ui/reveal';
 import { statusSentence } from '../../ui/status';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
 import { BoardPanel, TrustPanel } from './BoardView';
 import { boardRows, committedCount, latestRound, pactRows, previousTrust, revealInput, tickerTone, wireItems, type ScreenData } from './model';
-import { AuditView, BriefingView, FirmView, HelpView, LobbyView, PactsView, TrustView, WireView } from './Views';
+import { AuditView, BriefingView, FirmView, FirmsView, HelpView, LobbyView, PactsView, RanksView, TrustView, WireView } from './Views';
 
-type View = { kind: 'board' | 'trust' | 'pacts' | 'wire' | 'help' | 'audit' } | { kind: 'firm'; ticker: string };
+type View = { kind: 'board' | 'trust' | 'pacts' | 'wire' | 'help' | 'audit' | 'firms' | 'ranks' } | { kind: 'firm'; ticker: string };
 
 const PHASE_LABEL = {
   lobby: 'LOBBY',
@@ -67,7 +67,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
 
   const [view, setView] = useState<View>(() => {
     const v = route.query.get('view');
-    return v === 'trust' || v === 'pacts' || v === 'wire' || v === 'help' ? { kind: v } : { kind: 'board' };
+    return v === 'trust' || v === 'pacts' || v === 'wire' || v === 'help' || v === 'firms' || v === 'ranks' ? { kind: v } : { kind: 'board' };
   });
   const [notice, setNotice] = useState('');
   const cmd = useRef<CommandLineHandle>(null);
@@ -186,7 +186,8 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   }
   const firmCount = Object.keys(firms).length;
   const cap = boardCapacity({ lit: metaSub.data?.settings.litRoom ?? false, banner: pub?.phase === 'summit' });
-  const paged = boardMode(firmCount, cap) === 'paged' && view.kind === 'board';
+  // The FIRMS view pages like the board above 16 firms (§14.1, Session 13) and shares its rotation.
+  const paged = (boardMode(firmCount, cap) === 'paged' && view.kind === 'board') || (firmsGrid(firmCount).pages > 1 && view.kind === 'firms');
   useEffect(() => {
     if (!paged) return undefined;
     lastFlipAt.current = Date.now();
@@ -334,6 +335,8 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
         {view.kind === 'help' ? <HelpView /> : null}
         {view.kind === 'audit' ? <AuditView data={data} onQueue={queue} /> : null}
         {view.kind === 'firm' ? <FirmView ticker={view.ticker} data={data} /> : null}
+        {view.kind === 'firms' ? <FirmsView data={data} page={boardTick} /> : null}
+        {view.kind === 'ranks' ? <RanksView data={data} /> : null}
       </div>
     );
   }

@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { PARAMS, type Pact } from '../../src/engine';
 import type { FirmNode, FirmPublicNode, PublicNode, RoundNode } from '../../src/firebase/schema';
-import { boardColumns, boardMnemonics, boardTagW } from '../../src/screens/Screen/BoardView';
+import { boardChartW, boardColumns, boardMnemonics, boardTagW } from '../../src/screens/Screen/BoardView';
 import { boardTagWidth, tagWidthCh } from '../../src/ui/layout';
 import { INITIAL_VALUATION, boardRows, pactRows, type ScreenData } from '../../src/screens/Screen/model';
 
@@ -47,9 +47,36 @@ describe('disclosure columns on the board (spec §9.3)', () => {
     expect(labels(true)).toEqual(expect.arrayContaining(['PACE', 'SAFETY', 'EXPOSURE']));
   });
 
-  it('uses full-word headers where width allows (Session 12)', () => {
-    expect(boardColumns(false, false).map((c) => c.label)).toEqual(['#', 'FIRM', 'SHARE', 'PROFIT', 'VALUE', 'CHANGE', 'COMMITTED', '']);
+  it('uses full-word headers where width allows (Session 12), with the Session 13 columns', () => {
+    expect(boardColumns(false, false).map((c) => c.key)).toEqual(['rank', 'move', 'firm', 'share', 'profit', 'value', 'chg', 'cmt', 'bar', 'trend', 'tags']);
+    expect(boardColumns(false, false).map((c) => c.label).slice(0, 8)).toEqual(['#', 'MOVE', 'FIRM', 'SHARE', 'PROFIT', 'VALUE', 'CHANGE', '✓']);
     expect(boardMnemonics(true, false)).toEqual([]);
+  });
+
+  it('gives the bar and trend line the widths in the §14.1 table', () => {
+    const w = (disc: boolean, lit: boolean) => {
+      const cols = boardColumns(disc, false, lit);
+      return { bar: cols.find((c) => c.key === 'bar')?.w ?? 0, trend: cols.find((c) => c.key === 'trend')?.w ?? 0, tags: boardTagW(disc, lit) };
+    };
+    expect(w(false, false)).toEqual({ bar: 12, trend: 14, tags: 16 });
+    expect(w(true, false)).toEqual({ bar: 6, trend: 0, tags: 15 });
+    expect(w(false, true)).toEqual({ bar: 6, trend: 8, tags: 15 });
+    expect(w(true, true)).toEqual({ bar: 0, trend: 0, tags: 13 });
+    expect(boardChartW(true, true)).toEqual({ bar: 0, trend: 0 });
+  });
+
+  it('keeps SHARE and PROFIT, and the commit mark is a narrow column (owner decision 2026-10-05)', () => {
+    for (const [disc, lit] of [[false, false], [true, false], [false, true], [true, true]] as const) {
+      const cols = boardColumns(disc, false, lit);
+      expect(cols.map((c) => c.label)).toEqual(expect.arrayContaining(['SHARE', 'PROFIT']));
+      expect(cols.find((c) => c.key === 'cmt')?.w).toBe(2);
+    }
+  });
+
+  it('a BREACH tag and a pact tag fit in every mode but lit-room with disclosure on', () => {
+    for (const [disc, lit] of [[false, false], [true, false], [false, true]] as const) {
+      expect(boardTagW(disc, lit)).toBeGreaterThanOrEqual(tagWidthCh('BREACH') + tagWidthCh('PACT-A'));
+    }
   });
 
   it('with disclosure on, a BREACH tag and a pact tag still fit beside the full-word headers', () => {
@@ -58,8 +85,8 @@ describe('disclosure columns on the board (spec §9.3)', () => {
 
   it('falls back to keyed mnemonics in lit-room mode with disclosure on, keeping room for tags', () => {
     const labels = boardColumns(true, false, true).map((c) => c.label);
-    expect(labels).toEqual(expect.arrayContaining(['CMT', 'SAFE', 'EXPO']));
-    expect(boardMnemonics(true, true).map((m) => m.tag)).toEqual(['CMT', 'SAFE', 'EXPO']);
+    expect(labels).toEqual(expect.arrayContaining(['SAFE', 'EXPO']));
+    expect(boardMnemonics(true, true).map((m) => m.tag)).toEqual(['SAFE', 'EXPO']);
     expect(boardTagW(true, true)).toBeGreaterThanOrEqual(10);
     expect(boardMnemonics(false, true)).toEqual([]);
   });

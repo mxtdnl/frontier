@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { CARDS, FIRMS, HEADLINES, PACE_OPTIONS, TRUST, TRUST_HISTORY, prevProfit, prevRank, prevShare, prevValue, type MockFirm } from '../../mock/fixtures';
+import { CARDS, FIRMS, HEADLINES, PACE_OPTIONS, TRUST, TRUST_HISTORY, prevProfit, prevRank, prevShare, prevValue, valueHistory, type MockFirm } from '../../mock/fixtures';
 import {
   Brand,
   PhaseBlock,
@@ -22,7 +22,15 @@ import {
   Tag,
   Ticker,
   TopBar,
+  ShareStrip,
+  ValueBar,
+  TrendLine,
+  CommitMark,
+  RankMove,
+  FirmMultiples,
+  RankChart,
 } from '../../ui/components';
+import { shareSegments, sharedDomain } from '../../ui/performance';
 import { fmt, fmtShare } from '../../ui/format';
 import { useLitRoom } from '../../ui/litRoom';
 import { projectorKeys } from '../../ui/keys';
@@ -43,6 +51,7 @@ const toRow = (f: MockFirm, i: number): BoardRow => ({
   value: f.value,
   prevValue: prevValue(f),
   dValue: f.dValue,
+  history: valueHistory(f),
   committed: f.committed,
   auto: f.tags.includes('AUTO'),
   insolvent: f.tags.includes('INSOLV'),
@@ -85,6 +94,7 @@ export function Kit() {
 
   const demoDelta = TRUST.value - TRUST.prev;
   const sample = FIRMS.slice(0, 8).map(toRow);
+  const kitDomain = sharedDomain([...sample.map((r) => r.history), [-40]]);
 
   return (
     <div className="page stack">
@@ -110,7 +120,7 @@ export function Kit() {
             </div>
             <DataTable
               caption="Reveal sample"
-              columns={boardColumns(false, revealOn).slice(0, 6)}
+              columns={boardColumns(false, revealOn).filter((c) => ['rank', 'firm', 'share', 'profit', 'value', 'chg'].includes(c.key))}
               rows={sample}
               rowKey={(f) => f.id}
               prevIndex={revealOn ? (f) => f.prevIndex : undefined}
@@ -193,6 +203,39 @@ export function Kit() {
             <HBar label="MKT" value={0.79} text="1,184" />
             <HBar label="VAL" value={0.4} text="40.0%" tone="signal" marker={0.7} />
             <HBar label="DMG" value={-35} domain={[-50, 100]} text="−35.0" tone="signal" marker={60} markerTone="wire" />
+          </div>
+        </Panel>
+
+        <Panel title="FIRM PERFORMANCE ROW" bodyClassName="pad">
+          <div className="stack">
+            <ShareStrip {...shareSegments([...sample.map((r) => ({ id: r.id, ticker: r.ticker, value: r.value })), { id: 'neg', ticker: 'NEG', value: -40 }])} trackCh={30} />
+            {[...sample.slice(0, 3).map((r) => ({ t: r.ticker, v: r.value, h: r.history })), { t: 'NEG', v: -40, h: [60, 30, 5, -40] }].map((r) => (
+              <div key={r.t} className="row" style={{ alignItems: 'center' }}>
+                <span style={{ width: '5ch' }}>{r.t}</span>
+                <span style={{ width: '8ch' }}><ValueBar value={r.v} domain={kitDomain} /></span>
+                <span style={{ width: '8ch' }}><TrendLine values={r.h} domain={kitDomain} /></span>
+                <CommitMark committed={r.v > 0} />
+                <RankMove move={r.v > 150 ? 2 : r.v < 0 ? -3 : 0} />
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="MULTIPLES / RANKS" bodyClassName="col">
+          <div className="col" style={{ height: '14lh' }}>
+            <FirmMultiples cols={2} rows={1} domain={kitDomain} ticks={[0]} cards={sample.slice(0, 2).map((r) => ({ id: r.id, ticker: r.ticker, rank: r.rank, value: r.value, change: r.dValue, history: r.history }))} />
+          </div>
+          <div className="col" style={{ height: '14lh' }}>
+            <RankChart
+              firmCount={3}
+              startQuarter={1}
+              description="Sample rank chart"
+              lines={[
+                { id: 'a', ticker: sample[0]?.ticker ?? 'A', ranks: [3, 2, 1], tone: 'leader', label: `${sample[0]?.ticker ?? 'A'} 1st` },
+                { id: 'b', ticker: sample[1]?.ticker ?? 'B', ranks: [1, 1, 3], tone: 'faller', label: `${sample[1]?.ticker ?? 'B'} ▼2` },
+                { id: 'c', ticker: sample[2]?.ticker ?? 'C', ranks: [2, 3, 2], tone: 'other', label: sample[2]?.ticker ?? 'C' },
+              ]}
+            />
           </div>
         </Panel>
 

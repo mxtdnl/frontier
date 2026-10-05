@@ -118,7 +118,8 @@ export async function checkCharts(page: Page, label: string): Promise<void> {
       const scrolls = host.matches('[data-res-scroll]');
       if (box.width > hostBox.width + 1 || (!scrolls && box.height > hostBox.height + 1)) problems.push(`${kind}#${k} is larger than its container`);
       const fs = parseFloat(getComputedStyle(svg).fontSize);
-      if (kind === 'line') {
+      // Line charts, FIRMS cards and the RANKS chart (Session 13) all draw quarters across the full plot width.
+      if (kind === 'line' || kind === 'multiple' || kind === 'ranks') {
         const left = Number(svg.dataset.plotLeft);
         const right = Number(svg.dataset.plotRight);
         svg.querySelectorAll<SVGPathElement>('path.lc-line').forEach((path, j) => {

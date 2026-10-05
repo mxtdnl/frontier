@@ -15,8 +15,11 @@ export const BOARD_PAGE_SIZE = 10;
 export const SCREEN_ROWS = { standard: 36, lit: 32 } as const;
 /** Top bar (2), status line (1), F-key bar (2) and ticker (1). */
 const SCREEN_CHROME_ROWS = 6;
-/** Board panel title, table header, the one-line tag key below the table and its gap, plus rule widths. */
-const BOARD_FIXED_ROWS = 4.5;
+/**
+ * Board panel title, value share strip and its half-line gap (Session 13), table header, the one-line key below the
+ * table and its gap, plus rule widths.
+ */
+const BOARD_FIXED_ROWS = 6;
 /** The summit banner (§14.1). */
 const BANNER_ROWS = 2;
 
@@ -119,6 +122,46 @@ export function fitTags(labels: ReadonlyArray<string>, widthCh: number): { shown
     used += w;
   }
   return { shown, more: 0 };
+}
+
+// ── Board value bar and trend line (§14.1, Session 13) ───────────────────────
+
+/** Tag room kept before the bar and trend line take any width: two tags (BREACH and PACT-A need 14.1). */
+export const BOARD_TAGS_MIN = 15;
+export const BOARD_BAR = { min: 6, max: 12 } as const;
+export const BOARD_TREND = { min: 8, max: 14 } as const;
+
+/**
+ * Widths in ch for the valuation bar and the trend line, from the width the fixed columns leave (`freeCh`). Tags keep
+ * 15 ch first; the bar comes next (6–12), then the trend line (8–14). 0 means the column is not shown.
+ */
+export function boardChartWidths(freeCh: number): { bar: number; trend: number } {
+  const avail = Math.floor(freeCh - BOARD_TAGS_MIN);
+  if (avail < BOARD_BAR.min) return { bar: 0, trend: 0 };
+  if (avail < BOARD_BAR.min + BOARD_TREND.min) return { bar: Math.min(BOARD_BAR.max, avail), trend: 0 };
+  const bar = Math.min(BOARD_BAR.max, BOARD_BAR.min + Math.floor((avail - BOARD_BAR.min - BOARD_TREND.min) / 2));
+  return { bar, trend: Math.min(BOARD_TREND.max, avail - bar) };
+}
+
+// ── FIRMS view (§14.1, Session 13) ───────────────────────────────────────────
+
+/** Cards per page above 16 firms. */
+export const FIRMS_PAGE_SIZE = 16;
+
+/**
+ * Grid for the small multiples: 3 columns up to 9 firms (3 × 3), 4 above (4 × 4), pages of 16 above 16 firms. Only the
+ * rows the first page needs are drawn, so 12 firms fill the panel as 4 × 3 rather than leaving a row empty.
+ */
+export function firmsGrid(n: number): { cols: number; rows: number; pages: number } {
+  const cols = n <= 9 ? 3 : 4;
+  return { cols, rows: Math.max(1, Math.ceil(Math.min(n, FIRMS_PAGE_SIZE) / cols)), pages: Math.max(1, Math.ceil(n / FIRMS_PAGE_SIZE)) };
+}
+
+/** One page of cards from firms sorted by rank; `page` wraps, like the board's rotation counter. */
+export function firmsPage<T>(sorted: ReadonlyArray<T>, page: number): { items: T[]; page: number; pages: number } {
+  const pages = firmsGrid(sorted.length).pages;
+  const p = ((page % pages) + pages) % pages;
+  return { items: sorted.slice(p * FIRMS_PAGE_SIZE, (p + 1) * FIRMS_PAGE_SIZE), page: p, pages };
 }
 
 // ── Lobby (§14.1) ─────────────────────────────────────────────────────────────

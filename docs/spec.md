@@ -478,8 +478,9 @@ The layout is built on a monospace character grid (§16.2). Regions:
 ┌ TOP BAR (dark panel, 2 px amber rule): FRONTIER │ Q3 Y2 │ [OPEN] │ 6/8 COMMITTED │ DISCLOSURE OFF │    T-01:47 ┐
 ├ STATUS LINE: Q3 Y2 · Decisions open. Set pace, safety and a card, then commit. 01:47 left. ───────────────────┤
 ├ BOARD (left ~62%) ─────────────────────────────────┬ TRUST (right ~38%) ───────────────────────────────┤
-│ #  FIRM   SHARE  PROFIT  VALUE  CHANGE  COMMITTED  │ PUBLIC TRUST                                      │
-│ rows… (BREACH / AUTO / INSOLV / BOT tags)          │ Total market revenue tracks public trust.         │
+│ VALUE SHARE [HUMN 30% │ BTC 22% │ …]  2 below zero │ PUBLIC TRUST                                      │
+│ # MOVE FIRM SHARE PROFIT VALUE CHANGE ✓ bar trend  │ Total market revenue tracks public trust.         │
+│ rows… (BREACH / AUTO / INSOLV / BOT tags)          │                                                   │
 │ [PACE SAFETY EXPOSURE columns if disclosure on]    │ 61.8  ▼6.3 since last quarter   (large numerals)  │
 │ key strip: only the tags on screen                 │ line chart + change strip │ MKT │ INCID │ PACTS │ DISCLOSURE │
 ├ WIRE  Q3 Y2 ▼ incident headline · Q3 Y2 headline … (scrolling; static list if reduced motion) ───────────────┤
@@ -502,7 +503,21 @@ The results screen and the phone use the same bar (brand block, position or quar
 
 **Ticker.** A 2ch gap after the `WIRE` label; each item starts with its quarter; items are coloured by headline kind (`--down` with ▼ for incidents, breaches, insolvency and the moratorium; `--up` for clean audits; `--wire` otherwise).
 
-**Board readability.** Row rules in `--grid` and an alternate-row fill in `--raise`; panel titles in `--text` at weight 600; column headers in `--dim` on a `--raise` header row; full-word column headers where width allows (CHANGE, PACE, SAFETY, EXPOSURE, COMMITTED). A one-line key strip at the foot of the board explains only the tags on screen.
+**Board readability.** Row rules in `--grid` and an alternate-row fill in `--raise`; panel titles in `--text` at weight 600; column headers in `--dim` on a `--raise` header row; full-word column headers where width allows (CHANGE, PACE, SAFETY, EXPOSURE). A key strip at the foot of the board explains only the tags and marks on screen: one line after a one-line gap, wrapping into the gap row when the entries need more (Session 13).
+
+**Firm performance on the board** (Session 13; owner approval 2026-10-03, UI audit section 06; column set by owner decision 2026-10-05).
+- **Value share strip** across the top of the board, one line plus half a line of space, so the two-line row capacities below are unchanged. Each firm with a valuation above zero gets a segment as wide as its share of the positive total, in rank order. Segments are `--wire`, faded by rank in five steps by mixing with `--panel` (never below 64 %, so the black text on them stays above 4.5:1), and separated by a 1 px `--base` gap. A segment wide enough to hold them shows the ticker and the whole percentage (`HUMN 30%`); narrower segments show nothing. Firms at or below zero have no segment; the caption at the right end counts the firms below zero ("2 below zero"). When no firm is above zero the strip reads "No firm above zero". The strip covers every firm, not only the page shown.
+- **Rows**, in order: `#` rank; `MOVE`, places gained or lost since last quarter (▲ or ▼ with a number, `–` for none); `FIRM`; `SHARE`; `PROFIT`; `VALUE`; `CHANGE`; the commit mark (a solid `--up` box carrying a black ✓ when the firm has committed this quarter, a dim `–` otherwise; the header is a ✓ and the key strip explains it); a **valuation bar** drawn from a visible zero line on one scale shared by every firm (positive in `--wire` to the right, negative in `--down` to the left); a **trend line** of the last 14 quarters (opening value included while fewer have resolved) on one y-scale shared by every row, with a dim zero line, drawn in `--wire`, or `--down` when the latest value is below zero; then the tags.
+- **Widths** (ch). The fixed columns take 48 (3 + 5 + 7 + 7 + 8 + 8 + 8 + 2), plus 21 with disclosure on (PACE 5, SAFETY 7, EXPOSURE 9) or 16 with the mnemonics. At least 15 ch stay for tags (two tags) except in lit-room mode with disclosure on. What is left goes to the bar (6–12) and the trend line (8–14):
+
+| Mode | Bar | Trend line | Tags |
+|---|---|---|---|
+| Standard, disclosure off | 12 | 14 | 16 |
+| Standard, disclosure on | 6 | none | 15 |
+| Lit-room, disclosure off | 6 | 8 | 15 |
+| Lit-room, disclosure on (SAFE, EXPO) | none | none | 13 |
+
+The trend for every firm is on the `FIRMS` view, which is never cut.
 
 **Command line.** This is the signature feature. Typing on the projector focuses a command line in the top bar. The command line is visible only while it has focus (the facilitator is typing); otherwise the brand block shows.
 
@@ -512,7 +527,9 @@ The results screen and the phone use the same bar (brand block, position or quar
   - `PACT`: pact table with members and terms
   - `WIRE`: full headline log
   - `FIRM <TICKER>`: a public firm profile with share and valuation history
-  - `HELP`
+  - `FIRMS`: small multiples of every firm's valuation (Session 13)
+  - `RANKS`: rank by quarter for every firm (Session 13)
+  - `HELP`: lists every command above and every key
 - Esc returns to the board.
 - F-keys mirror these.
 - Every F-key action also has a letter alternative, because laptops often need Fn: Shift+A advance, Shift+S summit, Shift+D disclosure, Shift+E end.
@@ -540,6 +557,10 @@ The results screen and the phone use the same bar (brand block, position or quar
 
 **Long member lists** (PACT view, audit picker, summit and results): a list of more than 12 tickers shows the first 10 and `+N more`. Member cells wrap rather than clip. Beside the board at a summit, the pact table omits the AUDIT column so the members have room.
 
+**`FIRMS` view** (Session 13). Small multiples: one card per firm in rank order. Each card shows the rank, the ticker, the value (in `--down` with a − sign below zero), the change since last quarter, and a line chart of the valuation by quarter from the opening value. Every card uses the same y-scale (zero-based, nice steps), with gridlines at the steps (the step is stated in the panel heading), a dotted zero line, a hollow square at the peak (when the peak is not the latest value) and a solid square at the latest value. The line is `--wire`, or `--down` when the latest value is below zero. Up to 9 firms: a 3 × 3 grid; up to 16: 4 × 4. Only the rows the first page needs are drawn, so the cards fill the panel (12 firms: 4 × 3). Above 16 the view pages like the board (§14.1): 16 cards per page in rank order, `PAGE 2/4` in the heading, an instant cut every 8 s, held while the command line is focused and for 30 s after a key press.
+
+**`RANKS` view** (Session 13). Rank by valuation for each resolved quarter as connected lines, rank 1 at the top. The rank for a quarter is the engine's rank (valuation, then the engine's own tie-break); where two firms would still tie the ticker decides, so the chart is deterministic. Two firms are highlighted automatically: the current leader in `--signal` and the firm with the largest fall from its best rank in `--down` (ties: the larger fall, then the ticker); both are drawn thicker with a square at each quarter. Every other firm is a thin `--rule` line. Labels sit at the line ends: the highlighted firms always (`HUMN 1st`, `BTC ▼3`), the others where they do not overlap. A headline sentence above the chart, e.g. "HUMN rose to 1st. BTC fell from 1st to 2nd." ("holds 1st" when the leader was already 1st; "No firm is below its best rank." when nothing fell). Rank axis labels: every rank up to 16 firms, then 1 and every 5th. One resolved quarter shows "1 quarter resolved" instead of lines.
+
 **Reveal state.** One orchestrated motion moment, described in §16.5.
 
 ### 14.2 Facilitator console (`#/control`)
@@ -564,7 +585,7 @@ Scale rules (Session 10):
 - Header: firm ticker, quarter, countdown, cash, last-quarter profit.
 - Bottom tab bar on mobile, left rail on desktop. Tabs:
   - **DESK**: the decisions
-  - **BOOK**: own P&L history and own valuation line chart (zero-based)
+  - **BOOK**: own P&L history and "against the field": a zero-based valuation chart with every other firm as a thin dim line, the own firm in `--signal` with its value tag, a dotted zero line, a key, and a sentence such as "Rank 1 of 9. Highest valuation for 13 quarters running." (or "Up 2 places since last quarter." / "Down 1 place since last quarter." / "Same place as last quarter."). The chart and the sentence use only `rounds/*/results` (valuations and ranks every signed-in user may read, §13); no other firm's private data
   - **PACTS**: propose, join, leave, terms, members
   - **WIRE**: the feed
 - DESK contents: pace selector (4 segments, ≥ 44 px targets); safety slider plus numeric stepper; card picker sheet, with a target list for POACH (above 8 targets the list gains a ticker filter field and scrolls inside the sheet); an *Estimated cost this quarter* line; a *Public exposure* label; the commit button (signal amber, full width).
@@ -730,7 +751,7 @@ Colours do not invert.
 
 ### 16.3 Components
 
-`TopBar`, `PhaseBlock`, `StatusLine`, `FKeyBar`, `CommandLine`, `Panel` (title row and 1 px rule border, no radius), `DataTable` (fixed ch columns, right-aligned numerics), `Delta` (sign, glyph and colour), `LineChart` (below), `HBar` (drawn from a visible zero line; negative values extend left in `--down` with a − sign), `Ticker`, `Segmented4`, `SafetySlider` (track and block thumb), `CardPicker` (sheet), `CommitButton`, `Tag` (`BOT`, `AUTO`, `BREACH`, `INSOLV`, `PACT-A`), `PresenceDot`, `QR`, `Countdown`.
+`TopBar`, `PhaseBlock`, `StatusLine`, `FKeyBar`, `CommandLine`, `Panel` (title row and 1 px rule border, no radius), `DataTable` (fixed ch columns, right-aligned numerics), `Delta` (sign, glyph and colour), `LineChart` (below), `ShareStrip`, `ValueBar`, `TrendLine`, `CommitMark`, `FirmMultiples`, `RankChart` (§14.1 firm performance, Session 13), `HBar` (drawn from a visible zero line; negative values extend left in `--down` with a − sign), `Ticker`, `Segmented4`, `SafetySlider` (track and block thumb), `CardPicker` (sheet), `CommitButton`, `Tag` (`BOT`, `AUTO`, `BREACH`, `INSOLV`, `PACT-A`), `PresenceDot`, `QR`, `Countdown`.
 
 All corners are square, except the device-like participant sheet edges, which are max 2 px.
 
@@ -742,6 +763,7 @@ All corners are square, except the device-like participant sheet edges, which ar
 - Optional: a change strip under the plot (one bar per quarter from a zero line, `--up` with ▲ for a rise, `--down` with ▼ for a fall); a labelled horizontal reference line; a labelled vertical marker; a flat 45° hatch between two series.
 - The y domain is either trust (always 0–100) or zero-based (always includes 0); never the min-to-max of the data.
 - A series with a single point shows the text "1 quarter resolved" instead of a line.
+- Optional (Session 13): context series drawn first as thin `--rule` lines without markers or tags, included in the y domain (phone BOOK); a dotted zero line.
 - τ is never passed to a chart on `#/screen` or `#/play`. It is drawn only on the results trust trace when the "Reveal threshold" setting is on.
 
 ### 16.4 Forbidden

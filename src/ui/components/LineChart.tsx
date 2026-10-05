@@ -50,6 +50,10 @@ interface Props {
   height?: string;
   /** Formats the end tags and the drop label. */
   format?: (v: number) => string;
+  /** Context series drawn first as thin dim lines without markers or tags, and included in the y domain (phone BOOK). */
+  context?: ReadonlyArray<ReadonlyArray<number>>;
+  /** Draw the zero line dotted. */
+  zeroDotted?: boolean;
 }
 
 /** Line chart (spec §16.3): straight segments, quarter markers, in-chart axes on the data's own scale. */
@@ -95,7 +99,7 @@ function ChartSvg(p: Props & { w: number; h: number; fs: number; idBase: string 
 
   // y scale and ticks.
   const maxTicks = Math.max(2, Math.min(6, Math.floor((mainBottom - top) / (lh * 1.6))));
-  const { domain, ticks } = yDomain(p.domain, series.map((s) => s.values), maxTicks);
+  const { domain, ticks } = yDomain(p.domain, [...series.map((s) => s.values), ...(p.context ?? [])], maxTicks);
   const decimals = tickDecimals(ticks);
   const tickText = ticks.map((t) => fmt(t, decimals));
   const Y = linearScale(domain, [mainBottom, top]);
@@ -124,7 +128,7 @@ function ChartSvg(p: Props & { w: number; h: number; fs: number; idBase: string 
   // Gridlines and y labels. Labels hidden where an end tag sits.
   ticks.forEach((t, k) => {
     const y = Y(t);
-    out.push(<line key={`g${k}`} className={t === 0 ? 'lc-zero' : 'lc-grid'} x1={left} x2={right} y1={y} y2={y} />);
+    out.push(<line key={`g${k}`} className={t === 0 ? `lc-zero${p.zeroDotted ? ' lc-dotted' : ''}` : 'lc-grid'} x1={left} x2={right} y1={y} y2={y} />);
     if (tagY.every((ty) => Math.abs(ty - y) >= lh * 0.9)) {
       out.push(
         <text key={`gt${k}`} className="lc-ytick" x={right + cw} y={y} data-y={y.toFixed(2)} dominantBaseline="central">
@@ -163,7 +167,10 @@ function ChartSvg(p: Props & { w: number; h: number; fs: number; idBase: string 
     );
   }
 
-  // Lines, then markers on the primary series.
+  // Context lines under everything else, then the series, then markers on the primary series.
+  (p.context ?? []).forEach((c, k) => {
+    if (c.length > 1) out.push(<path key={`c${k}`} className="lc-ctx" d={linePath(c, X, Y)} data-context="" />);
+  });
   series.forEach((s, k) => {
     out.push(<path key={`l${k}`} className={`lc-line lc-s-${s.tone ?? 'signal'}`} d={linePath(s.values, X, Y)} />);
   });

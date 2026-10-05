@@ -733,3 +733,113 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 **Next steps**
 - Owner: after merging, open a session on the live site and check the projector at the room's resolution. If the phase colours or the cyan summit banner read poorly on the real projector, report which.
 - Session 13: firm performance views. The board's numeric columns are now 7–8ch. The share strip and value bars must keep two tags visible with disclosure on; `tests/ui/screen-pacts.test.ts` checks this.
+
+## 2026-10-05 — Session 13: firm performance views
+
+**Owner decision (2026-10-05)**
+- The board keeps SHARE and PROFIT. COMMITTED becomes a narrow column: a green box with a tick. The owner accepted the trade-off this forces: with disclosure on, the board has no trend line, and in lit-room mode with disclosure on it also has no valuation bar. The trend for every firm is always on the `FIRMS` view.
+
+**Spec changes** (UI audit section 06, approved 2026-10-03, plus the decision above; written into `docs/spec.md` before the code)
+- §14.1:
+  - The board diagram now shows the value share strip.
+  - New "Firm performance on the board" rules: the strip, the row order, and a width table for the four modes.
+  - The `FIRMS` and `RANKS` views are described, and both commands are in the command list and HELP.
+  - The key strip may wrap into its gap row.
+- §14.3: BOOK "against the field", with the sentence variants. The chart and the sentence use only `rounds/{r}/results`.
+- §16.3: new components `ShareStrip`, `ValueBar`, `TrendLine`, `CommitMark`, `FirmMultiples` and `RankChart`. `LineChart` gains context lines and a dotted zero line.
+
+**Done**
+- `src/ui/performance.ts` (pure):
+  - rank by quarter, rank movement, leader and largest faller, the ordinal suffix (1st, 2nd …)
+  - the RANKS headline and the BOOK sentence
+  - valuation history, the 14-quarter window, shared domains, bar geometry
+  - share-strip segments and labels, and the BOOK field.
+- `src/ui/layout.ts`: widths for the bar and trend line (two tags keep 15 ch first); the FIRMS grid and its pages.
+- **Board** (`BoardView.tsx`)
+  - **VALUE SHARE strip.** Cyan, faded by rank in five steps, with ticker and percentage where they fit. A caption counts the firms below zero; "No firm above zero" when none is.
+  - **Columns:** `#`, MOVE (▲/▼ with a number), FIRM, SHARE, PROFIT, VALUE (red below zero), CHANGE, the commit box, the valuation bar from zero (cyan; red to the left below zero), TREND (last 14 quarters on one scale for every row), the disclosure columns, then the tags.
+  - **Capacity unchanged.** The strip takes one line plus half a line, which the grid had spare, so the board still holds 12 / 11 / 10 / 9 two-line rows.
+- **`FIRMS`**: one card per firm, all on one zero-based scale. Each card shows rank, ticker, value and change, with gridlines, a dotted zero line, a hollow square at the peak and a solid square at the latest value. Above 16 firms the view pages in 16s and shares the board's 8 s rotation, `?page=` and hold rules.
+- **`RANKS`**:
+  - leader in amber, largest faller in red, other firms dim
+  - the highlighted firms are always labelled; other labels are dropped where they would overlap
+  - rank axis: every rank up to 16 firms, then 1 and every 5th
+  - a headline sentence above the chart.
+- **HELP** lists `FIRMS` and `RANKS`. `?view=firms` and `?view=ranks` open the views directly.
+- **Phone BOOK**:
+  - every other firm as a thin dim line, the own firm in amber with its value tag, a dotted zero line
+  - a key, and the sentence (e.g. "Rank 1 of 4. Highest valuation this quarter.").
+- **Phones receive every firm's public valuation: confirmed.**
+  - The rules let any signed-in user read `rounds`. A new rules test has participant A read firm B's `rounds/1/results/fB/valuation` and be refused `firmsPrivate/fB`.
+  - The chart and the sentence take only `rounds`, `firms` and the own firm id. A render test checks that the own private history does not reach the chart.
+- Kit shows the new components. RUNBOOK explains the strip, MOVE, the bar, TREND, `FIRMS` and `RANKS`.
+
+**Choices (spec silent; written into the spec where they set a rule)**
+1. **Valuation bars and FIRMS lines are cyan (`--wire`), not amber as in the audit mock-up.** Solid amber bars on every row would break the Session 12 amber budget. Cyan already marks valuation on the `FIRM` view.
+2. **FIRMS draws only the rows the first page needs.** For example, 12 firms show as 4 × 3, so a row is not left empty. The maximum stays 3 × 3 up to 9 firms and 4 × 4 up to 16.
+3. **Above 16 firms, FIRMS pages in 16s** (Session 10's paging rules, with a full 4 × 4 page instead of 10 rows). No cards are pinned.
+4. **RANKS starts at the first resolved quarter**, because no rank exists before it.
+   - A quarter orders firms by valuation, then by the engine's stored rank (its own tie-break, which uses private cash), then by ticker. The chart therefore always matches the board, and it is still deterministic where the data ties.
+   - A tie for largest faller goes to the larger fall, then the ticker.
+   - With one quarter the headline reads "HUMN is 1st after Q1 Y1."
+5. **Key strip.**
+   - The commit box adds a "✓ committed" entry. The shorter tag texts are "terms breached", "lowest pace forced", "defaults applied", "automated", "pact member" and "more tags"; the mnemonic texts are "safety" and "exposure".
+   - The strip can wrap into its gap row, so every entry shows in all scale runs.
+   - The commit column's old mnemonic `CMT` is gone, because the box and the key replace it.
+6. **The MOVE column uses the engine's `rankDelta`**, the same figure the reveal swap uses.
+
+**Tests**
+- New: `tests/ui/performance.test.ts` (23 tests):
+  - rank by quarter, with ties broken by engine rank and then by ticker, independent of input order; a missing result ranks last
+  - rank movement; largest faller, including a ticker tie and a firm at its best rank
+  - the RANKS headline variants and ordinals; the BOOK sentence variants
+  - share-strip segments: they sum to 1 and exclude zero and negative values; the fade steps; labels only where they fit
+  - valuation history, the 14-quarter window, shared domains, bar spans, the BOOK field
+  - board widths for every free width, and the FIRMS grid and pages.
+- New: `tests/ui/book.test.ts`: the field chart is drawn from round results only, plus the rank sentence.
+- `tests/ui/screen-pacts.test.ts`: the new column set, the §14.1 width table in all four modes, SHARE and PROFIT kept, a 2 ch commit column, and two tags fitting in every mode except lit-room with disclosure on.
+- `tests/ui/commands.test.ts`: `FIRMS` and `RANKS` parse, `FIRM FIRMS` stays a ticker, and HELP lists every command.
+- `tests/ui/contrast.test.ts`: black text on every faded segment is at or above 4.5:1, standard and lit-room.
+- `tests/rules/read.test.ts`: a participant reads another firm's public round result but not its private node.
+- **e2e scale run** (every count 2–50, and lit-room at 12, 16, 24 and 50):
+  - strip segments as wide as their shares, with labels not cut
+  - a bar on every row where the mode has one, and red to the left of zero for a negative value
+  - a trend line where the mode has one
+  - FIRMS: page, grid, one chart per card, no card or heading cut
+  - RANKS: one line per firm, one leader, at most one faller, the highlighted firms labelled, no labels overlapping, the headline.
+  - The chart span check now covers FIRMS and RANKS lines.
+- **Main e2e**: `FIRMS`, `RANKS` (one quarter, then two), HELP, the strip and bars on the board, and BOOK against the field.
+
+**Test results**
+- `npm run typecheck` passes. `npm test`: 471 passed (was 439). `lint:copy` and `lint:design` pass. `npm run build` succeeds. `npm run shots`: all checks pass.
+- `npm run test:rules`: 161 passed (was 160).
+- `npm run test:e2e`: all checks passed (296 `ok` lines, was 283).
+- `npm run test:e2e:rehearsal`: all checks passed (141).
+- `npm run test:e2e:scale`: all checks passed (1,360, was 935).
+- `npm run test:a11y`: 100 in all 30 snapshots, including BOOK at 390 and 1440 px.
+- `npm run test:e2e:long` (30 quarters, 16 firms): all checks passed. The quarter-30 board shows the trend line over the last 14 quarters, and six-character values such as 3260.0 fit their columns.
+- `test:e2e:hardening` and `test:e2e:scale-run` were not run. No data paths, rules, orchestrator or countdown code changed. The hardening run checks the countdown; the scale run checks write sizes and replays.
+- **Failures found and fixed during the session:**
+  - Share segments were narrower than their shares, because flex padding set a minimum width. They now use percentage widths.
+  - The lit-room summit board at 16 firms was clipped. The commit box was taller than the text line and grew the one-line rows; it now sits inside the line.
+  - The key strip lost its last entries in lit-room mode. It now wraps into its gap row, with shorter texts.
+  - The 2-firm check expected a segment when both firms were below zero. The check now accepts "No firm above zero".
+  - The kit scrolled sideways at 390 px because of a long panel title.
+  - `lint:copy` caught the word `level` in code; the field is now `fade`.
+
+**Acceptance**
+- From the board screenshot alone a reader can name:
+  - the leader: rank 1, and the widest strip segment
+  - the biggest mover this quarter: the MOVE column, e.g. ▲2 and ▼2 in the rehearsal's collapse quarter
+  - any firm below zero: red value, a red bar left of zero, and the strip caption "2 below zero".
+- Screenshots reviewed: `shots/e2e-scale-*-open`, `-reveal`, `-firms`, `-ranks`, `-lit-*`, `e2e-rehearsal-collapse-*` and `e2e-play-book-field-*`.
+
+**Open issues**
+- With disclosure on the board has no trend line, and in lit-room mode with disclosure on it also has no bar (owner decision above).
+- Where one firm's value dwarfs the rest, the other trend lines look flat, because every row shares one scale. This is deliberate (the spec asks for a shared scale), but it can read as "no change".
+- In the four-firm main e2e, the faller tie went to BRLK (2nd to 3rd) rather than CEDR (1st to 2nd) because both fell one place and BRLK comes first by ticker. This follows the spec's tie rule. If losing 1st should outrank the ticker, say so.
+- The firebase CLI and the project's npm packages were missing from the container at the start of this session. They were installed with `npm install -g firebase-tools` and `npm ci`. The environment setup script should be checked.
+
+**Next steps**
+- Owner: after merging, open a session on the live site and type `FIRMS`, then `RANKS`, on the projector; check the board strip and bars at the room's resolution. On a phone, open BOOK after the second quarter.
+- Session 14: results narrative.

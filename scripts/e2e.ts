@@ -202,6 +202,23 @@ async function scenario(browser: Browser): Promise<void> {
   await waitText(fac, /FIRM · ALPH/, 'FIRM <TICKER> shows a firm profile', 5_000, '.scr');
   await snapProjector(fac, 'firm');
   await fac.keyboard.press('Escape');
+  // Firm performance views (Session 13).
+  await fac.keyboard.type('firms');
+  await fac.keyboard.press('Enter');
+  await waitText(fac, /FIRMS[\s\S]*same scale/, 'FIRMS shows the small multiples', 5_000, '.scr');
+  check((await fac.locator('.fm-card').count()) === 4 && (await fac.locator('[data-firms-grid="3x2"]').count()) === 1, 'FIRMS draws a card for each of 4 firms in 3 columns');
+  await snapProjector(fac, 'firms');
+  await fac.keyboard.press('Escape');
+  await fac.keyboard.type('ranks');
+  await fac.keyboard.press('Enter');
+  await waitText(fac, /RANKS[\s\S]*1 quarter resolved/, 'RANKS after one quarter says 1 quarter resolved', 5_000, '.scr');
+  await fac.keyboard.press('Escape');
+  await fac.keyboard.type('help');
+  await fac.keyboard.press('Enter');
+  await waitText(fac, /HELP[\s\S]*FIRMS[\s\S]*RANKS/, 'HELP lists FIRMS and RANKS', 5_000, '.scr');
+  await fac.keyboard.press('Escape');
+  const board1 = await fac.locator('[data-share-strip]').count();
+  check(board1 === 1 && (await fac.locator('.scr [data-value-bar]').count()) === 4, 'the board shows the value share strip and a value bar per firm');
 
   // ── 6. Quarter 2: summit, timer controls ───────────────────────────────────
   await fac.keyboard.press('F9');
@@ -604,6 +621,20 @@ async function participantScenario(
   await key(fac, 'F9');
   await waitText(A, /Q2 Y1 RESULT/, 'quarter 2 resolves', 15_000);
   check(/PACT-A audit found a breach\. Fine \d/.test(await A.locator('main').innerText()), 'the result card reports the audit breach and the fine');
+  // BOOK against the field (Session 13): every other firm as a thin line, from public round results.
+  await A.getByRole('tab', { name: 'BOOK' }).click();
+  await A.locator('[data-book-field] svg[data-chart="line"]').waitFor({ timeout: 5_000 }).catch(() => fail('BOOK draws the field chart after quarter 2'));
+  check((await A.locator('[data-book-field] [data-context]').count()) === 3, 'BOOK draws the firm against the 3 other firms');
+  check(/^Rank [1-4] of 4\./.test((await A.locator('[data-book-sentence]').innerText()).trim()), 'BOOK states the rank of 4');
+  await snapPlay(A, 'play-book-field');
+  await A.getByRole('tab', { name: 'DESK' }).click();
+  // RANKS after two quarters: a line per firm, one leader highlighted.
+  await fac.keyboard.type('ranks');
+  await fac.keyboard.press('Enter');
+  await waitText(fac, /RANKS[\s\S]*(rose to|holds) 1st/, 'RANKS shows the headline after two quarters', 5_000, '.scr');
+  check((await fac.locator('[data-rank-line]').count()) === 4 && (await fac.locator('[data-rank-line][data-tone="leader"]').count()) === 1, 'RANKS draws 4 lines with the leader highlighted');
+  await snapProjector(fac, 'ranks');
+  await fac.keyboard.press('Escape');
   const board2 = await screenText(fac);
   check(/PACE\s+SAFETY\s+EXPOSURE/.test(board2), 'the board shows PACE, SAFETY and EXPOSURE while disclosure is on');
   check(/BREACH/.test(board2) && /PACT-A/.test(board2), 'the board carries the pact tag and the BREACH tag after the audit');
