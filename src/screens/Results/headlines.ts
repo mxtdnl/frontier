@@ -30,11 +30,11 @@ export function finalBoardHeadline(r: FinalResults): string {
   const neg = firms.filter((f) => belowZero(f.valuation)).length;
   let first: string;
   if (below === 0) first = n === 1 ? 'The firm finished at its peak.' : 'Every firm finished at its peak.';
-  else if (below === n && n > 1) first = `All ${n} firms finished below their peak.`;
+  else if (below === n && n > 1) first = `${n === 2 ? 'Both' : `All ${n}`} firms finished below their peak.`;
   else first = `${below} of ${n} ${plural(n, 'firm', 'firms')} finished below ${plural(below, 'its', 'their')} peak.`;
   let second: string;
   if (neg === 0) second = 'None finished below zero.';
-  else if (neg === n && n > 1) second = `All ${n} finished below zero.`;
+  else if (neg === n && n > 1) second = `${n === 2 ? 'Both' : `All ${n}`} finished below zero.`;
   else second = `${neg} finished below zero.`;
   return `${first} ${second}`;
 }

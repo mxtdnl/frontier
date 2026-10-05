@@ -83,8 +83,14 @@ describe('FINAL BOARD headline', () => {
 
   it('all below their peak and all below zero', () => {
     expect(finalBoardHeadline(results([{ ticker: 'AAAA', valuation: -1, peak: 10 }, { ticker: 'BBBB', valuation: -2, peak: 5 }]))).toBe(
-      'All 2 firms finished below their peak. All 2 finished below zero.',
+      'Both firms finished below their peak. Both finished below zero.',
     );
+  });
+
+  it('all of three firms below their peak and below zero', () => {
+    expect(
+      finalBoardHeadline(results([{ ticker: 'AAAA', valuation: -1, peak: 10 }, { ticker: 'BBBB', valuation: -2, peak: 5 }, { ticker: 'CCCC', valuation: -3, peak: 5 }])),
+    ).toBe('All 3 firms finished below their peak. All 3 finished below zero.');
   });
 
   it('one firm below its peak', () => {

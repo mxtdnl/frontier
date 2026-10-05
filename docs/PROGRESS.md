@@ -878,7 +878,7 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 **Choices (spec silent)**
 1. The headline is 1.25em, weight 600, `--text`, the first element in each panel body.
 2. Industry totals in headlines are whole numbers, as on the figures. A ratio that would read "1.0×" becomes a difference ("worth 40 more than it kept").
-3. In the attribution headline, a tie means equal shares as displayed. All tied firms are named, in ticker order. A firm at or below zero "kept none of the value".
+3. With two firms the FINAL BOARD headline says "Both" instead of "All 2". In the attribution headline, a tie means equal shares as displayed. All tied firms are named, in ticker order. A firm at or below zero "kept none of the value".
 4. "Below zero" in the headlines means below zero as displayed (one decimal), so the sentence matches the red figures.
 5. The pact headline counts breaches as firm-quarters, the same unit as the table, and adds how many pacts dissolved.
 6. Fill rule used by the e2e check: no results panel may leave more than 20% of its height empty below its content.
@@ -901,10 +901,10 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
   - The main e2e checks the card sentence and the DAMAGE bar.
 
 **Test results**
-- `npm run typecheck` passes. `npm test`: 513 passed (was 471). `lint:copy`, `lint:design` and `npm run build` pass.
+- `npm run typecheck` passes. `npm test`: 514 passed (was 471). `lint:copy`, `lint:design` and `npm run build` pass.
 - `npm run test:e2e`: all checks passed (297 `ok` lines).
 - `npm run test:e2e:rehearsal`: all checks passed (152, was 141). All six panels were reviewed at 1280×720 and 1920×1080, plus the human's card.
-- `npm run test:e2e:scale`: running when this entry was written; the result is in the pull request.
+- `npm run test:e2e:scale`: all checks passed (1,364, was 1,360), including the headline and fill checks on the results panels at every firm count from 2 to 50.
 - Not run: `test:rules`, `test:e2e:long`, `test:e2e:hardening` and `test:e2e:scale-run`. No rules, paths, orchestrator or countdown code changed. The new `checked` record is written through the existing `pactsPrivate` path.
 
 **Spec text to add** (not yet in `docs/spec.md`; see the deviation above)
