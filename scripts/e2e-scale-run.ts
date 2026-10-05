@@ -33,6 +33,28 @@ const canon = (v: unknown): string =>
     x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x as Json).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : x,
   );
 
+/**
+ * Numbers compare equal within a relative 1e-9. The stored result is computed in the facilitator's
+ * browser and the replay in Node; their JavaScript engines can differ in the last bit of Math.pow
+ * (about 1 call in 10 for x^1.4 between Node 22 and Chromium 141, checked in Session 16), which the
+ * market size (§6.3 step 8) uses. Anything else must match exactly.
+ */
+const sameNumber = (a: number, b: number): boolean => a === b || Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
+
+/** Paths (up to `max`) where two values differ, beyond the number tolerance above. */
+function diffPaths(a: unknown, b: unknown, path = '', out: string[] = [], max = 5): string[] {
+  if (out.length >= max) return out;
+  if (typeof a === 'number' && typeof b === 'number') {
+    if (!sameNumber(a, b)) out.push(`${path}: stored ${a} replay ${b}`);
+  } else if (a && b && typeof a === 'object' && typeof b === 'object') {
+    const keys = [...new Set([...Object.keys(a as Json), ...Object.keys(b as Json)])].sort();
+    for (const k of keys) diffPaths((a as Json)[k], (b as Json)[k], `${path}/${k}`, out, max);
+  } else if (canon(a) !== canon(b)) {
+    out.push(`${path || '/'}: stored ${canon(a)?.slice(0, 80)} replay ${canon(b)?.slice(0, 80)}`);
+  }
+  return out;
+}
+
 interface Quarter {
   round: number;
   resolveMs: number;
@@ -179,8 +201,8 @@ async function runPlan(browser: Browser, plan: Plan, email: string, seed: number
       await waitText(fac, /REVEAL/, `${tag}: quarter ${r} resolves`, 30_000, '.scr');
       const resolveMs = Date.now() - t0 - 600;
       const stored = await adminGet<Json>(`games/${g}/rounds/${r}`);
-      const same = canon(storeAndRead(stored)) === canon(storeAndRead((copy.rounds as Json | undefined)?.[String(r)]));
-      check(same, `${tag}: quarter ${r} stored result equals the replay`);
+      const diffs = diffPaths(storeAndRead(stored), storeAndRead((copy.rounds as Json | undefined)?.[String(r)]));
+      check(diffs.length === 0, `${tag}: quarter ${r} stored result equals the replay${diffs.length ? ` (differs at ${diffs.join('; ')})` : ''}`);
       report.quarters.push({ round: r, resolveMs, writeBytes, roundBytes: size(stored), firmsPublicBytes: size(await adminGet(`games/${g}/firmsPublic`)) });
       if (r === 1 || r === 7 || r === QUARTERS) await snapProjector(fac, `scale-run-${plan.mode}-q${r}`);
       if (r < QUARTERS) await key('F9');

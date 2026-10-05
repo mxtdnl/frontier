@@ -249,7 +249,7 @@ Participants can see:
 - headlines
 - their own cash, capability, costs and P&L
 
-They see their own **public exposure** as a qualitative label derived from d_i: LOW < 1.5 ≤ MED < 3.5 ≤ HIGH < 6 ≤ SEVERE. They see an estimated cost for the quarter (deterministic: compute + safety + card).
+They see their own **public exposure** as a qualitative label derived from d_i: LOW < 1.5 ≤ MED < 3.5 ≤ HIGH < 6 ≤ SEVERE. These cutoffs are on the starting DRAW scale; they are recalibrated whenever DRAW changes (`EXPO_CUTS` in `params.ts`, logged in `docs/CALIBRATION.md`) so that at safety 0 paces 1–4 read LOW, MED, HIGH and SEVERE, and pace 4 at safety 30 reads HIGH. They see an estimated cost for the quarter (deterministic: compute + safety + card).
 
 They never see τ, endRound, other firms' cash, capability, pace or safety (unless disclosure is on, §9.3), or unaudited violations.
 
@@ -295,7 +295,7 @@ Bots are labelled `BOT` on every screen. They serve rehearsal, small classes and
 
 ### 8.1 Validity conditions
 
-All four must hold for N ∈ {4, 6, 8, 10, 12, 16, 20, 30, 40, 50} (16–50 added for multiplayer mode, Session 10), across at least 200 seeds per scenario, over 14 rounds. Thresholds are medians, with the stated percentile constraints.
+All five must hold for N ∈ {4, 6, 8, 10, 12, 16, 20, 30, 40, 50} (16–50 added for multiplayer mode, Session 10; C5 added in Session 16), across at least 200 seeds per scenario, over 14 rounds. Thresholds are medians, with the stated percentile constraints.
 
 | # | Scenario | Pass condition |
 |---|---|---|
@@ -303,10 +303,12 @@ All four must hold for N ∈ {4, 6, 8, 10, 12, 16, 20, 30, 40, 50} (16–50 adde
 | C2 | All firms sustainable (pace 2, safety 15, no card) | No collapse in ≥ 99% of seeds by round 30; mean final V per firm > mean final V per firm in C1 by ≥ 40% |
 | C3 | One greedy firm, rest sustainable | The greedy firm's final V > the mean sustainable firm's V by ≥ 25% (temptation exists) |
 | C4 | One greedy firm, rest sustainable | No collapse in ≥ 95% of seeds by round 14 (no single firm can collapse the market) |
+| C5 | Half the firms greedy (⌊N/2⌋), the rest sustainable | Collapse by round 14 in ≥ 80% of seeds; median collapse round ≤ 11 (a room where many firms push hard reaches the moratorium within a normal session). Owner decision 2026-10-05 |
 
 ### 8.2 Additional diagnostics (report; no hard pass)
 
 - Half greedy, half sustainable: collapse round distribution.
+- Greedy share: rooms with a quarter, a third, a half and two thirds of the firms greedy (round(share × N) greedy firms, at least 1), the rest sustainable. Share of seeds with a collapse by rounds 10, 12 and 14, at every N.
 - All Aggressive with safety 0, 15 and 30. This shows that safety substitutes for restraint.
 - **Passive path**: every firm keeps defaults every round (pace 2, safety 10). Must be stable, and no collapse by round 30.
 - Card dominance check: no single card is played in > 60% of best-response rounds in a greedy best-response search.
@@ -832,7 +834,7 @@ Allowed exception: a flat 45° hatch (1 px lines in a token colour, no gradient 
 
 ## 18. Acceptance criteria (v1)
 
-1. Calibration conditions C1–C4 pass. `reports/calibration.md` is committed.
+1. Calibration conditions C1–C5 pass. `reports/calibration.md` is committed.
 2. Rules tests prove the following:
    - Participants cannot read `engine`, `pactsPrivate`, other firms' `firmsPrivate` or decisions, or `results` before the end.
    - Participants cannot write outside their own decision, membership, presence and pact membership.

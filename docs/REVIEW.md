@@ -14,9 +14,9 @@ Severity scale:
 |---|---|---|---|
 | H1 | High | Firms left with no members, and extra firms, cannot be removed | **Fixed** (REMOVE and LOCK JOINS on the console) |
 | H2 | High | A firm's 4-digit PIN could be guessed in seconds while joining was open | **Fixed** (per-firm join throttle, owner's choice; new rules to paste) |
-| M1 | Medium | One firm alone can trigger the moratorium with 4 or fewer firms | Open: runbook advice added; parameter choice for the owner |
-| M2 | Medium | POACH dominates the card choice, unlike the §8.2 diagnostic suggests | Open |
-| M3 | Medium | Pact sanctions do not deter a breach | Open |
+| M1 | Medium | One firm alone can trigger the moratorium with 4 or fewer firms | Open: runbook advice added. Re-measured in Session 16: similar by quarter 14, much more likely in long sessions |
+| M2 | Medium | POACH dominates the card choice, unlike the §8.2 diagnostic suggests | Open (unchanged in Session 16) |
+| M3 | Medium | Pact sanctions do not deter a breach | Open (unchanged in Session 16) |
 | M4 | Medium | Tickers are not unique in the rules | Open |
 | L1–L10 | Low | See section 4 | Open |
 
@@ -157,6 +157,22 @@ So the statement "no single firm can trigger a moratorium at N = 4" does not hol
 2. Scale incident damage with a floor, for example INC_TRUST × 8/max(N, 6). This is a spec deviation: it changes the §6.3 step 5 formula.
 3. Accept it. One reckless firm in a very small market can be a valid teaching moment.
 
+**Session 16 re-measure (2026-10-05).** The Session 16 recalibration (R 0.13, DRAW [0.125, 0.25, 1.2, 1.4], INC_TRUST 1.5; `docs/CALIBRATION.md`) changes these figures. Worst single firm (pace 4, safety 0, LOBBY every other quarter), 500 seeds, other firms restrained or keeping the defaults:
+
+| N | by quarter 14 (before) | by quarter 30 (before) | median quarter |
+|---|---|---|---|
+| 2 | 100% (88–90%) | 100% (99.6%) | 7–8 |
+| 3 | 88–93% (49–56%) | 100% (82–94%) | 11–12 |
+| 4 | **22–31%** (17–22%) | 99.6–100% (43–65%) | 16–17 |
+| 5 | 1–3% (2–6%) | 65–97% (13–29%) | 21–23 |
+| 6 | 0–0.2% (0.8–1.4%) | 16–68% (3–9%) | 25–26 |
+| 8 | 0% (0%) | 0–2.4% (0–0.2%) | 28 |
+
+- Within the default hidden end (quarters 10–14), the risk is close to Session 9 for 4 or more firms. The pace 3 → 4 step in DRAW was kept flat for this reason. Scaling DRAW evenly instead would have raised the N = 4 figure to 60–77%.
+- In a long session (fixed end, manual end, or up to quarter 30), one reckless firm now nearly always triggers the moratorium at N ≤ 5, and often at N = 6.
+- C4 (one greedy bot) still passes at every N: at most 0.4% at 500 seeds.
+- The runbook advice (at least 6 firms) stands, and now gives these figures. Options 1–3 above are unchanged.
+
 ### M2 (Medium): POACH dominates the card choice
 
 **What happens.**
@@ -175,6 +191,10 @@ So the statement "no single firm can trigger a moratorium at N = 4" does not hol
 
 **Options:** raise POACH's cost (15 → 25–30), cut its effect (±3 → ±2), or add a multi-quarter best-response check to `tools/calibrate.ts` before tuning. Each is a calibration change.
 
+**Session 16 re-measure.** Unchanged in substance. In a restrained field at N = 8, the valuation at the end of the session (`reports/strategy-audit.md`, section 1):
+- pace 2, safety 15: 650 with no card, 1,019 with POACH (+57%), 1,128 with POACH and BLITZ (+74%)
+- every best response in a restrained or defaults field still includes POACH.
+
 ### M3 (Medium): pact sanctions do not deter a breach
 
 **What happens.**
@@ -187,6 +207,12 @@ So the statement "no single firm can trigger a moratorium at N = 4" does not hol
 **Reproduction.** `reports/strategy-audit.md`, section 3.
 
 **Options:** a higher default audit probability (0.25 → 0.5), fines based on valuation rather than cash, or a larger minimum fine. Each is a calibration change. Alternatively, keep it and use the debrief to discuss why the sanctions were too weak.
+
+**Session 16 re-measure.** Unchanged in substance. Breach at pace 4, safety 0 with BLITZ ends at 1,503 against 650 for complying, after 533 in fines on average. Alternating LOBBY halves the fines (270). See `reports/strategy-audit.md`, section 3.
+
+**Also from the Session 16 audit:**
+- No strategy now beats both references in every field and N. In Session 9 one did: pace 3, safety 0, POACH and BLITZ.
+- The symmetric check still flags pace 1, safety 0, PUBLISH every other quarter. Mean firm value at quarter 14 is 1,236–1,348, against 742–744 for an all-sustainable field, with no moratorium (L9).
 
 
 ---

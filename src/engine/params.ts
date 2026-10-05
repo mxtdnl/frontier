@@ -102,14 +102,14 @@ export interface Params {
 
 export const PARAMS: Params = {
   T0: 72,
-  R: 0.25, // calibrated, was 0.16 (docs/CALIBRATION.md step 1)
+  R: 0.13, // calibrated: 0.16 → 0.25 (Session 2) → 0.13 (Session 16, docs/CALIBRATION.md)
   TAU_MIN: 30,
   TAU_MAX: 40,
   TRUST_MAX: 100,
 
   CAP_GAIN: [2, 4, 7, 11],
   COMPUTE_COST: [12, 20, 32, 48],
-  DRAW: [0.125, 0.3125, 0.6875, 1.125], // calibrated, was [1.0, 2.5, 5.5, 9.0] (step 2)
+  DRAW: [0.125, 0.25, 1.2, 1.4], // calibrated: [1.0, 2.5, 5.5, 9.0] → [0.125, 0.3125, 0.6875, 1.125] (Session 2) → this (Session 16)
   INC_BASE: [0.02, 0.05, 0.15, 0.3],
 
   SAFETY_MAX: 30,
@@ -119,7 +119,7 @@ export const PARAMS: Params = {
   BUDGET_REF: 1.0,
   DRAW_REF_N: 8,
 
-  INC_TRUST: 4.0,
+  INC_TRUST: 1.5, // calibrated, was 4.0 (Session 16)
   INC_REV_LOSS: 0.15,
 
   M_PER_FIRM: 100,
@@ -148,7 +148,7 @@ export const PARAMS: Params = {
   DEFAULT_PACE: 2,
   DEFAULT_SAFETY: 10,
 
-  EXPO_CUTS: [0.1875, 0.4375, 0.75], // scaled with DRAW, was [1.5, 3.5, 6] (step 3, spec deviation)
+  EXPO_CUTS: [0.15, 0.55, 1.21], // follow DRAW (§6.5): [1.5, 3.5, 6] → [0.1875, 0.4375, 0.75] (Session 2) → this (Session 16)
 
   FINE_RATES: [0.1, 0.25, 0.4],
   FINE_MIN: 10,

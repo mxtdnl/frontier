@@ -83,6 +83,10 @@ export const DEFAULTS: FirmSetup = { kind: 'defaults' };
 export const allOf = (n: number, s: FirmSetup): FirmSetup[] => Array.from({ length: n }, () => s);
 export const oneGreedy = (n: number): FirmSetup[] => [GREEDY, ...allOf(n - 1, SUSTAINABLE)];
 export const halfGreedy = (n: number): FirmSetup[] => Array.from({ length: n }, (_, i) => (i < Math.floor(n / 2) ? GREEDY : SUSTAINABLE));
+/** Firms greedy in a room with the given greedy share: round(share × n), at least 1 (§8.2). */
+export const greedyCount = (n: number, share: number): number => Math.max(1, Math.round(share * n));
+export const greedyShare = (n: number, share: number): FirmSetup[] =>
+  Array.from({ length: n }, (_, i) => (i < greedyCount(n, share) ? GREEDY : SUSTAINABLE));
 export const mixedField = (n: number): FirmSetup[] =>
   Array.from({ length: n }, (_, i) => bot((['cautious', 'standard', 'greedy', 'mimic-leader'] as const)[i % 4] ?? 'standard'));
 
@@ -108,7 +112,7 @@ export const gain = (x: number, base: number): number => (x - base) / Math.abs(b
 // ── §8.1 conditions ──
 
 export interface Condition {
-  id: 'C1' | 'C2' | 'C3' | 'C4';
+  id: 'C1' | 'C2' | 'C3' | 'C4' | 'C5';
   n: number;
   pass: boolean;
   detail: Record<string, number>;
@@ -125,6 +129,7 @@ export interface NResult {
   c3Greedy: number[];
   c3Sustainable: number[];
   c4Rounds: number[];
+  c5Rounds: number[];
   sampleData: string[];
 }
 
@@ -141,6 +146,7 @@ export function runConditions(p: Params, n: number, seeds: number, keepAll = fal
   const c3Greedy: number[] = [];
   const c3Sustainable: number[] = [];
   const c4Rounds: number[] = [];
+  const c5Rounds: number[] = [];
   const sampleData: string[] = [];
   for (let seed = 1; seed <= seeds; seed++) {
     const keepData = keepAll || (seed === 1 && n === 8);
@@ -163,7 +169,10 @@ export function runConditions(p: Params, n: number, seeds: number, keepAll = fal
     c3Sustainable.push(s);
     c3Gains.push(gain(g, s));
     c4Rounds.push(c3.collapseRound ?? NEVER);
-    if (keepData) sampleData.push(...c1.dataLines, ...c2.dataLines, ...c3.dataLines);
+
+    const c5 = simulate(p, seed, halfGreedy(n), ROUNDS, { keepData, label: 'C5' });
+    c5Rounds.push(c5.collapseRound ?? NEVER);
+    if (keepData) sampleData.push(...c1.dataLines, ...c2.dataLines, ...c3.dataLines, ...c5.dataLines);
   }
   const frac = (xs: number[], pred: (x: number) => boolean): number => xs.filter(pred).length / xs.length;
   const c1Median = median(c1Rounds);
@@ -172,6 +181,8 @@ export function runConditions(p: Params, n: number, seeds: number, keepAll = fal
   const c2MedianGain = median(c2Gains);
   const c3MedianGain = median(c3Gains);
   const c4Rate = frac(c4Rounds, (r) => r <= ROUNDS);
+  const c5By14 = frac(c5Rounds, (r) => r <= ROUNDS);
+  const c5Median = median(c5Rounds);
   return {
     n,
     conditions: [
@@ -194,6 +205,12 @@ export function runConditions(p: Params, n: number, seeds: number, keepAll = fal
         detail: { medianGreedyGain: c3MedianGain, gainOfMeans: gain(mean(c3Greedy), mean(c3Sustainable)) },
       },
       { id: 'C4', n, pass: c4Rate <= 0.05, detail: { collapseRateBy14: c4Rate } },
+      {
+        id: 'C5',
+        n,
+        pass: c5By14 >= 0.8 && c5Median <= 11,
+        detail: { collapseRateBy14: c5By14, medianRound: c5Median, collapsedBy11: frac(c5Rounds, (r) => r <= 11) },
+      },
     ],
     c1Rounds,
     c1Values,
@@ -203,6 +220,7 @@ export function runConditions(p: Params, n: number, seeds: number, keepAll = fal
     c3Greedy,
     c3Sustainable,
     c4Rounds,
+    c5Rounds,
     sampleData,
   };
 }
@@ -223,6 +241,22 @@ export function collapseDist(p: Params, seeds: number, setups: (n: number) => Re
     rateBy14: rounds.filter((r) => r <= ROUNDS).length / seeds,
     rateBy30: rounds.filter((r) => r <= LONG_ROUNDS).length / seeds,
   };
+}
+
+/** Greedy shares reported by the §8.2 greedy-share diagnostic. */
+export const GREEDY_SHARES = [
+  { label: '1/4', share: 1 / 4 },
+  { label: '1/3', share: 1 / 3 },
+  { label: '1/2', share: 1 / 2 },
+  { label: '2/3', share: 2 / 3 },
+] as const;
+
+/** Share of seeds with a moratorium by quarters 10, 12 and 14 for a room with the given greedy share. */
+export function greedyShareRates(p: Params, seeds: number, n: number, share: number): { by10: number; by12: number; by14: number } {
+  const rounds: number[] = [];
+  for (let seed = 1; seed <= seeds; seed++) rounds.push(simulate(p, seed, greedyShare(n, share), ROUNDS).collapseRound ?? NEVER);
+  const by = (q: number): number => rounds.filter((r) => r <= q).length / seeds;
+  return { by10: by(10), by12: by(12), by14: by(14) };
 }
 
 export interface PassivePath {

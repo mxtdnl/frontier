@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { REHEARSAL_QUARTERS, simulateRehearsal } from '../../scripts/lib/rehearsal-model';
 
-const SEED = 5; // keep equal to SEED in scripts/e2e-rehearsal.ts
+const SEED = 2; // keep equal to SEED in scripts/e2e-rehearsal.ts
 
 describe('rehearsal replica', () => {
   it('the fixed rehearsal seed ends in a moratorium inside the 14 quarters, with margin on both sides', () => {
