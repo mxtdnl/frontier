@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { PARAMS, type FinalResults } from '../../engine';
+import { PACT_QUARTER, PARAMS, type FinalResults, type PactFinal, type PactQuarterCode } from '../../engine';
 import { stepResults, type ActionResult } from '../../firebase/orchestrator';
 import { RESULT_PANEL_COUNT } from '../../firebase/phases';
 import { navigate, useRoute } from '../../router';
@@ -13,6 +13,7 @@ import { matchKey, resultsKeys, type KeyAction } from '../../ui/keys';
 import { useLitRoom } from '../../ui/litRoom';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
 import { Butterfly, Dumbbell } from './charts';
+import { DEBRIEF_HEADLINE, attributionHeadline, counterfactualHeadline, finalBoardHeadline, pactHeadline, trustHeadline } from './headlines';
 import {
   DEBRIEF_PROMPTS,
   RESULT_PANELS,
@@ -21,8 +22,10 @@ import {
   finalBoardRows,
   headlineFigures,
   pactLines,
+  pactStripRows,
   rankedFirms,
   trustSeries,
+  type PactStripRow,
 } from './model';
 
 export { RESULT_PANELS };
@@ -177,9 +180,19 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   );
 }
 
+/** The panel's one-sentence point, written from the data (§14.4). */
+function Headline({ text }: { text: string }) {
+  return (
+    <p className="res-headline" data-headline="">
+      {text}
+    </p>
+  );
+}
+
 export function FinalBoard({ r }: { r: FinalResults }) {
   return (
     <Panel title="FINAL BOARD · ranked by final valuation" right={`peak → final valuation · ${r.rounds} QTR`} bodyClassName="pad col">
+      <Headline text={finalBoardHeadline(r)} />
       <Dumbbell rows={finalBoardRows(r)} />
     </Panel>
   );
@@ -195,6 +208,7 @@ export function TrustTrace({ r }: { r: FinalResults }) {
       right={`${marker !== null ? `moratorium from ${quarterLabel(marker)}` : 'no moratorium'}${r.tau !== null ? ' · τ revealed' : ''}`}
       bodyClassName="pad col"
     >
+      <Headline text={trustHeadline(r)} />
       <LineChart
         series={[{ values: series, label: 'Trust', tone: 'signal' }]}
         domain="trust"
@@ -232,6 +246,7 @@ export function Counterfactual({ r }: { r: FinalResults }) {
   const right = `same incident draws · every firm at pace ${alt.pace}, safety ${alt.safety}`;
   return (
     <Panel title="COUNTERFACTUAL" right={right} bodyClassName="pad col">
+      <Headline text={counterfactualHeadline(r, alt)} />
       <div className="figs">
         <Figure label="INDUSTRY VALUE" value={fmt(f.actual, 0)} sub="actual, all firms" tone={f.actual < 0 ? 'down' : undefined} />
         <Figure label="ALTERNATIVE" value={fmt(f.alternative, 0)} sub={`pace ${alt.pace}, safety ${alt.safety}`} tone="wire" />
@@ -266,7 +281,7 @@ export function Counterfactual({ r }: { r: FinalResults }) {
 function CompareList({ firms, domain }: { firms: ReturnType<typeof rankedFirms>; domain: readonly [number, number] }) {
   const zeroAt = ((0 - domain[0]) / (domain[1] - domain[0])) * 100;
   return (
-    <div className="res-scroll" data-res-scroll="" tabIndex={0} aria-label={`Actual and alternative valuation for ${firms.length} firms. Scroll for every firm.`}>
+    <div className="res-scroll cmp-list" data-res-scroll="" tabIndex={0} aria-label={`Actual and alternative valuation for ${firms.length} firms. Scroll for every firm.`}>
       <div className="cmp-row dim res-sticky-top">
         <span>FIRM</span>
         <span>ACTUAL FROM 0</span>
@@ -314,6 +329,7 @@ export function Attribution({ r }: { r: FinalResults }) {
       right={others ? `the ${rows.length} largest shares of damage · OTHERS combines ${combined} firms` : 'ranked by share of damage'}
       bodyClassName="pad col"
     >
+      <Headline text={attributionHeadline(r)} />
       <Butterfly rows={rows} anyPositive={anyPositive} others={others} />
     </Panel>
   );
@@ -322,10 +338,10 @@ export function Attribution({ r }: { r: FinalResults }) {
 export function PactRecord({ r }: { r: FinalResults }) {
   const lines = pactLines(r);
   return (
-    <Panel title="PACT RECORD · undetected violations now shown" bodyClassName="pad">
-      {lines.length === 0 ? <p>No pacts were formed.</p> : null}
+    <Panel title="PACT RECORD · undetected violations now shown" bodyClassName="pad col">
+      <Headline text={pactHeadline(r)} />
       {lines.length > 0 ? (
-        <div className="stack">
+        <>
           <DataTable
             caption="Pact record"
             tall
@@ -341,17 +357,87 @@ export function PactRecord({ r }: { r: FinalResults }) {
               { key: 'b', label: 'BY FIRM', w: 0, className: 'tags', render: (l) => tickerLine(l.undetectedBy, ' · ') || '–' },
             ]}
           />
+          <PactStrips r={r} pacts={lines.map((l) => l.pact)} />
           <p className="dim">Counts are quarters in which a member broke the terms. Undetected means no audit examined that quarter.</p>
-        </div>
+        </>
       ) : null}
     </Panel>
   );
 }
 
-function Debrief() {
+const CELL_CLASS: Record<PactQuarterCode, string> = {
+  [PACT_QUARTER.none]: 'ps-none',
+  [PACT_QUARTER.kept]: 'ps-kept',
+  [PACT_QUARTER.detected]: 'ps-detected',
+  [PACT_QUARTER.undetected]: 'ps-undetected',
+};
+
+/** "ARCN, former member: detected breach in Q2 Y1; undetected breach in Q3 Y1, Q4 Y1; kept the terms in 2 quarters." */
+function describeStripRow(row: PactStripRow): string {
+  const at = (code: PactQuarterCode) => row.cells.flatMap((c, i) => (c === code ? [quarterLabel(i + 1)] : []));
+  const parts: string[] = [];
+  const det = at(PACT_QUARTER.detected);
+  const und = at(PACT_QUARTER.undetected);
+  const kept = at(PACT_QUARTER.kept).length;
+  if (det.length > 0) parts.push(`detected breach in ${det.join(', ')}`);
+  if (und.length > 0) parts.push(`undetected breach in ${und.join(', ')}`);
+  if (kept > 0) parts.push(`kept the terms in ${kept} ${kept === 1 ? 'quarter' : 'quarters'}`);
+  return `${row.ticker}${row.former ? ', former member' : ''}: ${parts.join('; ')}.`;
+}
+
+/**
+ * One row of quarter cells per firm bound by the pact (§14.4): solid red for a detected breach, a red outline
+ * for an undetected one, a dim dot for a quarter that kept the terms, blank when the firm was not bound.
+ */
+function PactStrips({ r, pacts }: { r: FinalResults; pacts: ReadonlyArray<PactFinal> }) {
+  const quarters = Array.from({ length: r.rounds }, (_, i) => i);
+  const style = { ['--ps-q' as string]: Math.max(1, r.rounds) };
   return (
-    <Panel title="DEBRIEF" bodyClassName="pad">
-      <ol className="stack" style={{ margin: 0, paddingLeft: '4ch', gap: '1lh' }}>
+    <div className="ps-wrap">
+      <div className="res-scroll ps-list" data-res-scroll="" tabIndex={0} aria-label={`Pact record by quarter for ${pacts.length} ${pacts.length === 1 ? 'pact' : 'pacts'}`}>
+        {pacts.map((pact) => {
+          const rows = pactStripRows(r, pact);
+          return (
+            <div key={pact.pactId} className="ps-pact" data-pact-strip={pact.name}>
+              <div className="ps-row ps-head dim" style={style} aria-hidden="true">
+                <span>{pact.name}</span>
+                {quarters.map((i) => (
+                  <span key={i} className={`ps-q${i % 4 === 0 ? ' is-year' : ''}`}>
+                    {i % 4 === 0 ? `Y${i / 4 + 1}` : ''}
+                  </span>
+                ))}
+              </div>
+              {rows.length === 0 ? <p className="dim">No quarter is recorded for this pact.</p> : null}
+              {rows.map((row) => (
+                <div key={row.firmId} className="ps-row" style={style} data-firm={row.ticker} role="img" aria-label={describeStripRow(row)}>
+                  <span className="ps-name">
+                    <strong>{row.ticker}</strong>
+                    {row.former ? <span className="dim"> former</span> : null}
+                  </span>
+                  {row.cells.map((c, i) => (
+                    <span key={i} className={`ps-cell ${CELL_CLASS[c]}${i % 4 === 0 ? ' is-year' : ''}`} data-cell={c} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      <div className="ps-key dim" data-key="pact-strip">
+        <span><span className="ps-cell ps-detected" aria-hidden="true" /> detected breach</span>
+        <span><span className="ps-cell ps-undetected" aria-hidden="true" /> undetected breach</span>
+        <span><span className="ps-cell ps-kept" aria-hidden="true" /> kept the terms</span>
+        <span>blank: not bound by the terms</span>
+      </div>
+    </div>
+  );
+}
+
+export function Debrief() {
+  return (
+    <Panel title="DEBRIEF" bodyClassName="pad col">
+      <Headline text={DEBRIEF_HEADLINE} />
+      <ol className="res-prompts">
         {DEBRIEF_PROMPTS.map((p) => (
           <li key={p}>{p}</li>
         ))}

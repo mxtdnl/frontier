@@ -5,8 +5,9 @@ import { PARAMS, buildResults, nextPactName, resolveRound, type EngineState, typ
 import { fromResults } from '../../src/firebase/schema';
 import { fmt, fmtShare, quarterLabel } from '../../src/ui/format';
 import { OwnResultsCard } from '../../src/screens/Results/OwnResultsCard';
-import { Attribution, Counterfactual, FinalBoard, PactRecord, TrustTrace } from '../../src/screens/Results/Results';
-import { attributionRows, attributionView, counterfactualTrustSeries, finalBoardRows, headlineFigures, pactLines, rankedFirms, trustSeries } from '../../src/screens/Results/model';
+import { Attribution, Counterfactual, Debrief, FinalBoard, PactRecord, TrustTrace } from '../../src/screens/Results/Results';
+import { DEBRIEF_HEADLINE, ownResultSentence, panelHeadline } from '../../src/screens/Results/headlines';
+import { attributionRows, attributionView, counterfactualTrustSeries, finalBoardRows, headlineFigures, pactLines, pactStripRows, rankedFirms, trustSeries } from '../../src/screens/Results/model';
 import type { FinalResults } from '../../src/engine';
 import { storeAndRead } from '../firebase/rtdb';
 import { dec, game } from '../engine/helpers';
@@ -225,7 +226,67 @@ describe('results panels', () => {
 
   it('pact record says so when no pact was formed', () => {
     const r = { ...read(false), pacts: [] };
-    expect(html(createElement(PactRecord, { r }))).toContain('No pacts were formed.');
+    const out = html(createElement(PactRecord, { r }));
+    expect(out).toContain('No pacts were formed.');
+    expect(out).not.toContain('data-pact-strip');
+  });
+
+  it('every panel opens with its headline (§14.4)', () => {
+    const r = read(false);
+    const panels = [FinalBoard, TrustTrace, Counterfactual, Attribution, PactRecord];
+    panels.forEach((el, i) => {
+      const out = html(createElement(el, { r }));
+      const m = /<p class="res-headline" data-headline="">([^<]*)<\/p>/.exec(out);
+      expect(m?.[1]?.replace(/&#x27;/g, "'")).toBe(panelHeadline(r, i));
+      // The headline comes before the chart or table.
+      expect(out.indexOf('data-headline')).toBeLessThan(Math.max(out.indexOf('<svg'), out.indexOf('<table'), out.indexOf('data-pact-strip')));
+    });
+    expect(html(createElement(Debrief))).toContain(DEBRIEF_HEADLINE);
+  });
+
+  it('pact strip draws one cell per quarter for every firm bound by the terms', () => {
+    const r = read(false);
+    const out = html(createElement(PactRecord, { r }));
+    const pact = r.pacts[0]!;
+    const rows = pactStripRows(r, pact);
+    expect(rows.map((x) => x.ticker)).toEqual(['ARCN', 'BRLK']);
+    expect(out).toContain('data-pact-strip="PACT-A"');
+    const cells = [...out.matchAll(/data-cell="([-cdu])"/g)].map((m) => m[1]);
+    expect(cells).toHaveLength(rows.length * r.rounds);
+    expect(cells.join('')).toBe(rows.map((x) => x.cells.join('')).join(''));
+    expect(cells.filter((c) => c === 'd')).toHaveLength(pact.detected);
+    expect(cells.filter((c) => c === 'u')).toHaveLength(pact.undetected);
+    // ARCN (pace 4 every quarter) breached every quarter; BRLK (pace 2) kept the terms.
+    expect(rows[0]?.cells.every((c) => c === 'd' || c === 'u')).toBe(true);
+    expect(rows[1]?.cells.every((c) => c === 'c')).toBe(true);
+    expect(out).toMatch(/aria-label="ARCN: detected breach in [^"]*Q1 Y1/);
+    for (const word of ['detected breach', 'undetected breach', 'kept the terms', 'not bound by the terms']) expect(out).toContain(word);
+  });
+
+  it('pact strip lists former members after members, marked former, blank where not bound', () => {
+    const base = read(false);
+    const pact = base.pacts[0]!;
+    const r: FinalResults = {
+      ...base,
+      pacts: [{ ...pact, members: ['f1'], quarters: { ...pact.quarters, f4: '--' + 'c'.repeat(base.rounds - 2) } }],
+    };
+    const rows = pactStripRows(r, r.pacts[0]!);
+    expect(rows.map((x) => [x.ticker, x.former])).toEqual([
+      [r.final.f1!.ticker, false],
+      [r.final.f0!.ticker, true],
+      [r.final.f4!.ticker, true],
+    ]);
+    expect(rows[2]?.cells.slice(0, 2)).toEqual(['-', '-']);
+    const out = html(createElement(PactRecord, { r }));
+    expect(out).toContain('> former</span>');
+  });
+
+  it('pact strip reads a record without quarter codes as breaches only, and ignores unknown codes', () => {
+    const base = read(false);
+    const r: FinalResults = { ...base, pacts: [{ ...base.pacts[0]!, quarters: { f0: 'dx' } }] };
+    const rows = pactStripRows(r, r.pacts[0]!);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.cells).toEqual(['d', ...Array.from({ length: base.rounds - 1 }, () => '-')]);
   });
 });
 
@@ -239,6 +300,20 @@ describe('participant results card', () => {
     expect(out).toContain(fmt(own.counterfactual));
     expect(out).toContain(fmtShare(own.drawShare));
     expect(out).toContain(`<dd>${own.undetected}</dd>`);
+  });
+
+  it('opens with the result sentence and shows damage and value shares as two bars', () => {
+    const r = read(false);
+    const own = r.final.f0!;
+    const out = html(createElement(OwnResultsCard, { ticker: own.ticker, firmId: 'f0', results: r, unavailable: false, rank: null, valuation: null }));
+    const sentence = ownResultSentence(own, 5);
+    expect(sentence).toMatch(/^You finished \d(st|nd|rd|th) of 5, /);
+    expect(out).toContain(`data-headline="">${sentence}</p>`);
+    expect(out.indexOf(sentence)).toBeLessThan(out.indexOf('Valuation'));
+    expect([...out.matchAll(/class="hbar"/g)]).toHaveLength(2);
+    expect(out).toContain(`aria-label="Share of the damage ${fmtShare(own.drawShare)}"`);
+    expect(out).toContain(`aria-label="Share of the value ${fmtShare(own.valueShare)}"`);
+    expect(out).not.toContain('data-pact-strip');
     expect(out).toContain(`<dd>${own.detected}</dd>`);
   });
 
@@ -319,6 +394,12 @@ describe('results at 50 firms (spec §14.4, Session 10)', () => {
     const v = attributionView(small);
     expect(v.others).toBeNull();
     expect(v.rows).toHaveLength(small.attribution.length);
+  });
+
+  it('draws a strip row for each of the 30 pact members', () => {
+    const h = html(createElement(PactRecord, { r: r50 }));
+    expect([...h.matchAll(/class="ps-row" [^>]*data-firm=/g)]).toHaveLength(30);
+    expect(h).toContain('data-res-scroll');
   });
 
   it('truncates a 30-firm pact member list', () => {

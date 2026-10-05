@@ -159,6 +159,41 @@ export async function checkCharts(page: Page, label: string): Promise<void> {
   if (r.problems.length) fail(`${label}: charts: ${r.problems.join(' | ')}`);
 }
 
+/** Results panels (§14.4): most empty height allowed below the last content, as a share of the panel body. */
+export const RESULTS_EMPTY_MAX = 0.2;
+
+/**
+ * Results panel checks (spec §14.4, Session 14), run on any projector frame that shows a results panel:
+ * the panel body opens with a non-empty headline, and the content reaches down the panel, leaving at most
+ * RESULTS_EMPTY_MAX of its height empty at the bottom. Returns the headline text ('' when no results panel).
+ */
+export async function checkResultsPanel(page: Page, label: string): Promise<string> {
+  const r = await page.evaluate(() => {
+    const head = document.querySelector<HTMLElement>('.scr .panel-body > [data-headline]');
+    if (!head) return null;
+    const body = head.parentElement as HTMLElement;
+    const box = body.getBoundingClientRect();
+    const pad = parseFloat(getComputedStyle(body).paddingBottom) || 0;
+    let lowest = box.top;
+    body.querySelectorAll<Element>('*').forEach((el) => {
+      if (el.children.length > 0 || el.tagName === 'svg') return;
+      const b = el.getBoundingClientRect();
+      if (b.width <= 0 || b.height <= 0) return;
+      lowest = Math.max(lowest, Math.min(b.bottom, box.bottom));
+    });
+    return {
+      text: head.innerText.trim(),
+      first: body.firstElementChild === head,
+      empty: (box.bottom - pad - lowest) / Math.max(1, box.height - pad),
+    };
+  });
+  if (r === null) return '';
+  if (!r.text) fail(`${label}: results headline is empty`);
+  if (!r.first) fail(`${label}: results headline is not the first thing in the panel`);
+  if (r.empty > RESULTS_EMPTY_MAX) fail(`${label}: results panel leaves ${(r.empty * 100).toFixed(0)}% of its height empty`);
+  return r.text;
+}
+
 /** Captures the projector at both required sizes, then restores the working size. */
 export async function snapProjector(page: Page, name: string): Promise<void> {
   for (const [w, h] of [[1280, 720], [1920, 1080]] as const) {
@@ -168,6 +203,7 @@ export async function snapProjector(page: Page, name: string): Promise<void> {
     await checkProjector(page, `projector ${name} ${w}x${h}`);
     await checkCharts(page, `projector ${name} ${w}x${h}`);
     await checkAmber(page, `projector ${name} ${w}x${h}`);
+    await checkResultsPanel(page, `projector ${name} ${w}x${h}`);
   }
   await page.setViewportSize({ width: 1280, height: 720 });
 }

@@ -1,5 +1,5 @@
 /** Pure helpers for the results panels (spec §14.4). */
-import type { FinalResults, FirmFinal, PactFinal } from '../../engine';
+import { PACT_QUARTER, type FinalResults, type FirmFinal, type PactFinal, type PactQuarterCode } from '../../engine';
 import { ATTRIBUTION_ALL_MAX, ATTRIBUTION_TOP, tickerLine } from '../../ui/layout';
 
 export const RESULT_PANELS = ['FINAL BOARD', 'TRUST TRACE', 'COUNTERFACTUAL', 'ATTRIBUTION', 'PACT RECORD', 'DEBRIEF'] as const;
@@ -144,4 +144,37 @@ export function pactLines(r: FinalResults): PactLine[] {
       .filter(([, v]) => v.undetected > 0)
       .map(([id, v]) => `${tickerOf(r, id)} ${v.undetected}`),
   }));
+}
+
+export interface PactStripRow {
+  firmId: string;
+  ticker: string;
+  /** Bound by the terms at some point but not a member at the end (left, expelled, or the pact dissolved without it). */
+  former: boolean;
+  /** One code per resolved quarter, quarter 1 first. */
+  cells: PactQuarterCode[];
+}
+
+const QUARTER_CODES: ReadonlySet<string> = new Set(Object.values(PACT_QUARTER));
+
+/**
+ * Quarter strip rows for one pact (§14.4 PACT RECORD): members at the end in their table order, then
+ * former members by ticker. A firm with no quarter bound by the terms has no row.
+ */
+export function pactStripRows(r: FinalResults, pact: PactFinal): PactStripRow[] {
+  const cellsOf = (id: string): PactQuarterCode[] => {
+    const line = pact.quarters[id] ?? '';
+    return Array.from({ length: r.rounds }, (_, i) => {
+      const c = line[i] ?? PACT_QUARTER.none;
+      return (QUARTER_CODES.has(c) ? c : PACT_QUARTER.none) as PactQuarterCode;
+    });
+  };
+  const bound = (cells: PactQuarterCode[]) => cells.some((c) => c !== PACT_QUARTER.none);
+  const current = pact.members.map((id) => ({ firmId: id, ticker: tickerOf(r, id), former: false, cells: cellsOf(id) }));
+  const members = new Set(pact.members);
+  const former = Object.keys(pact.quarters)
+    .filter((id) => !members.has(id))
+    .map((id) => ({ firmId: id, ticker: tickerOf(r, id), former: true, cells: cellsOf(id) }))
+    .sort((a, b) => (a.ticker < b.ticker ? -1 : a.ticker > b.ticker ? 1 : 0));
+  return [...current, ...former].filter((row) => bound(row.cells));
 }
