@@ -37,6 +37,8 @@ export interface BoardRow {
   value: number;
   prevValue: number;
   dValue: number;
+  /** Valuation by quarter from the opening value (public `rounds` results), for the trend line. */
+  history: number[];
   committed: boolean;
   auto: boolean;
   insolvent: boolean;
@@ -96,6 +98,7 @@ export function boardRows(d: ScreenData): BoardRow[] {
       value,
       prevValue,
       dValue: last === 0 ? 0 : value - prevValue,
+      history: valuationSeries(id, d.rounds),
       committed: !!fp && d.pub.round > 0 && fp.submittedRound === d.pub.round,
       auto: !!fp && fp.auto && d.pub.phase !== 'open',
       insolvent: fp?.insolvent ?? false,

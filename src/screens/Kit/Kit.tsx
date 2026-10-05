@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { CARDS, FIRMS, HEADLINES, PACE_OPTIONS, TRUST, TRUST_HISTORY, prevProfit, prevRank, prevShare, prevValue, type MockFirm } from '../../mock/fixtures';
+import { CARDS, FIRMS, HEADLINES, PACE_OPTIONS, TRUST, TRUST_HISTORY, prevProfit, prevRank, prevShare, prevValue, valueHistory, type MockFirm } from '../../mock/fixtures';
 import {
   Brand,
   PhaseBlock,
@@ -43,6 +43,7 @@ const toRow = (f: MockFirm, i: number): BoardRow => ({
   value: f.value,
   prevValue: prevValue(f),
   dValue: f.dValue,
+  history: valueHistory(f),
   committed: f.committed,
   auto: f.tags.includes('AUTO'),
   insolvent: f.tags.includes('INSOLV'),

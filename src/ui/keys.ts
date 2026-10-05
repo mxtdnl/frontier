@@ -48,7 +48,7 @@ export function matchKey(e: KeyLike, commandLineFocused: boolean): KeyAction | n
   return null;
 }
 
-export type ScreenView = 'board' | 'trust' | 'pacts' | 'audit' | 'wire' | 'help' | 'firm';
+export type ScreenView = 'board' | 'trust' | 'pacts' | 'audit' | 'wire' | 'help' | 'firm' | 'firms' | 'ranks';
 
 export interface KeyContext {
   phase: 'lobby' | 'briefing' | 'open' | 'resolving' | 'reveal' | 'summit' | 'ended';

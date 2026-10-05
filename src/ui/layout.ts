@@ -148,10 +148,13 @@ export function boardChartWidths(freeCh: number): { bar: number; trend: number }
 /** Cards per page above 16 firms. */
 export const FIRMS_PAGE_SIZE = 16;
 
-/** Grid for the small multiples: 3 × 3 up to 9 firms, 4 × 4 above; pages of 16 above 16 firms. */
+/**
+ * Grid for the small multiples: 3 columns up to 9 firms (3 × 3), 4 above (4 × 4), pages of 16 above 16 firms. Only the
+ * rows the first page needs are drawn, so 12 firms fill the panel as 4 × 3 rather than leaving a row empty.
+ */
 export function firmsGrid(n: number): { cols: number; rows: number; pages: number } {
-  const side = n <= 9 ? 3 : 4;
-  return { cols: side, rows: side, pages: Math.max(1, Math.ceil(n / FIRMS_PAGE_SIZE)) };
+  const cols = n <= 9 ? 3 : 4;
+  return { cols, rows: Math.max(1, Math.ceil(Math.min(n, FIRMS_PAGE_SIZE) / cols)), pages: Math.max(1, Math.ceil(n / FIRMS_PAGE_SIZE)) };
 }
 
 /** One page of cards from firms sorted by rank; `page` wraps, like the board's rotation counter. */

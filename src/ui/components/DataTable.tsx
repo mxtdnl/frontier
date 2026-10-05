@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 export interface Column<T> {
   key: string;
   label: string;
+  /** Header content when it is not plain text (e.g. a glyph); `label` still names the column. */
+  head?: ReactNode;
   /** Column width in ch. Zero takes the remaining width. */
   w: number;
   align?: 'l' | 'r';
@@ -38,7 +40,7 @@ export function DataTable<T>({ columns, rows, rowKey, isOwn, prevIndex, rowClass
         <tr>
           {columns.map((c) => (
             <th key={c.key} scope="col" className={c.align === 'r' ? 'num' : ''}>
-              {c.label}
+              {c.head ?? c.label}
             </th>
           ))}
         </tr>

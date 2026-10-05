@@ -91,6 +91,14 @@ export function largestFaller(firms: ReadonlyArray<FirmRef>, table: RankTable): 
   return out;
 }
 
+/** Rank labels: every rank up to 16 firms, then 1 and every 5th. */
+export function rankAxis(n: number): number[] {
+  if (n <= 16) return Array.from({ length: n }, (_, i) => i + 1);
+  const out = [1];
+  for (let r = 5; r <= n; r += 5) out.push(r);
+  return out;
+}
+
 /** 1 → "1st", 2 → "2nd", 11 → "11th", 23 → "23rd". */
 export function ordinal(n: number): string {
   const t = n % 100;

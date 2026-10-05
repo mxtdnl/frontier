@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseCommand } from '../../src/ui/commands';
+import { COMMAND_HELP, parseCommand } from '../../src/ui/commands';
 
 describe('parseCommand', () => {
   it('parses the fixed mnemonics, ignoring case and <GO>', () => {
@@ -8,6 +8,14 @@ describe('parseCommand', () => {
     expect(parseCommand(' pact ')).toEqual({ kind: 'pacts' });
     expect(parseCommand('Wire')).toEqual({ kind: 'wire' });
     expect(parseCommand('help')).toEqual({ kind: 'help' });
+  });
+  it('parses FIRMS and RANKS as their own commands, distinct from FIRM <TICKER> (Session 13)', () => {
+    expect(parseCommand('firms')).toEqual({ kind: 'firms' });
+    expect(parseCommand('RANKS <GO>')).toEqual({ kind: 'ranks' });
+    expect(parseCommand('firm firms')).toEqual({ kind: 'firm', ticker: 'FIRMS' });
+  });
+  it('lists every command in HELP', () => {
+    expect(COMMAND_HELP.map((c) => c.mnemonic)).toEqual(['BOARD', 'TRST', 'PACT', 'WIRE', 'FIRM <TICKER>', 'FIRMS', 'RANKS', 'HELP']);
   });
   it('treats empty input as the board', () => {
     expect(parseCommand('   ')).toEqual({ kind: 'board' });

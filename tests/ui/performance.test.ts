@@ -204,10 +204,12 @@ describe('board bar and trend widths', () => {
 });
 
 describe('FIRMS grid', () => {
-  it('is 3 × 3 up to 9 firms, 4 × 4 up to 16, then pages of 16', () => {
-    expect(firmsGrid(2)).toEqual({ cols: 3, rows: 3, pages: 1 });
+  it('is 3 × 3 up to 9 firms, 4 × 4 up to 16, then pages of 16; only the rows needed are drawn', () => {
+    expect(firmsGrid(2)).toEqual({ cols: 3, rows: 1, pages: 1 });
+    expect(firmsGrid(4)).toEqual({ cols: 3, rows: 2, pages: 1 });
     expect(firmsGrid(9)).toEqual({ cols: 3, rows: 3, pages: 1 });
-    expect(firmsGrid(10)).toEqual({ cols: 4, rows: 4, pages: 1 });
+    expect(firmsGrid(10)).toEqual({ cols: 4, rows: 3, pages: 1 });
+    expect(firmsGrid(12)).toEqual({ cols: 4, rows: 3, pages: 1 });
     expect(firmsGrid(16)).toEqual({ cols: 4, rows: 4, pages: 1 });
     expect(firmsGrid(17)).toEqual({ cols: 4, rows: 4, pages: 2 });
     expect(firmsGrid(50)).toEqual({ cols: 4, rows: 4, pages: 4 });

@@ -1141,3 +1141,169 @@ legend {
   border: var(--rule-w) solid var(--signal-dim);
   color: var(--signal);
 }
+
+/* ---------- Firm performance on the board (spec §14.1, Session 13) ---------- */
+/* One line plus half a line of space, so the board's two-line capacities are unchanged. */
+.share-strip {
+  display: flex;
+  align-items: stretch;
+  height: 1lh;
+  margin: 0.25lh 0;
+  white-space: nowrap;
+}
+.share-strip .ss-label {
+  flex: 0 0 12ch;
+  color: var(--dim);
+}
+.share-strip .ss-track {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+}
+.share-strip .ss-cap {
+  flex: 0 0 14ch;
+  text-align: right;
+  color: var(--down);
+}
+.share-strip .ss-none {
+  color: var(--dim);
+}
+/* Faded by rank by mixing with the panel colour; never below 64 %, so black text stays above 4.5:1. */
+.ss-seg {
+  flex: none;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--signal-ink);
+  border-left: 1px solid var(--base);
+}
+.ss-text {
+  margin-left: 0.5ch;
+}
+.ss-seg:first-child {
+  border-left: 0;
+}
+.ss-l0 {
+  background: var(--wire);
+}
+.ss-l1 {
+  background: color-mix(in srgb, var(--wire) 91%, var(--panel));
+}
+.ss-l2 {
+  background: color-mix(in srgb, var(--wire) 82%, var(--panel));
+}
+.ss-l3 {
+  background: color-mix(in srgb, var(--wire) 73%, var(--panel));
+}
+.ss-l4 {
+  background: color-mix(in srgb, var(--wire) 64%, var(--panel));
+}
+.neg-c {
+  color: var(--down);
+}
+.tbl td.chart-cell {
+  vertical-align: middle;
+}
+.vbar {
+  position: relative;
+  display: block;
+  height: 0.8em;
+}
+.vbar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.vbar-fill.pos {
+  background: var(--wire);
+}
+.vbar-fill.neg {
+  background: var(--down);
+}
+.vbar-zero {
+  position: absolute;
+  top: -0.2em;
+  bottom: -0.2em;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--dim);
+}
+.trend,
+.trend-empty {
+  display: block;
+  width: 100%;
+  height: 1lh;
+}
+.trend .trend-zero {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+.trend .trend-line {
+  fill: none;
+  stroke: var(--wire);
+  stroke-width: 1.5;
+}
+.trend .trend-line.neg {
+  stroke: var(--down);
+}
+/* Commit mark: a solid green box carrying a black check (owner decision 2026-10-05). */
+.tbl td.cmt-cell {
+  padding-right: 0.5ch;
+  text-align: center;
+}
+.cmt-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5ch;
+  height: 1.2em;
+  vertical-align: -0.2em;
+  background: var(--up);
+  color: var(--signal-ink);
+}
+
+/* ---------- FIRMS small multiples and RANKS chart (spec §14.1, Session 13) ---------- */
+.fm-grid {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  gap: 0 1ch;
+}
+.fm-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-top: var(--rule-w) solid var(--grid);
+}
+.fm-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1ch;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.fm-ticker {
+  font-weight: 600;
+}
+.fm-chart {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.lc .fm-zero {
+  stroke: var(--dim);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+.lc .rc-other {
+  stroke: var(--rule);
+  stroke-width: 1.5;
+}
+.lc .rc-hi {
+  stroke-width: 3;
+}
+.ranks-headline {
+  padding: 0.5lh 0;
+}

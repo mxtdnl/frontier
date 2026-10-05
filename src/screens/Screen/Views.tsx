@@ -1,8 +1,10 @@
 import { COMMAND_HELP } from '../../ui/commands';
-import { DataTable, Delta, LineChart, Panel, QR, Tag } from '../../ui/components';
+import { DataTable, Delta, FirmMultiples, LineChart, Panel, QR, RankChart, Tag, type RankLine } from '../../ui/components';
+import { yDomain } from '../../ui/chart';
 import { fmt, fmtShare, quarterLabel } from '../../ui/format';
 import { KEY_BINDINGS } from '../../ui/keys';
-import { fillColumns, lobbyColumns, tickerLine, truncateList } from '../../ui/layout';
+import { fillColumns, firmsGrid, firmsPage, lobbyColumns, tickerLine, truncateList } from '../../ui/layout';
+import { largestFaller, leaderOf, ordinal, rankByQuarter, ranksHeadline, type FirmRef } from '../../ui/performance';
 import { BRIEFING_LINES } from './briefing';
 import { boardRows, joinUrl, pactRows, previousTrust, trustSeries, valuationSeries, wireItems, type BoardRow, type PactRow, type ScreenData } from './model';
 
@@ -160,6 +162,52 @@ export function FirmView({ ticker, data }: { ticker: string; data: ScreenData })
           ))}
         </div>
       </div>
+    </Panel>
+  );
+}
+
+/** `FIRMS` (§14.1, Session 13): small multiples, one card per firm in rank order, every card on one y-scale. */
+export function FirmsView({ data, page = 0 }: { data: ScreenData; page?: number }) {
+  const rows = boardRows(data);
+  const grid = firmsGrid(rows.length);
+  const shown = firmsPage(rows, page);
+  // The scale covers every firm, so cards on different pages compare honestly.
+  const { domain, ticks } = yDomain('zero', rows.map((r) => r.history), 4);
+  const step = ticks.length > 1 ? (ticks[1] as number) - (ticks[0] as number) : 0;
+  const right = `${shown.pages > 1 ? `PAGE ${shown.page + 1}/${shown.pages} · ` : ''}valuation · same scale · gridlines every ${fmt(step, step % 1 === 0 ? 0 : 1)} · dotted line 0 · hollow square peak`;
+  return (
+    <Panel title="FIRMS" right={right} bodyClassName="col">
+      <div data-firms-page={shown.page + 1} data-firms-pages={shown.pages} style={{ display: 'contents' }}>
+        <FirmMultiples
+          cols={grid.cols}
+          rows={grid.rows}
+          domain={domain}
+          ticks={ticks}
+          cards={shown.items.map((r) => ({ id: r.id, ticker: r.ticker, rank: r.rank, value: r.value, change: r.dValue, history: r.history }))}
+        />
+      </div>
+    </Panel>
+  );
+}
+
+/** `RANKS` (§14.1, Session 13): rank by quarter; the leader and the largest faller highlighted. */
+export function RanksView({ data }: { data: ScreenData }) {
+  const firms: FirmRef[] = Object.entries(data.firms).map(([id, f]) => ({ id, ticker: f.ticker }));
+  const table = rankByQuarter(firms, data.rounds);
+  const leader = leaderOf(firms, table);
+  const faller = largestFaller(firms, table);
+  const lines: RankLine[] = firms.map((f) => {
+    const ranks = table.ranks[f.id] ?? [];
+    const tone: RankLine['tone'] = f.id === leader?.id ? 'leader' : f.id === faller?.firm.id ? 'faller' : 'other';
+    const label = tone === 'leader' ? `${f.ticker} 1st` : tone === 'faller' && faller ? `${f.ticker} ▼${faller.now - faller.best}` : f.ticker;
+    return { id: f.id, ticker: f.ticker, ranks, tone, label };
+  });
+  const headline = ranksHeadline(firms, table);
+  const described = leader ? `Rank of each firm by quarter. ${leader.ticker} is ${ordinal(1)}.` : 'Rank of each firm by quarter.';
+  return (
+    <Panel title="RANKS" right="rank by valuation, each quarter" bodyClassName="col">
+      {headline ? <p className="ranks-headline" data-ranks-headline="">{headline}</p> : null}
+      <RankChart lines={lines} startQuarter={table.rounds[0] ?? 1} firmCount={firms.length} description={described} />
     </Panel>
   );
 }

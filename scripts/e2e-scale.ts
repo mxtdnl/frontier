@@ -14,12 +14,15 @@
 import type { Browser, Page } from 'playwright';
 import { createGame, PARAMS, type BotPolicy } from '../src/engine';
 import { advance, BOT_FIRMS, endSession, MAX_FIRMS_BY_MODE, publishResults, toggleDisclosure, toggleSummit } from '../src/firebase/orchestrator';
-import { boardCapacity, boardPageCount, boardPageSize, filterByTicker, lobbyColumns } from '../src/ui/layout';
+import { boardCapacity, boardPageCount, boardPageSize, filterByTicker, firmsGrid, lobbyColumns } from '../src/ui/layout';
 import { adminSet } from './emulator-rules';
 import { BASE, adminGet, check, fail, shot, signUp, snapPlay, snapProjector, runWithStack, waitText, watchPage, checkPhone } from './lib/e2e-kit';
 import { memoryCtx, setAt, type Json } from './lib/memory-io';
 
-const COUNTS = [2, 12, 16, 17, 24, 32, 40, 50] as const;
+const ALL_COUNTS = [2, 12, 16, 17, 24, 32, 40, 50] as const;
+/** `SCALE_COUNTS=2,12` runs a subset while iterating on a layout; the full run uses every count. */
+const COUNTS: ReadonlyArray<number> = process.env.SCALE_COUNTS ? process.env.SCALE_COUNTS.split(',').map(Number) : ALL_COUNTS;
+const LIT_COUNTS: ReadonlyArray<number> = process.env.SCALE_COUNTS ? COUNTS : [12, 16, 24, 50];
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
 const POLICIES: BotPolicy[] = ['cautious', 'standard', 'greedy', 'mimic-leader'];
@@ -174,6 +177,108 @@ async function boardChecks(page: Page, n: number, name: string, wantPage: number
   } else {
     check(info.rows === n, `${name}: all ${n} rows on one board (got ${info.rows})`);
   }
+}
+
+/**
+ * Board firm performance (§14.1, Session 13): the share strip's segments are as wide as their shares and their labels
+ * are not cut; every row has a value bar where the mode has one (red, to the left of zero, for a negative value) and a
+ * trend line where the mode has one; the strip's caption counts the firms below zero.
+ */
+async function performanceChecks(page: Page, n: number, name: string, want: { bar: boolean; trend: boolean }): Promise<void> {
+  const r = await page.evaluate(() => {
+    const strip = document.querySelector<HTMLElement>('[data-share-strip]');
+    const track = strip?.querySelector<HTMLElement>('.ss-track');
+    const segs = Array.from(strip?.querySelectorAll<HTMLElement>('[data-seg]') ?? []);
+    const trackW = track?.getBoundingClientRect().width ?? 0;
+    const off = segs
+      .map((s) => ({ t: s.dataset.seg ?? '', want: Number(s.dataset.share) * trackW, got: s.getBoundingClientRect().width }))
+      .filter((s) => Math.abs(s.want - s.got) > 2.5)
+      .map((s) => `${s.t} ${s.got.toFixed(0)}px for ${s.want.toFixed(0)}px`);
+    const cut = segs.filter((s) => s.scrollWidth > s.clientWidth + 1).map((s) => s.dataset.seg ?? '');
+    const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-board-mode] tbody tr'));
+    const bars = rows.map((tr) => tr.querySelector<HTMLElement>('[data-value-bar]'));
+    const negRows = rows.filter((tr) => tr.querySelector('.neg-c'));
+    const badNeg = negRows.filter((tr) => {
+      const b = tr.querySelector<HTMLElement>('[data-value-bar]');
+      if (!b) return false;
+      const fill = b.querySelector<HTMLElement>('.vbar-fill.neg')?.getBoundingClientRect();
+      const zero = b.querySelector<HTMLElement>('.vbar-zero')?.getBoundingClientRect();
+      return !fill || !zero || fill.width < 0.5 || fill.right > zero.left + zero.width / 2 + 1.5;
+    }).length;
+    return {
+      strip: !!strip,
+      segs: segs.length,
+      below: Number(strip?.dataset.below ?? -1),
+      off,
+      cut,
+      rows: rows.length,
+      bars: bars.filter(Boolean).length,
+      trends: rows.filter((tr) => tr.querySelector('[data-trend], .trend-empty')).length,
+      badNeg,
+      boxes: document.querySelectorAll('[data-board-mode] [data-committed]').length,
+    };
+  });
+  check(r.strip && r.segs + r.below <= n && r.segs > 0, `${name}: value share strip with ${r.segs} segments, ${r.below} below zero`);
+  check(r.off.length === 0, `${name}: share segments as wide as their shares${r.off.length ? ` (${r.off.slice(0, 3).join(' | ')})` : ''}`);
+  check(r.cut.length === 0, `${name}: no share label cut off${r.cut.length ? ` (${r.cut.join(' ')})` : ''}`);
+  check(r.bars === (want.bar ? r.rows : 0), `${name}: ${want.bar ? 'a value bar on every row' : 'no value bar column'} (${r.bars}/${r.rows})`);
+  check(r.trends === (want.trend ? r.rows : 0), `${name}: ${want.trend ? 'a trend line on every row' : 'no trend column'} (${r.trends}/${r.rows})`);
+  check(r.badNeg === 0, `${name}: negative values have red bars left of zero`);
+}
+
+async function firmsChecks(page: Page, n: number, name: string, wantPage: number): Promise<void> {
+  const grid = firmsGrid(n);
+  const r = await page.evaluate(() => {
+    const host = document.querySelector<HTMLElement>('[data-firms-page]');
+    const cards = Array.from(document.querySelectorAll<HTMLElement>('.fm-card'));
+    return {
+      page: Number(host?.dataset.firmsPage ?? 0),
+      pages: Number(host?.dataset.firmsPages ?? 0),
+      grid: document.querySelector<HTMLElement>('[data-firms-grid]')?.dataset.firmsGrid ?? '',
+      cards: cards.length,
+      charts: document.querySelectorAll('svg[data-chart="multiple"]').length,
+      cut: cards.filter((c) => c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1).map((c) => c.dataset.firm ?? ''),
+      heads: cards.filter((c) => {
+        const h = c.querySelector<HTMLElement>('.fm-head');
+        return !h || h.scrollWidth > h.clientWidth + 1;
+      }).length,
+    };
+  });
+  const want = Math.min(16, n - (wantPage - 1) * 16);
+  check(r.pages === grid.pages && r.page === wantPage, `${name}: FIRMS page ${wantPage} of ${grid.pages} (got ${r.page}/${r.pages})`);
+  check(r.grid === `${grid.cols}x${grid.rows}`, `${name}: ${grid.cols} x ${grid.rows} grid (got ${r.grid})`);
+  check(r.cards === want && r.charts === want, `${name}: ${want} cards, each with a chart (${r.cards} cards, ${r.charts} charts)`);
+  check(r.cut.length === 0 && r.heads === 0, `${name}: no card or card heading is cut off${r.cut.length ? ` (${r.cut.slice(0, 4).join(' ')})` : ''}`);
+}
+
+async function ranksChecks(page: Page, n: number, name: string): Promise<void> {
+  const r = await page.evaluate(() => {
+    const lines = Array.from(document.querySelectorAll<SVGPathElement>('svg[data-chart="ranks"] [data-rank-line]'));
+    const labels = Array.from(document.querySelectorAll<SVGTextElement>('svg[data-chart="ranks"] [data-end-label]')).map((t) => t.getBBox());
+    let overlaps = 0;
+    for (let i = 0; i < labels.length; i++) {
+      for (let j = i + 1; j < labels.length; j++) {
+        const a = labels[i] as DOMRect;
+        const b = labels[j] as DOMRect;
+        if (a.y < b.y + b.height - 1 && b.y < a.y + a.height - 1) overlaps++;
+      }
+    }
+    const hi = lines.filter((l) => l.dataset.tone !== 'other').map((l) => l.dataset.rankLine ?? '');
+    const hiLabels = Array.from(document.querySelectorAll<SVGTextElement>('[data-end-label]')).map((t) => t.dataset.endLabel ?? '');
+    return {
+      lines: lines.length,
+      leaders: lines.filter((l) => l.dataset.tone === 'leader').length,
+      fallers: lines.filter((l) => l.dataset.tone === 'faller').length,
+      hiLabelled: hi.every((t) => hiLabels.includes(t)),
+      labels: labels.length,
+      overlaps,
+      headline: document.querySelector('[data-ranks-headline]')?.textContent ?? '',
+    };
+  });
+  check(r.lines === n, `${name}: a rank line for each of ${n} firms (${r.lines})`);
+  check(r.leaders === 1 && r.fallers <= 1, `${name}: one leader and at most one faller highlighted (${r.leaders}, ${r.fallers})`);
+  check(r.hiLabelled && r.overlaps === 0, `${name}: highlighted firms labelled, ${r.labels} end labels, none overlapping (${r.overlaps})`);
+  check(/rose to 1st|holds 1st/.test(r.headline), `${name}: headline "${r.headline}"`);
 }
 
 async function results(page: Page, g: string, n: number, tag = ''): Promise<void> {
@@ -366,8 +471,20 @@ async function scenario(browser: Browser): Promise<void> {
     if (n > 16) check((await page.locator('.lobby-cell').count()) === n, `lobby ${n}: every firm has a cell`);
     await projector(page, ids.open, '', `scale-${n}-open`, /OPEN/);
     await boardChecks(page, n, `board ${n} open`, 1);
+    await performanceChecks(page, n, `board ${n} open`, { bar: true, trend: true });
     await projector(page, ids.reveal, '', `scale-${n}-reveal`, /REVEAL/);
     await boardChecks(page, n, `board ${n} reveal`, 1);
+    // Disclosure is on in the reveal snapshot: the bar narrows and the trend line goes (§14.1 width table).
+    await performanceChecks(page, n, `board ${n} reveal`, { bar: true, trend: false });
+    await projector(page, ids.reveal, '?view=firms', `scale-${n}-firms`, /FIRMS/);
+    await firmsChecks(page, n, `firms ${n}`, 1);
+    const fpages = firmsGrid(n).pages;
+    if (fpages > 1) {
+      await projector(page, ids.reveal, `?view=firms&page=${fpages}`, `scale-${n}-firms-last`, /FIRMS/);
+      await firmsChecks(page, n, `firms ${n} last page`, fpages);
+    }
+    await projector(page, ids.reveal, '?view=ranks', `scale-${n}-ranks`, /RANKS/);
+    await ranksChecks(page, n, `ranks ${n}`);
     const pages = boardPageCount(n);
     if (pages > 1) {
       await projector(page, ids.reveal, `?page=${pages}`, `scale-${n}-reveal-last`, /REVEAL/);
@@ -383,7 +500,7 @@ async function scenario(browser: Browser): Promise<void> {
   }
 
   // Lit-room mode: 32 grid rows instead of 36, so fewer two-line rows fit (§14.1).
-  for (const n of [12, 16, 24, 50]) {
+  for (const n of LIT_COUNTS) {
     const b = await build(n, facUid, true);
     const reveal = await publish(b.states.reveal, `lit-${n}-reveal`);
     const summit = await publish(b.states.summit, `lit-${n}-summit`);
@@ -391,6 +508,13 @@ async function scenario(browser: Browser): Promise<void> {
     await projector(page, await publish(b.states.lobby, `lit-${n}-lobby`), '', `scale-lit-${n}-lobby`, /LOBBY/);
     await projector(page, reveal, '', `scale-lit-${n}-reveal`, /REVEAL/);
     await boardChecks(page, n, `lit board ${n} reveal`, 1, boardCapacity({ lit: true }));
+    await performanceChecks(page, n, `lit board ${n} reveal`, { bar: false, trend: false });
+    await projector(page, await publish(b.states.open, `lit-${n}-open`), '', `scale-lit-${n}-open`, /OPEN/);
+    await performanceChecks(page, n, `lit board ${n} open`, { bar: true, trend: true });
+    await projector(page, reveal, '?view=firms', `scale-lit-${n}-firms`, /FIRMS/);
+    await firmsChecks(page, n, `lit firms ${n}`, 1);
+    await projector(page, reveal, '?view=ranks', `scale-lit-${n}-ranks`, /RANKS/);
+    await ranksChecks(page, n, `lit ranks ${n}`);
     if (n > 16) {
       await projector(page, reveal, '?page=2', `scale-lit-${n}-reveal-p2`, /REVEAL/);
       await boardChecks(page, n, `lit board ${n} page 2`, 2, boardCapacity({ lit: true }));
