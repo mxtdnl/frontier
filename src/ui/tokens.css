@@ -1,11 +1,14 @@
-/* Design tokens (spec §16.1). The only file that may contain hex colour values. */
+/* Design tokens v2 (spec §16.1). The only file that may contain hex colour values. */
 :root {
   --base: #000000;
-  --panel: #15140F;
-  --rule: #2E2C22;
+  --panel: #1C1B14;
+  --raise: #24231B;
+  --rule: #3A3729;
+  --grid: #2A2820;
   --text: #E8E2C8;
-  --dim: #8A8570;
+  --dim: #9A947C;
   --signal: #FFB000;
+  --signal-dim: #8A6400;
   --signal-ink: #000000;
   --wire: #5EC8D8;
   --up: #7FD15B;
@@ -17,10 +20,12 @@
   --font: 'IBM Plex Mono', ui-monospace, monospace;
 }
 
-/* Lit-room mode (spec §16.1): brighter secondary text, heavier rules, larger type. Colours do not invert. */
+/* Lit-room mode (spec §16.1): every adjusted value brighter than standard, heavier rules, larger type. Colours do not invert. */
 .lit-room {
   --dim: #B9B39A;
   --rule: #4A4736;
+  --grid: #36342A;
+  --raise: #2C2B22;
   --rule-w: 2px;
   --scale: 1.15;
 }
