@@ -475,17 +475,36 @@ The facilitator's client runs resolution. There are no Cloud Functions, so the p
 The layout is built on a monospace character grid (§16.2). Regions:
 
 ```
-┌ TOP BAR (signal amber, black text): FRNT <GO> │ Q3 Y2 │ PHASE │ T-01:47 │ 6/8 COMMITTED ┐
-├ BOARD (left ~62%) ─────────────────────────┬ TRUST (right ~38%) ───────────────────┤
-│ #  FIRM      SHARE   PROFIT   VALUE   Δ  ✓ │ PUBLIC TRUST                          │
-│ rows… (BREACH / AUTO / INSOLV / BOT tags)  │ 61.8  ▼6.3 QoQ   (large numerals)      │
-│ [PACE SAFE EXPO columns if disclosure on]  │ line chart + change strip, all quarters│
-│                                            │ MKT SIZE bar  │ INCIDENTS │ PACTS │ DISCL│
-├ WIRE (scrolling ticker; static list if reduced motion) ─────────────────────────────┤
-└ F-KEY BAR: F2 BOARD  F3 TRUST  F4 PACTS  F6 AUDIT  F7 DISCL  F8 SUMMIT  F9 ADVANCE  F10 END ┘
+┌ TOP BAR (dark panel, 2 px amber rule): FRONTIER │ Q3 Y2 │ [OPEN] │ 6/8 COMMITTED │ DISCLOSURE OFF │    T-01:47 ┐
+├ STATUS LINE: Q3 Y2 · Decisions open. Set pace, safety and a card, then commit. 01:47 left. ───────────────────┤
+├ BOARD (left ~62%) ─────────────────────────────────┬ TRUST (right ~38%) ───────────────────────────────┤
+│ #  FIRM   SHARE  PROFIT  VALUE  CHANGE  COMMITTED  │ PUBLIC TRUST                                      │
+│ rows… (BREACH / AUTO / INSOLV / BOT tags)          │ Total market revenue tracks public trust.         │
+│ [PACE SAFETY EXPOSURE columns if disclosure on]    │ 61.8  ▼6.3 since last quarter   (large numerals)  │
+│ key strip: only the tags on screen                 │ line chart + change strip │ MKT │ INCID │ PACTS │ DISCLOSURE │
+├ WIRE  Q3 Y2 ▼ incident headline · Q3 Y2 headline … (scrolling; static list if reduced motion) ───────────────┤
+└ F-KEY BAR: only the keys that act on this screen; the next expected action is the one solid key ──────────────┘
 ```
 
-**Command line.** This is the signature feature. Typing on the projector focuses a command line in the top bar.
+**Top bar** (Session 12; owner approval 2026-10-03, UI audit). A `--panel` bar with a 2 px `--signal` bottom rule. From the left:
+- the brand block `FRONTIER` in solid `--signal` with `--signal-ink` text;
+- the quarter;
+- the phase as a status block, each phase distinct and always carrying its word (colours in §16.1);
+- the commit count while decisions are open, the firm count in the lobby, and `DISCLOSURE ON` or `DISCLOSURE OFF`;
+- the latest facilitator notice;
+- the countdown, right-aligned, 1.5× size, in `--signal`. `PAUSED` follows it while the timer is frozen.
+
+The results screen and the phone use the same bar (brand block, position or quarter, phase block, countdown).
+
+**Status line.** One sentence directly under the projector top bar, written from the phase, saying what is happening and what firms do now, e.g. "Q3 Y2 · Decisions open. Set pace, safety and a card, then commit. 01:42 left." During reveal it is the **reveal headline**, a summary of the quarter from the data: "Q3 Y2 resolved · Trust ▼5.9 to 45.6 · BTC takes 1st · 2 incidents." It never uses hidden values.
+
+**F-key bar.** Key caps are outlined in `--signal-dim`. The next expected action is the one solid key (F9 in lobby, briefing, open, reveal and after the end; F8 during a summit; none while resolving). Keys that do nothing on the current screen are hidden: view keys while their view is showing or in lobby and briefing, F6 without an active pact or outside open, reveal and summit, F8 outside open, reveal and summit, F10 before quarter 1 and after the end, F7 after the end, F9 while resolving or in a summit. The results screen shows only F9 and F2.
+
+**Ticker.** A 2ch gap after the `WIRE` label; each item starts with its quarter; items are coloured by headline kind (`--down` with ▼ for incidents, breaches, insolvency and the moratorium; `--up` for clean audits; `--wire` otherwise).
+
+**Board readability.** Row rules in `--grid` and an alternate-row fill in `--raise`; panel titles in `--text` at weight 600; column headers in `--dim` on a `--raise` header row; full-word column headers where width allows (CHANGE, PACE, SAFETY, EXPOSURE, COMMITTED). A one-line key strip at the foot of the board explains only the tags on screen.
+
+**Command line.** This is the signature feature. Typing on the projector focuses a command line in the top bar. The command line is visible only while it has focus (the facilitator is typing); otherwise the brand block shows.
 
 - Mnemonics followed by Enter, shown as `<GO>`:
   - `BOARD`
@@ -516,6 +535,7 @@ The layout is built on a monospace character grid (§16.2). Regions:
 - A large join code.
 - A QR code, generated client-side.
 - The URL.
+- Numbered join steps: 1 scan or enter the code, 2 form or join a firm, 3 wait for the briefing.
 - Firms appearing live with member counts. Up to 16 firms: one table (ticker, name, member count). Above 16: compact cells (ticker and member count, `BOT` for a bot firm) in min(4, ceil(N / 16)) columns, filled down each column. The code, QR code and URL stay visible.
 
 **Long member lists** (PACT view, audit picker, summit and results): a list of more than 12 tickers shows the first 10 and `+N more`. Member cells wrap rather than clip. Beside the board at a summit, the pact table omits the AUDIT column so the members have room.
@@ -533,7 +553,7 @@ Panels:
 - **Danger**: remove a firm, lock joins, delete the game.
 
 Scale rules (Session 10):
-- A control strip stays fixed at the top of the window and is never scrolled away. It holds the F6 AUDIT, F7 DISCL, F8 SUMMIT, F9 ADVANCE and F10 END buttons, the phase, the quarter, the commit count and the latest notice.
+- A control strip stays fixed at the top of the window and is never scrolled away. It holds the F6 AUDIT, F7 DISCLOSURE, F8 SUMMIT, F9 ADVANCE and F10 END buttons, the phase, the quarter, the commit count and the latest notice.
 - The Firms panel is a compact table that scrolls inside the panel, at most 20 rows tall.
 - The table can be sorted by firm (creation order), commit status or devices online.
 - Two filters: NOT COMMITTED (open quarter only) and OFFLINE (no device online; bot firms excluded).
@@ -654,22 +674,47 @@ Calibration builds will extend the bank to at least 40 templates in the same reg
 
 ### 16.1 Tokens
 
+Tokens v2 (Session 12; owner approval 2026-10-03, UI audit section 03).
+
 | Token | Hex | Use |
 |---|---|---|
 | `--base` | `#000000` | Page. True black, deliberately not a tinted near-black |
-| `--panel` | `#15140F` | Panel fills, ticker strip |
-| `--rule` | `#2E2C22` | 1 px grid rules |
-| `--text` | `#E8E2C8` | Primary text |
-| `--dim` | `#8A8570` | Secondary text and labels |
-| `--signal` | `#FFB000` | Top bar, focus, own firm, primary action, trust value |
-| `--signal-ink` | `#000000` | Text on signal |
-| `--wire` | `#5EC8D8` | Headlines, market size, informational data |
+| `--panel` | `#1C1B14` | Panel fills, top bar, ticker strip, F-key bar |
+| `--raise` | `#24231B` | Header rows, alternate rows, selection |
+| `--rule` | `#3A3729` | 1 px panel and section rules |
+| `--grid` | `#2A2820` | Chart gridlines, table row rules |
+| `--text` | `#E8E2C8` | Primary text, panel titles |
+| `--dim` | `#9A947C` | Secondary text, column headers and hints |
+| `--signal` | `#FFB000` | Brand block, primary action, selection, countdown, trust value, own firm, focus |
+| `--signal-dim` | `#8A6400` | Outlines, hatches, inactive key caps. Never text (3.2:1 on `--panel`) |
+| `--signal-ink` | `#000000` | Text on signal and on other solid fills |
+| `--wire` | `#5EC8D8` | Headlines, market size, informational data, summit banner |
 | `--up` | `#7FD15B` | Positive deltas (always with + or ▲) |
 | `--down` | `#FF4D3D` | Negative deltas, breaches, alarms (always with − or ▼) |
 
-**Lit-room mode** (a facilitator toggle):
+**Amber budget.** Solid amber (a `--signal` fill, or the large amber numerals) only for: the brand block, the one primary action on screen (the solid F-key, COMMIT), the selected option, the countdown, the trust numeral and the reveal invert. Pact tags and every other amber mark are amber text or a `--signal-dim` outline.
+
+**Phase blocks** (top bar). Each phase is distinct and always shows its word, so colour is never the only signal:
+
+| Phase | Block |
+|---|---|
+| LOBBY | `--dim` outline, `--text` word |
+| BRIEFING | `--text` outline, `--text` word |
+| OPEN | solid `--up`, `--signal-ink` word |
+| RESOLVING | `--signal-dim` outline, `--signal` word |
+| REVEAL | solid `--text`, `--signal-ink` word |
+| SUMMIT | solid `--wire`, `--signal-ink` word |
+| ENDED / RESULTS | solid `--dim`, `--signal-ink` word |
+
+The summit banner is solid `--wire`, distinct from the dark top bar.
+
+**Notices** have half-line vertical padding and a 2 px left rule coloured by kind (`--dim` for status, `--down` for errors) instead of a full box.
+
+**Lit-room mode** (a facilitator toggle). Every adjusted value stays brighter than its standard value:
 - `--dim` → `#B9B39A`
 - `--rule` → `#4A4736`
+- `--grid` → `#36342A`
+- `--raise` → `#2C2B22`
 - base font scale × 1.15
 - rules become 2 px.
 
@@ -681,11 +726,11 @@ Colours do not invert.
 - Layout is in `ch` units on a character grid. Panel widths, column positions and gutters are integers of `1ch`. Line height is fixed at 1.35, so every row aligns across panels. This grid is the design's single bold idea; keep everything else quiet.
 - Projector base size: `clamp(14px, 1.05vw, 22px)`. Large numerals are 4× base, weight 500.
 - Participant base size: 16 px, with a minimum of 14 px anywhere.
-- Uppercase only for mnemonic labels of ≤ 6 characters. No letter-spacing.
+- Uppercase only for labels: a mnemonic of ≤ 6 characters, or the full word in uppercase where a mnemonic would need explaining (CHANGE, SAFETY, EXPOSURE, COMMITTED, DISCLOSURE, BRIEFING, RESOLVING, DETECTED, UNDETECTED; Session 12, settles REVIEW L7). No letter-spacing.
 
 ### 16.3 Components
 
-`TopBar`, `FKeyBar`, `CommandLine`, `Panel` (title row and 1 px rule border, no radius), `DataTable` (fixed ch columns, right-aligned numerics), `Delta` (sign, glyph and colour), `LineChart` (below), `HBar` (drawn from a visible zero line; negative values extend left in `--down` with a − sign), `Ticker`, `Segmented4`, `SafetySlider` (track and block thumb), `CardPicker` (sheet), `CommitButton`, `Tag` (`BOT`, `AUTO`, `BREACH`, `INSOLV`, `PACT-A`), `PresenceDot`, `QR`, `Countdown`.
+`TopBar`, `PhaseBlock`, `StatusLine`, `FKeyBar`, `CommandLine`, `Panel` (title row and 1 px rule border, no radius), `DataTable` (fixed ch columns, right-aligned numerics), `Delta` (sign, glyph and colour), `LineChart` (below), `HBar` (drawn from a visible zero line; negative values extend left in `--down` with a − sign), `Ticker`, `Segmented4`, `SafetySlider` (track and block thumb), `CardPicker` (sheet), `CommitButton`, `Tag` (`BOT`, `AUTO`, `BREACH`, `INSOLV`, `PACT-A`), `PresenceDot`, `QR`, `Countdown`.
 
 All corners are square, except the device-like participant sheet edges, which are max 2 px.
 
@@ -722,7 +767,7 @@ Allowed exception: a flat 45° hatch (1 px lines in a token colour, no gradient 
 
 ### 16.6 Accessibility
 
-- WCAG AA contrast for all text. Verify `--dim` on `--panel`.
+- WCAG AA contrast for all text. Measured for tokens v2 (Session 12, `tests/ui/contrast.test.ts`): `--dim` on `--panel` 5.67:1, on `--raise` 5.18:1, on `--base` 6.90:1; `--text` on `--panel` 13.27:1; `--down` on `--raise` 4.79:1; `--signal-ink` on `--dim` 6.90:1 and on `--up` 11.17:1. Lit-room `--dim` on `--panel` 8.20:1 and on lit `--raise` 6.76:1. `--signal-dim` is 3.21:1 on `--panel` and is used for outlines and hatches only, never text.
 - Never use colour alone; use signs and glyphs as well.
 - Focus is visible as a signal-coloured block outline.
 - Touch targets are at least 44 px.

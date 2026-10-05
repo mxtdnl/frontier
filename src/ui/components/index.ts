@@ -1,4 +1,5 @@
-export { TopBar } from './TopBar';
+export { TopBar, Brand, PhaseBlock, type PhaseKind } from './TopBar';
+export { StatusLine, GlyphText } from './StatusLine';
 export { FKeyBar } from './FKeyBar';
 export { CommandLine, type CommandLineHandle } from './CommandLine';
 export { Panel } from './Panel';
@@ -14,5 +15,5 @@ export { CommitButton } from './CommitButton';
 export { Tag, type TagKind } from './Tag';
 export { PresenceDot } from './PresenceDot';
 export { QR } from './QR';
-export { Countdown } from './Countdown';
+export { Countdown, useRemainingMs } from './Countdown';
 export { GlyphUp, GlyphDown, GlyphCheck } from './Glyph';

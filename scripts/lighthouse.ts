@@ -53,7 +53,7 @@ await withDevServer(async () => {
     await fac.waitForURL(/#\/screen\/[^/?]+/);
     const g = /#\/screen\/([^/?]+)/.exec(fac.url())?.[1] ?? '';
     await waitText(fac, /LOBBY/, 'the lobby opens', 15_000, '.scr');
-    const code = (await fac.locator('.scr .big.signal').first().innerText()).trim();
+    const code = (await fac.locator('.scr [data-join-code]').first().innerText()).trim();
     const key = async (k: string): Promise<void> => {
       await fac.waitForTimeout(600);
       await fac.keyboard.press(k);

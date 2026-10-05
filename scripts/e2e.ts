@@ -76,7 +76,7 @@ async function scenario(browser: Browser): Promise<void> {
   const g = /#\/screen\/([^/?]+)/.exec(fac.url())?.[1] ?? '';
   check(g.length > 5, `session created (${g})`);
   await waitText(fac, /LOBBY/, 'the projector opens on the lobby', 15_000, '.scr');
-  const code = (await fac.locator('.scr .big.signal').first().innerText()).trim();
+  const code = (await fac.locator('.scr [data-join-code]').first().innerText()).trim();
   check(/^[A-HJ-NP-Z]{4}$/.test(code), `join code ${code} uses A–Z without I and O`);
   check((await fac.locator('.qr svg').count()) === 1, 'the lobby shows a QR code');
   check((await screenText(fac)).includes(`#/j/${code}`), 'the lobby shows the join address');
@@ -353,7 +353,7 @@ async function participantScenario(
   await fac.waitForURL(/#\/screen\/[^/?]+/);
   const g = /#\/screen\/([^/?]+)/.exec(fac.url())?.[1] ?? '';
   await waitText(fac, /LOBBY/, 'participant run: the lobby loads', 15_000, '.scr');
-  const code = (await fac.locator('.scr .big.signal').first().innerText()).trim();
+  const code = (await fac.locator('.scr [data-join-code]').first().innerText()).trim();
   const control = watch(await facCtx.newPage(), 'participant-run control');
   await control.setViewportSize({ width: 1440, height: 900 });
   await control.goto(`${BASE}#/control/${g}`);
@@ -583,8 +583,8 @@ async function participantScenario(
   await waitText(control, /QUEUED/, 'the console shows the audit queued', 15_000);
   // F7 / Shift+D turns disclosure on, on the projector and the console.
   await key(fac, 'Shift+D');
-  await waitText(fac, /DISCL ON/, 'Shift+D turns disclosure on', 15_000, '.scr');
-  await waitText(control, /F7 DISCL ON/, 'the console shows disclosure on', 15_000);
+  await waitText(fac, /DISCLOSURE ON/, 'Shift+D turns disclosure on', 15_000, '.scr');
+  await waitText(control, /F7 DISCLOSURE ON/, 'the console shows disclosure on', 15_000);
   await A.getByRole('tab', { name: 'DESK' }).click();
   check(await A.getByRole('button', { name: 'LOCKED' }).isDisabled(), 'the desk is locked during the summit');
   await key(fac, 'F8');
@@ -605,12 +605,12 @@ async function participantScenario(
   await waitText(A, /Q2 Y1 RESULT/, 'quarter 2 resolves', 15_000);
   check(/PACT-A audit found a breach\. Fine \d/.test(await A.locator('main').innerText()), 'the result card reports the audit breach and the fine');
   const board2 = await screenText(fac);
-  check(/PACE\s+SAFE\s+EXPO/.test(board2), 'the board shows PACE, SAFE and EXPO while disclosure is on');
+  check(/PACE\s+SAFETY\s+EXPOSURE/.test(board2), 'the board shows PACE, SAFETY and EXPOSURE while disclosure is on');
   check(/BREACH/.test(board2) && /PACT-A/.test(board2), 'the board carries the pact tag and the BREACH tag after the audit');
   await shot(fac, 'participant-run-disclosure-on');
   await key(fac, 'Shift+D');
-  await waitText(fac, /DISCL OFF/, 'Shift+D turns disclosure off', 15_000, '.scr');
-  check(!/PACE\s+SAFE\s+EXPO/.test(await screenText(fac)), 'the PACE, SAFE and EXPO columns disappear when disclosure is off');
+  await waitText(fac, /DISCLOSURE OFF/, 'Shift+D turns disclosure off', 15_000, '.scr');
+  check(!/PACE\s+SAFETY\s+EXPOSURE/.test(await screenText(fac)), 'the PACE, SAFETY and EXPOSURE columns disappear when disclosure is off');
   const round2 = await adminGet<{ disclosure?: Record<string, unknown> }>(`games/${g}/rounds/2`);
   check(Object.keys(round2.disclosure ?? {}).length === 4, 'the quarter 2 snapshot holds all four firms');
 

@@ -13,10 +13,10 @@ export const BOARD_COMPACT_MAX = 16;
 export const BOARD_PAGE_SIZE = 10;
 /** Grid rows (grid.css `--rows`): standard and lit-room mode. */
 export const SCREEN_ROWS = { standard: 36, lit: 32 } as const;
-/** Top bar (2), F-key bar (2) and ticker (1). */
-const SCREEN_CHROME_ROWS = 5;
-/** Board panel title, table header and the two-line legend below the table, plus rule widths. */
-const BOARD_FIXED_ROWS = 5.5;
+/** Top bar (2), status line (1), F-key bar (2) and ticker (1). */
+const SCREEN_CHROME_ROWS = 6;
+/** Board panel title, table header, the one-line tag key below the table and its gap, plus rule widths. */
+const BOARD_FIXED_ROWS = 4.5;
 /** The summit banner (§14.1). */
 const BANNER_ROWS = 2;
 

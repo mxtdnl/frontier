@@ -166,8 +166,40 @@ export async function snapProjector(page: Page, name: string): Promise<void> {
     await shot(page, name);
     await checkProjector(page, `projector ${name} ${w}x${h}`);
     await checkCharts(page, `projector ${name} ${w}x${h}`);
+    await checkAmber(page, `projector ${name} ${w}x${h}`);
   }
   await page.setViewportSize({ width: 1280, height: 720 });
+}
+
+/**
+ * Amber budget (spec §16.1, Session 12): a solid amber fill only on the brand block, the primary key and the
+ * reveal invert; large amber text only on the countdown and the trust numeral. Charts (SVG) are not counted.
+ */
+export async function checkAmber(page: Page, label: string): Promise<void> {
+  const bad = await page.evaluate(() => {
+    const scr = document.querySelector<HTMLElement>('.scr');
+    if (!scr) return ['no .scr frame'];
+    const amber = 'rgb(255, 176, 0)';
+    const base = parseFloat(getComputedStyle(scr).fontSize);
+    const out: string[] = [];
+    scr.querySelectorAll<HTMLElement>('*').forEach((el) => {
+      if (el.closest('svg')) return;
+      const r = el.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) return;
+      const cs = getComputedStyle(el);
+      if (cs.visibility === 'hidden') return;
+      if (cs.backgroundColor === amber && !el.matches('.tb-brand, .fkey.is-primary .k, .is-inverted')) {
+        out.push(`amber fill on ${el.className || el.tagName}: ${el.textContent?.slice(0, 20)}`);
+      }
+      const ownText = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim() !== '');
+      if (ownText && cs.color === amber && parseFloat(cs.fontSize) >= base * 1.4 && !el.closest('.tb-clock, [data-trust-numerals], [data-amber]')) {
+        out.push(`large amber text on ${el.className || el.tagName}: ${el.textContent?.slice(0, 20)}`);
+      }
+    });
+    return out;
+  });
+  if (bad.length) fail(`${label}: amber budget: ${bad.slice(0, 4).join(' | ')}`);
+  else console.log(`ok   ${label}: amber budget`);
 }
 
 export interface Harness {

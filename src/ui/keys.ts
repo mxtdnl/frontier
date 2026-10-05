@@ -14,7 +14,7 @@ export const KEY_BINDINGS: ReadonlyArray<KeyBinding> = [
   { action: 'trust', fKey: 'F3', letter: 'T', label: 'TRUST' },
   { action: 'pacts', fKey: 'F4', letter: 'P', label: 'PACTS' },
   { action: 'audit', fKey: 'F6', letter: 'F', label: 'AUDIT' },
-  { action: 'disclosure', fKey: 'F7', letter: 'D', label: 'DISCL' },
+  { action: 'disclosure', fKey: 'F7', letter: 'D', label: 'DISCLOSURE' },
   { action: 'summit', fKey: 'F8', letter: 'S', label: 'SUMMIT' },
   { action: 'advance', fKey: 'F9', letter: 'A', label: 'ADVANCE' },
   { action: 'end', fKey: 'F10', letter: 'E', label: 'END' },
@@ -46,4 +46,54 @@ export function matchKey(e: KeyLike, commandLineFocused: boolean): KeyAction | n
     if (hit) return hit.action;
   }
   return null;
+}
+
+export type ScreenView = 'board' | 'trust' | 'pacts' | 'audit' | 'wire' | 'help' | 'firm';
+
+export interface KeyContext {
+  phase: 'lobby' | 'briefing' | 'open' | 'resolving' | 'reveal' | 'summit' | 'ended';
+  /** The view on the projector. */
+  view: ScreenView;
+  /** Active pacts that an audit could target. */
+  activePacts: number;
+}
+
+export interface ShownKey extends KeyBinding {
+  /** The next expected action: the one solid key. */
+  primary: boolean;
+}
+
+const VIEW_OF: Partial<Record<KeyAction, ScreenView>> = { board: 'board', trust: 'trust', pacts: 'pacts', audit: 'audit' };
+const AUDIT_PHASES: ReadonlyArray<KeyContext['phase']> = ['open', 'reveal', 'summit'];
+
+/** Whether a key does anything on the projector now (spec §14.1, Session 12). */
+function acts(a: KeyAction, c: KeyContext): boolean {
+  const pre = c.phase === 'lobby' || c.phase === 'briefing';
+  const view = VIEW_OF[a];
+  if (view && (pre || c.view === view)) return false;
+  switch (a) {
+    case 'audit':
+      return c.activePacts > 0 && AUDIT_PHASES.includes(c.phase);
+    case 'disclosure':
+      return c.phase !== 'ended';
+    case 'summit':
+      return AUDIT_PHASES.includes(c.phase);
+    case 'advance':
+      return c.phase !== 'resolving' && c.phase !== 'summit';
+    case 'end':
+      return !pre && c.phase !== 'ended' && c.phase !== 'resolving';
+    default:
+      return true;
+  }
+}
+
+/** F-keys shown on the projector: only those that act, with the next expected action solid. */
+export function projectorKeys(c: KeyContext): ShownKey[] {
+  const primary: KeyAction | null = c.phase === 'summit' ? 'summit' : c.phase === 'resolving' ? null : 'advance';
+  return KEY_BINDINGS.filter((b) => acts(b.action, c)).map((b) => ({ ...b, primary: b.action === primary }));
+}
+
+/** The results screen acts only on F9 (next panel) and F2 (back to the board). */
+export function resultsKeys(lastPanel: boolean): ShownKey[] {
+  return KEY_BINDINGS.filter((b) => b.action === 'board' || b.action === 'advance').map((b) => ({ ...b, primary: b.action === 'advance' && !lastPanel }));
 }

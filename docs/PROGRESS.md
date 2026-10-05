@@ -655,3 +655,81 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 
 **Next steps**
 - Owner: after merging, hard-refresh the live site and confirm the icon appears in the browser tab. Browsers cache favicons, so it may take a reload or a new tab.
+
+## 2026-10-05 — Session 12: colour, chrome and screen-level clarity
+
+**Spec changes** (each approved by the owner on 2026-10-03 in the UI audit; written into `docs/spec.md` before the code):
+- §16.1: tokens v2 (`--panel #1C1B14`, `--rule #3A3729`, `--dim #9A947C`, new `--raise #24231B`, `--grid #2A2820`, `--signal-dim #8A6400`); the amber budget; a phase-block table; notices with a left rule; the summit banner in `--wire`; lit-room values for `--grid` and `--raise`.
+- §14.1: new top-bar diagram; top bar, status line and reveal headline, F-key bar rules (which keys show, which is solid), ticker, board readability, numbered lobby steps; the command line is visible only while it has focus.
+- §16.2: full words in uppercase are allowed where a mnemonic would need explaining. This settles REVIEW L7: DETECTED, UNDETECTED, BRIEFING and RESOLVING are accepted as they are.
+- §16.3: `PhaseBlock` and `StatusLine` added. §16.6: the measured contrast ratios. §14.2: F7 reads DISCLOSURE.
+
+**Contrast (WCAG AA, computed in `tests/ui/contrast.test.ts`)**
+- `--dim` on `--panel` 5.67:1, on `--raise` 5.18:1, on `--base` 6.90:1. Lit-room `--dim` on `--panel` 8.20:1, on lit `--raise` 6.76:1.
+- `--down` on `--raise` 4.79:1 (the lowest text pair that passes). Black text on the solid phase blocks: 6.90:1 (`--dim`) to 16.14:1 (`--text`).
+- `--signal-dim` is 3.21:1 on `--panel`, below AA, so it is used only for outlines, hatches and key-cap borders, never for text. A test asserts this.
+
+**Done**
+- `src/ui/tokens.css` tokens v2. Chart gridlines now use `--grid` and the hatch uses `--signal-dim` (the follow-up Session 11 left).
+- **Top bar** (projector, results, phone): `--panel` bar with a 2 px amber rule, the `FRONTIER` brand block in solid amber, the quarter, the phase as a coloured block with its word, and the countdown right-aligned at 1.5× in amber. On the phone the brand block carries the firm's own ticker (see choices). The results bar reads `FRONTIER · RESULTS · 3/6 · COUNTERFACTUAL`.
+- **Command line** stays in the page but is hidden until the facilitator types. Typing any letter shows it in the top bar, as before.
+- **Status line** under the projector top bar (`src/ui/status.ts`, pure): one sentence for each phase, plus paused, time up, moratorium and ended. During reveal it carries the reveal headline, e.g. "Q1 Y2 resolved · Trust ▲1.3 to 60.8 · HUMN holds 1st · No incidents." ▲ and ▼ are drawn as glyphs in the up and down colours.
+- **F-key bar**: outlined key caps. The next expected action is the one solid key: F9, or F8 during a summit, none while resolving. Keys that do nothing are hidden (`projectorKeys`, `resultsKeys` in `src/ui/keys.ts`). The results screen shows only F2 and F9. Hidden keys still work when pressed.
+- **Ticker**: 2ch gap after WIRE; each item starts with its quarter. Incidents, breaches, insolvency and the moratorium are red with ▼, clean audits green, the rest cyan.
+- **Board**: headers CHANGE, COMMITTED, PACE, SAFETY and EXPOSURE; a `--raise` header row; row rules in `--grid` drawn inside the row height; alternate-row fill. Panel titles are in `--text` at weight 600. The two-line legend is now a one-line key strip that lists only the tags on screen, plus `+N` when tags are cut.
+- **Trust panel**: the subtitle "Total market revenue tracks public trust."; "since last quarter"; labels in full (MARKET, INCIDENTS, PACTS, DISCLOSURE). The TRST view gets the same copy.
+- **DISCL → DISCLOSURE** in the F-key bar, top bar, trust panel, console and RUNBOOK. Other projector labels written out in full: MAX PACE, MIN SAFETY, MANUAL (audit cell), VALUE (firm view), DEVICES (lobby).
+- **Amber budget**:
+  - Pact tags are amber text in a `--signal-dim` outline.
+  - The summit banner is solid cyan; the phone's offline banner is red.
+  - The lobby join code and the firm-view ticker are now `--text`.
+  - The results counterfactual "actual" bars are amber outlines instead of fills.
+- **Notices**: half-line padding and a 2 px left rule (dim for status, red for errors) instead of a box.
+- **Lobby**: join steps numbered 1–3.
+- Kit (`#/kit`) shows the new top bar, status line, every phase block and the F-key bar.
+- RUNBOOK: a "Reading the projector" note; F7 and the disclosure columns renamed.
+
+**Choices (spec silent)**
+1. **Phase colours.** LOBBY: outline. BRIEFING: outline. OPEN: solid green. RESOLVING: amber outline. REVEAL: solid `--text`. SUMMIT: solid cyan. ENDED and RESULTS: solid `--dim`. None is solid amber, because the budget reserves solid amber.
+2. **The F9 label stays ADVANCE.** The audit mock-up's "OPEN NEXT QUARTER" would be wrong on the last quarter, and choosing a label for the last quarter would reveal the hidden end round.
+3. **Mnemonics in lit-room mode.** With disclosure on in lit-room mode, the full-word headers would leave no room for tags. In that one case the board uses CMT, SAFE and EXPO, and the key strip explains them, so every label is either a word or keyed. To keep two tags visible with disclosure on in standard mode, SHARE, PROFIT, VALUE and CHANGE are each 1ch narrower (they still fit six-character values such as `−104.8`).
+4. **Phone brand block** is the firm's own ticker, not FRONTIER. The own firm is an amber use the spec allows, and FRONTIER plus the ticker does not fit on one line at 360 px.
+5. **Countdown keeps the `T-` prefix**, as in the original spec.
+6. **The alarm headline kinds** (`isAlarmKind`) live in `src/firebase/wire.ts`. One of the engine's kind names is a word that `lint:copy` bans in screen code.
+7. **The status line takes one grid row.** The board legend shrank from two lines to one, so board capacity is unchanged: 12 / 11 / 10 / 9 two-line rows.
+
+**Acceptance against the session criteria**
+- On the board screenshots, the solid amber HTML fills are the brand block, the primary key, the countdown and the trust numeral; the new `checkAmber` e2e check enforces this on every projector screenshot. **Exception, reported rather than changed:** the trust chart's end tag (a small solid amber box carrying the latest trust value, added by Session 11's `LineChart` spec) and the amber trust line are SVG and are not counted by the check. I treated both as part of the trust value. Owner decision 2026-10-05: keep the end tag as it is.
+- Every projector label is a word, or a tag or mnemonic explained by the key strip.
+
+**Tests**
+- New: `tests/ui/status.test.ts`. It covers the reveal headline: the spec example, a rise and a held lead, unchanged trust, no incidents, ties for 1st (two and three firms), losing a shared lead, quarter 1, no leader, and the moratorium. It also covers the status sentence for every phase, paused, time up, the moratorium and ended. Every variant is run through the `lint:copy` rules.
+- `tests/ui/keys.test.ts`: which keys show and which is solid in every phase; F6 needs an active pact; results keys; the DISCLOSURE label.
+- `tests/ui/screen-model.test.ts`: reveal input (leaders, ties, previous leader), ticker tones, and the key strip (only tags on screen, the pact entry, `+N`).
+- `tests/ui/screen-pacts.test.ts`: full-word headers; the lit-room mnemonic fallback; tag width matches the columns built; a BREACH tag and a pact tag fit with disclosure on.
+- `tests/ui/contrast.test.ts`: tokens v2 pairs including `--raise` and the phase blocks; the ratios recorded in §16.6; `--signal-dim` below AA; lit-room values brighter than standard.
+- The layout tests (board capacity at every firm count) pass unchanged.
+- e2e: new `checkAmber` on every projector screenshot. The join code is located by `data-join-code` instead of its amber class. The checks for DISCL, SAFE and EXPO were updated to DISCLOSURE, SAFETY and EXPOSURE.
+
+**Test results**
+- `npm run typecheck` passes. `npm test`: 439 passed (was 388). `lint:copy` and `lint:design` pass. `npm run build` succeeds. `npm run shots`: all checks pass.
+- `npm run test:e2e`: all checks passed (283 `ok` lines, 30 of them the new amber check).
+- `npm run test:e2e:rehearsal`: all checks passed (141, 18 amber).
+- `npm run test:e2e:scale`: all checks passed (935, 274 amber). This covers every firm count from 2 to 50, lit-room mode, paged boards, the summit and results.
+- `npm run test:a11y`: 100 in all 30 snapshots.
+- `test:rules`, `test:e2e:long`, `test:e2e:hardening` and `test:e2e:scale-run` were not run. No rules or data paths changed. The hardening and long runs check the `T-mm:ss` countdown and the commit count, which the main e2e run also checks with the new top bar.
+- **Failures fixed during the session:**
+  - The countdown read `T- 01:55`, because flex layout split `T-` from the digits. They are now one inline span.
+  - The e2e scripts found the join code through its old amber class.
+  - The first amber check caught the solid amber counterfactual bars, which are now outlines.
+  - Screenshot review found HUMN's pact tag pushed into `+1` with disclosure on. The numeric columns were narrowed to fix it.
+
+**Open issues**
+- None from the end tag: the owner decided on 2026-10-05 to keep the trust chart's solid amber end tag as it is.
+- The phone summit banner and the PACTS notice still say the same thing twice (audit section 02, LOW). This is left to Session 15, which owns the phone.
+- The control console still uses CMT and its own button styles; Session 15 regroups it.
+- The firebase CLI was missing from the container again and was installed with `npm install -g firebase-tools`, as CLAUDE.md says. The environment setup script should be checked.
+
+**Next steps**
+- Owner: after merging, open a session on the live site and check the projector at the room's resolution. If the phase colours or the cyan summit banner read poorly on the real projector, report which.
+- Session 13: firm performance views. The board's numeric columns are now 7–8ch. The share strip and value bars must keep two tags visible with disclosure on; `tests/ui/screen-pacts.test.ts` checks this.

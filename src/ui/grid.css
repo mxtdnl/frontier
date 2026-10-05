@@ -93,6 +93,10 @@ p {
   grid-template-rows: 2lh minmax(0, 1fr) auto 2lh;
   overflow: hidden;
 }
+/* Projector board: a one-line status sentence under the top bar (§14.1). */
+.scr.has-status {
+  grid-template-rows: 2lh 1lh minmax(0, 1fr) auto 2lh;
+}
 .scr-main {
   display: grid;
   grid-template-columns: var(--board-w) minmax(0, 1fr);
@@ -102,7 +106,7 @@ p {
   grid-template-columns: minmax(0, 1fr);
 }
 .scr-banner {
-  background: var(--signal);
+  background: var(--wire);
   color: var(--signal-ink);
   padding: 0 1ch;
   height: 2lh;

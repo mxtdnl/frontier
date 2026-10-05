@@ -7,9 +7,9 @@ import { usePublic, useResults } from '../../state';
 import { useMeta, useOrchestrator, useResultsPublisher } from '../../state/facilitator';
 import { niceDomain } from '../../ui/chart';
 import { tickerLine } from '../../ui/layout';
-import { DataTable, FKeyBar, HBar, LineChart, Panel, TopBar } from '../../ui/components';
+import { Brand, DataTable, FKeyBar, HBar, LineChart, Panel, PhaseBlock, TopBar } from '../../ui/components';
 import { fmt, quarterLabel } from '../../ui/format';
-import { matchKey, type KeyAction } from '../../ui/keys';
+import { matchKey, resultsKeys, type KeyAction } from '../../ui/keys';
 import { useLitRoom } from '../../ui/litRoom';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
 import { Butterfly, Dumbbell } from './charts';
@@ -159,10 +159,9 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
     <div className="scr-wrap">
       <div className="scr">
         <TopBar>
-          <span>RESULTS</span>
-          <span className="sep">|</span>
+          <Brand />
+          <PhaseBlock kind="ended" word="RESULTS" />
           <span data-results-pos="">{ended ? step + 1 : 0}/{RESULT_PANEL_COUNT}</span>
-          <span className="sep">|</span>
           <span>{ended ? title : 'PENDING'}</span>
           <span className="grow topbar-notice" role="status" aria-live="polite">
             {notice}
@@ -172,7 +171,7 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
           <div className="scr-main is-single">{body}</div>
         </div>
         <div />
-        <FKeyBar onAction={act} />
+        <FKeyBar onAction={act} keys={resultsKeys(step >= RESULT_PANEL_COUNT - 1)} />
       </div>
     </div>
   );
@@ -285,7 +284,7 @@ function CompareList({ firms, domain }: { firms: ReturnType<typeof rankedFirms>;
             domain={domain}
             marker={x.counterfactual}
             markerTone="wire"
-            tone="signal"
+            tone="signal-outline"
             text=""
             describe={`${x.ticker} actual ${fmt(x.valuation, 0)}, alternative ${fmt(x.counterfactual, 0)}`}
           />

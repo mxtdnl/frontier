@@ -292,7 +292,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
         </header>
         <div className="row">
           <button type="button" className="btn" aria-pressed={pub.disclosure} disabled={busyNow || pub.phase === 'ended'} onClick={() => run(() => toggleDisclosure(ctx, seenRef.current))}>
-            F7 DISCL {pub.disclosure ? 'ON' : 'OFF'}
+            F7 DISCLOSURE {pub.disclosure ? 'ON' : 'OFF'}
           </button>
           <button type="button" className="btn" disabled={busyNow} onClick={() => run(() => toggleSummit(ctx, seenRef.current))}>F8 SUMMIT</button>
           <button type="button" className="btn btn-signal" disabled={busyNow} onClick={() => run(() => advance(ctx, seenRef.current))}>F9 ADVANCE</button>
@@ -373,7 +373,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
         <Panel title="CONTROLS" bodyClassName="pad">
           <div className="stack">
             <p className="dim">The buttons stay at the top of this page while it scrolls. The F-keys and Shift+letters work here too.</p>
-            <p className="dim">Disclosure {pub.disclosure ? 'ON: PACE, SAFE and EXPO are published each quarter' : 'OFF: nothing is published'}.</p>
+            <p className="dim">Disclosure {pub.disclosure ? 'ON: PACE, SAFETY and EXPOSURE are published each quarter' : 'OFF: nothing is published'}.</p>
             <p className="dim">Press END twice within 3 s. ADVANCE resolves an open quarter, with AUTO defaults for firms that have not committed.</p>
           </div>
         </Panel>

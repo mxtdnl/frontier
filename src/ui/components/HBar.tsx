@@ -8,7 +8,8 @@ interface Props {
   domain?: Domain;
   text: string;
   /** Tone for positive values; negative values are always drawn in the down colour. */
-  tone?: 'wire' | 'signal' | 'dim' | 'down';
+  /** `signal-outline` is the amber series drawn as an outline, not a fill (amber budget, spec §16.1). */
+  tone?: 'wire' | 'signal' | 'signal-outline' | 'dim' | 'down';
   /** Optional marker, in the units of `domain`. */
   marker?: number;
   markerTone?: 'text' | 'wire';

@@ -5,7 +5,9 @@
  */
 import { PARAMS, type DisclosureEntry, type Pact } from '../../engine';
 import type { FirmNode, FirmPublicNode, MetaNode, PublicNode, RoundNode, WireNode } from '../../firebase/schema';
-import { mergeWire } from '../../firebase/wire';
+import { isAlarmKind, mergeWire } from '../../firebase/wire';
+import type { TickerTone } from '../../ui/components/Ticker';
+import type { RevealInput } from '../../ui/status';
 
 export interface ScreenData {
   pub: PublicNode;
@@ -185,4 +187,65 @@ export function joinUrl(code: string, href: string): string {
   u.search = '';
   u.hash = `#/j/${code}`;
   return u.toString();
+}
+
+// ── Status line and ticker (spec §14.1, Session 12) ───────────────────────────
+
+/** Tickers of the firms tied at the top valuation in one resolved quarter. */
+export function leadersOf(round: RoundNode | undefined, firms: Record<string, FirmNode>): string[] {
+  if (!round) return [];
+  const entries = Object.entries(round.results).filter(([id]) => firms[id]);
+  if (entries.length === 0) return [];
+  const top = Math.max(...entries.map(([, r]) => r.valuation));
+  return entries
+    .filter(([, r]) => r.valuation === top)
+    .map(([id]) => (firms[id] as FirmNode).ticker)
+    .sort();
+}
+
+/** Data for the reveal headline of the latest resolved quarter; null before quarter 1. */
+export function revealInput(d: ScreenData): RevealInput | null {
+  const last = latestRound(d.rounds);
+  const node = d.rounds[String(last)];
+  if (!node) return null;
+  return {
+    round: last,
+    T: node.T,
+    prevT: previousTrust(d.rounds),
+    incidents: node.incidents,
+    leaders: leadersOf(node, d.firms),
+    prevLeaders: leadersOf(d.rounds[String(last - 1)], d.firms),
+    collapseRound: d.pub.collapsed ? d.pub.collapseRound : null,
+  };
+}
+
+const UP_KINDS: ReadonlySet<string> = new Set(['audit-clean']);
+
+/** Ticker colour by headline kind: alarms in the down colour with ▼, clean audits up, the rest wire. */
+export function tickerTone(kind: string): TickerTone {
+  if (isAlarmKind(kind)) return 'down';
+  if (UP_KINDS.has(kind)) return 'up';
+  return 'wire';
+}
+
+/** What each board tag means, in board priority order. */
+export const TAG_MEANING: ReadonlyArray<readonly [string, string]> = [
+  ['BREACH', 'pact terms breached'],
+  ['INSOLV', 'forced to lowest pace'],
+  ['AUTO', 'default settings applied'],
+  ['BOT', 'automated firm'],
+];
+
+/**
+ * The key strip at the foot of the board (§14.1): only the tags on screen. `shown` holds each
+ * visible row's tags as drawn; pact names share one entry, and a `+N` count gets its own.
+ */
+export function tagKey(shown: ReadonlyArray<ReadonlyArray<string>>, anyMore: boolean): Array<{ tag: string; text: string }> {
+  const on = new Set(shown.flat());
+  const out = TAG_MEANING.filter(([t]) => on.has(t)).map(([tag, text]) => ({ tag, text }));
+  const pacts = [...on].filter((t) => !TAG_MEANING.some(([k]) => k === t)).sort();
+  // Pact names are PACT-A, PACT-B…; several share one entry.
+  if (pacts.length) out.push({ tag: pacts.length === 1 ? (pacts[0] as string) : 'PACT-', text: pacts.length === 1 ? 'member of this pact' : 'member of the named pact' });
+  if (anyMore) out.push({ tag: '+N', text: 'more tags not shown' });
+  return out;
 }

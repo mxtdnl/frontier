@@ -5,7 +5,11 @@ import {
   boardRows,
   committedCount,
   joinUrl,
+  leadersOf,
   previousTrust,
+  revealInput,
+  tagKey,
+  tickerTone,
   trustSeries,
   valuationSeries,
   wireItems,
@@ -112,5 +116,42 @@ describe('series and wire', () => {
 describe('joinUrl', () => {
   it('builds the join address from the page address, dropping the query and old hash', () => {
     expect(joinUrl('KXMT', 'https://mxtdnl.github.io/frontier/#/screen/g1?view=trust')).toBe('https://mxtdnl.github.io/frontier/#/j/KXMT');
+  });
+});
+
+describe('reveal input (Session 12)', () => {
+  it('takes the latest quarter, the trust before it and the leaders of both quarters', () => {
+    expect(revealInput(data())).toEqual({ round: 2, T: 70, prevT: 80, incidents: 1, leaders: ['BBB'], prevLeaders: ['AAA'], collapseRound: null });
+  });
+  it('is null before quarter 1', () => {
+    expect(revealInput(data({ rounds: {} }))).toBeNull();
+  });
+  it('lists every firm tied at the top valuation', () => {
+    const r = round(70, { a: { share: 0.5, profit: 1, valuation: 110, rank: 1 }, b: { share: 0.5, profit: 1, valuation: 110, rank: 2 } });
+    expect(leadersOf(r, data().firms)).toEqual(['AAA', 'BBB']);
+    expect(leadersOf(undefined, data().firms)).toEqual([]);
+  });
+  it('carries the moratorium quarter only while it is in force', () => {
+    expect(revealInput(data({ pub: pub({ collapsed: true, collapseRound: 2 }) }))?.collapseRound).toBe(2);
+  });
+});
+
+describe('ticker tone (Session 12)', () => {
+  it('marks harm in the down colour, clean audits up, the rest wire', () => {
+    for (const k of ['incident', 'breach', 'insolvency', 'moratorium']) expect(tickerTone(k), k).toBe('down');
+    expect(tickerTone('audit-clean')).toBe('up');
+    for (const k of ['rank', 'ambient', 'trust-band', 'pact-formed', 'disclosure-on']) expect(tickerTone(k), k).toBe('wire');
+  });
+});
+
+describe('board key strip (Session 12)', () => {
+  it('lists only the tags on screen, in board priority order', () => {
+    expect(tagKey([['BOT'], ['BREACH', 'AUTO']], false).map((k) => k.tag)).toEqual(['BREACH', 'AUTO', 'BOT']);
+    expect(tagKey([[], []], false)).toEqual([]);
+  });
+  it('gives one entry for pact tags and one for a +N count', () => {
+    expect(tagKey([['PACT-A']], false)).toEqual([{ tag: 'PACT-A', text: 'member of this pact' }]);
+    const k = tagKey([['PACT-B'], ['PACT-A', 'BOT']], true);
+    expect(k.map((x) => x.tag)).toEqual(['BOT', 'PACT-', '+N']);
   });
 });

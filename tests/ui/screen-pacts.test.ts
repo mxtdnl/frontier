@@ -3,7 +3,8 @@ import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { PARAMS, type Pact } from '../../src/engine';
 import type { FirmNode, FirmPublicNode, PublicNode, RoundNode } from '../../src/firebase/schema';
-import { boardColumns } from '../../src/screens/Screen/BoardView';
+import { boardColumns, boardMnemonics, boardTagW } from '../../src/screens/Screen/BoardView';
+import { boardTagWidth, tagWidthCh } from '../../src/ui/layout';
 import { INITIAL_VALUATION, boardRows, pactRows, type ScreenData } from '../../src/screens/Screen/model';
 
 const firm = (ticker: string, createdAt: number): FirmNode => ({ name: `${ticker} Inc`, ticker, createdAt, order: 0, isBot: false, botPolicy: null });
@@ -39,18 +40,42 @@ const cellsOf = (d: ScreenData, disclosure: boolean, label: string): string[] =>
 describe('disclosure columns on the board (spec §9.3)', () => {
   const snapshot = { a: { pace: 3, safety: 12, expo: PARAMS.DRAW[3] }, b: { pace: 1, safety: 25, expo: 0.1 } } as const;
 
-  it('shows PACE, SAFE and EXPO only while disclosure is on', () => {
+  it('shows PACE, SAFETY and EXPOSURE only while disclosure is on', () => {
     const labels = (on: boolean) => boardColumns(on, false).map((c) => c.label);
     expect(labels(false)).not.toEqual(expect.arrayContaining(['PACE']));
-    expect(labels(false).some((l) => l === 'SAFE' || l === 'EXPO')).toBe(false);
-    expect(labels(true)).toEqual(expect.arrayContaining(['PACE', 'SAFE', 'EXPO']));
+    expect(labels(false).some((l) => l === 'SAFETY' || l === 'EXPOSURE')).toBe(false);
+    expect(labels(true)).toEqual(expect.arrayContaining(['PACE', 'SAFETY', 'EXPOSURE']));
+  });
+
+  it('uses full-word headers where width allows (Session 12)', () => {
+    expect(boardColumns(false, false).map((c) => c.label)).toEqual(['#', 'FIRM', 'SHARE', 'PROFIT', 'VALUE', 'CHANGE', 'COMMITTED', '']);
+    expect(boardMnemonics(true, false)).toEqual([]);
+  });
+
+  it('with disclosure on, a BREACH tag and a pact tag still fit beside the full-word headers', () => {
+    expect(boardTagW(true, false)).toBeGreaterThanOrEqual(tagWidthCh('BREACH') + tagWidthCh('PACT-A'));
+  });
+
+  it('falls back to keyed mnemonics in lit-room mode with disclosure on, keeping room for tags', () => {
+    const labels = boardColumns(true, false, true).map((c) => c.label);
+    expect(labels).toEqual(expect.arrayContaining(['CMT', 'SAFE', 'EXPO']));
+    expect(boardMnemonics(true, true).map((m) => m.tag)).toEqual(['CMT', 'SAFE', 'EXPO']);
+    expect(boardTagW(true, true)).toBeGreaterThanOrEqual(10);
+    expect(boardMnemonics(false, true)).toEqual([]);
+  });
+
+  it('the tag width matches the columns built', () => {
+    for (const [disc, lit] of [[false, false], [true, false], [false, true], [true, true]] as const) {
+      const fixed = boardColumns(disc, false, lit).reduce((a, c) => a + c.w, 0);
+      expect(boardTagW(disc, lit)).toBe(boardTagWidth(fixed, lit));
+    }
   });
 
   it('fills them from the round snapshot', () => {
     const d = data({ pub: pub({ disclosure: true }), rounds: { '1': roundNode(), '2': roundNode({ disclosure: { ...snapshot } }) } });
     expect(cellsOf(d, true, 'PACE')).toEqual(['3', '1']);
-    expect(cellsOf(d, true, 'SAFE')).toEqual(['12', '25']);
-    expect(cellsOf(d, true, 'EXPO')[1]).toBe('0.1');
+    expect(cellsOf(d, true, 'SAFETY')).toEqual(['12', '25']);
+    expect(cellsOf(d, true, 'EXPOSURE')[1]).toBe('0.1');
   });
 
   it('shows dashes until a snapshot has been published, and never reads one while the toggle is off', () => {
