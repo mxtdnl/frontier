@@ -1,10 +1,26 @@
 import { useState } from 'react';
 import type { Pace, Pact, PactTerms } from '../../engine';
 import type { FirmNode, Phase } from '../../firebase/schema';
-import { Panel, Segmented4, Tag } from '../../ui/components';
+import { GlyphGe, GlyphLe, Panel, Segmented4, Tag } from '../../ui/components';
 import { truncateList } from '../../ui/layout';
 import { PACE_OPTIONS } from './model';
-import { DEFAULT_TERMS_FORM, canPropose, pactAction, sortPacts, termsFromForm, termsText, type TermsForm } from './pacts';
+import { DEFAULT_TERMS_FORM, canPropose, pactAction, sortPacts, termsFromForm, termsParts, termsShort, type TermsForm } from './pacts';
+
+/** Terms as `pace ≤ 2 · safety ≥ 15%` with the comparison signs drawn as shapes. */
+export function PactTermsText({ terms }: { terms: PactTerms }) {
+  const parts = termsParts(terms);
+  if (parts.length === 0) return <>–</>;
+  return (
+    <span role="img" aria-label={termsShort(terms)} data-pact-terms="">
+      {parts.map((t, i) => (
+        <span key={t.label} aria-hidden="true">
+          {i > 0 ? ' · ' : ''}
+          {t.label} {t.op === 'le' ? <GlyphLe /> : <GlyphGe />} {t.value}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 interface Props {
   phase: Phase;
@@ -44,7 +60,6 @@ export function PactsTab(p: Props) {
 
   return (
     <div className="stack">
-      {p.summit ? <p className="notice" role="status">Summit in session. Propose, join or leave pacts now.</p> : null}
       {p.error ? <p className="notice err" role="alert">{p.error}</p> : null}
 
       <Panel title="PROPOSE" right={p.nextName} bodyClassName="pad">
@@ -123,7 +138,7 @@ export function PactsTab(p: Props) {
           >
             <div className="stack">
               <dl className="kv">
-                <dt>Terms</dt><dd>{termsText(pact.terms)}</dd>
+                <dt>Terms</dt><dd><PactTermsText terms={pact.terms} /></dd>
                 <dt>Members</dt>
                 <dd>
                   {(full ? members : shown).join(' ') || '–'}

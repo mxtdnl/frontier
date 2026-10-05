@@ -90,7 +90,7 @@ describe('result card rendering', () => {
     '3': { pace: 2, safety: 10, card: 'NONE', target: null, auto: false, expo: 1, draw: 1, incident: false, share: 0.25, revenue: 40, cost: 20, fine: 0, profit: 20, cash: 100, cap: 100, valuation: 200, rank: 2, rankDelta: 0, insolvent: false },
   } as never;
   const render = (cardNotices: Array<{ kind: 'card-cooldown' | 'card-target'; card: 'POACH' | 'BLITZ' }>) =>
-    renderToStaticMarkup(createElement(RevealCard, { round: 3, history, audits: [], headlines: [], pacts: {}, firmId: 'a', cardNotices }));
+    renderToStaticMarkup(createElement(RevealCard, { round: 3, history, audits: [], headlines: [], pacts: {}, firmId: 'a', cardNotices, firmCount: 2 }));
 
   it('shows a dropped card in the notices panel', () => {
     const html = render([{ kind: 'card-target', card: 'POACH' }]);

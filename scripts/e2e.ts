@@ -489,16 +489,18 @@ async function participantScenario(
   const cost1 = fmt(estimatedCost(3, 13, 'PUBLISH', PARAMS));
   check(/Estimated cost this quarter\s*\n?\s*/.test(await A.locator('[aria-label="Estimate"]').innerText()) && (await A.locator('[aria-label="Estimate"]').innerText()).includes(cost1), `the estimated cost is ${cost1}`);
   check(/LOW|MED|HIGH|SEVERE/.test(await A.locator('[aria-label="Estimate"]').innerText()), 'the public exposure label is shown');
-  check(/same card cannot repeat[\s\S]*Insolvent firms cannot play cards/.test(await A.locator('[aria-label="Card"]').innerText()), 'the cooldown and insolvency rules are shown inline');
+  check(/same card cannot repeat[\s\S]*Insolvent firms cannot play cards/.test((await A.locator('[aria-label="Card"] dialog.sheet').textContent()) ?? ''), 'the cooldown and insolvency rules are in the card sheet');
+  check(!/same card cannot repeat/.test(await A.locator('[aria-label="Card"]').innerText()), 'the rules paragraph is no longer on the desk');
+  check(/Publish safety research/.test(await A.locator('[data-card-effect]').innerText()) && /Raises public trust/.test(await A.locator('[data-card-effect]').innerText()), 'the selected card’s one-line effect shows under its name');
   await snapPlay(A, 'play-open');
   await A.getByRole('button', { name: 'COMMIT' }).click();
-  await waitText(A, /Committed \d\d:\d\d:\d\d · edit until close · device AB/, 'commit shows the time and the committing device');
-  await waitText(B, /Committed \d\d:\d\d:\d\d · edit until close · device AB/, 'a teammate sees which device committed');
+  await waitText(A, /COMMITTED \d\d:\d\d:\d\d · edit until close · device AB/, 'commit shows the time and the committing device');
+  await waitText(B, /COMMITTED \d\d:\d\d:\d\d · edit until close · device AB/, 'a teammate sees which device committed');
   check((await B.getByRole('radio', { name: /Aggressive/ }).getAttribute('aria-checked')) === 'true', 'a teammate’s desk adopts the committed pace');
   await B.getByRole('radio', { name: /Breakneck/ }).click();
-  await waitText(B, /changes not committed/, 'an edited desk says changes are not committed');
+  await waitText(B, /CHANGES NOT COMMITTED/, 'an edited desk says changes are not committed');
   await B.getByRole('button', { name: 'Recommit' }).click();
-  await waitText(B, /device EF(?![\s\S]*changes not committed)/, 'recommit replaces the decision from the second device');
+  await waitText(B, /device EF(?![\s\S]*CHANGES NOT COMMITTED)/, 'recommit replaces the decision from the second device');
   await waitText(A, /device EF/, 'the first device sees the recommit');
   const dec1 = await adminGet<{ pace: number; safety: number; card: string }>(`games/${g}/decisions/1/${firmA}`);
   check(dec1.pace === 4 && dec1.safety === 13 && dec1.card === 'PUBLISH', 'the stored decision is the recommitted one');
@@ -516,9 +518,9 @@ async function participantScenario(
   await C.keyboard.press('Enter');
   await tabTo(C, '.sheet-body .btn-signal', 'the Done button');
   await C.keyboard.press('Enter');
-  await tabTo(C, '.commit-bar .btn-signal', 'the commit button');
+  await tabTo(C, '.desk-foot .btn-signal', 'the commit button');
   await C.keyboard.press('Enter');
-  await waitText(C, /Committed \d\d:\d\d:\d\d · edit until close · device GH/, 'a keyboard-only commit works');
+  await waitText(C, /COMMITTED \d\d:\d\d:\d\d · edit until close · device GH/, 'a keyboard-only commit works');
   const firmC = Object.entries((await adminGet<Record<string, { ticker: string }>>(`games/${g}/firms`)) ?? {}).find(([, f]) => f.ticker === 'CEDR')?.[0] ?? '';
   const decC = await adminGet<{ pace: number; safety: number; card: string }>(`games/${g}/decisions/1/${firmC}`);
   check(decC.pace === 3 && decC.safety === 12 && decC.card === 'BLITZ', 'the keyboard-only decision has pace 3, safety 12, BLITZ');
@@ -531,7 +533,7 @@ async function participantScenario(
 
   // Reload keeps membership (same device, same anonymous user).
   await A.reload();
-  await waitText(A, /Committed \d\d:\d\d:\d\d[\s\S]*device EF/, 'a reload restores the firm and its committed decision');
+  await waitText(A, /COMMITTED \d\d:\d\d:\d\d[\s\S]*device EF/, 'a reload restores the firm and its committed decision');
   const A2 = watch(await ctxA.newPage(), 'phone A (new tab)');
   await A2.goto(`${BASE}#/`);
   check(await A2.getByRole('link', { name: /RESUME LAST SESSION/ }).isVisible(), 'the landing page offers to resume the last session');
@@ -544,7 +546,10 @@ async function participantScenario(
   await waitText(A, /Q1 Y1 RESULT/, 'the result card appears at the reveal', 15_000);
   const resultText = await A.locator('main').innerText();
   check(/Revenue[\s\S]*Costs[\s\S]*Profit[\s\S]*Valuation/.test(resultText) && /RANK \d/.test(resultText), 'the result card shows revenue, costs, profit, valuation and rank');
-  check(/NOTICES/.test(resultText), 'the result card has a notices panel');
+  check(/No notices this quarter|notice|audit|Incident|Insolvent|decision was received/i.test(await A.locator('[aria-label="Notices"]').innerText()), 'the result card has notices');
+  check(/^You ranked \d+(st|nd|rd|th) of \d+/.test(await A.locator('[data-result-sentence]').innerText()), 'the result card opens with the result sentence');
+  check(resultText.indexOf('You ranked') >= 0 && resultText.indexOf('You ranked') < resultText.indexOf('Revenue'), 'the sentence comes before the figures');
+  check((await A.locator('.notice-rule').count()) >= 1 && (await A.locator('.notice-rule').first().evaluate((el) => getComputedStyle(el).borderLeftWidth)) === '2px', 'notices carry a 2 px left rule');
   await snapPlay(A, 'play-reveal');
   await A.getByRole('tab', { name: 'BOOK' }).click();
   await waitText(A, /Q1 Y1/, 'BOOK lists the quarter');
@@ -577,7 +582,9 @@ async function participantScenario(
   // Pacts (Session 6): propose from the phone, join from the desktop, audit and disclose from the projector.
   await A.getByRole('button', { name: 'PROPOSE A PACT' }).click();
   await A.getByRole('button', { name: 'SIGN PACT-A' }).click();
-  await waitText(A, /PACT-A[\s\S]*pace 2 or lower/, 'a pact is proposed from the phone during the summit');
+  await waitText(A, /PACT-A[\s\S]*Terms\s+pace\s+2/, 'a pact is proposed from the phone during the summit');
+  check((await A.locator('[data-pact-terms]').first().getAttribute('aria-label')) === 'pace ≤ 2', 'pact terms read pace ≤ 2');
+  check((await A.getByText('Summit in session. Propose, join or leave pacts now.').count()) === 0, 'the summit shows one notice, not two');
   await waitText(fac, /PACT-A/, 'the projector lists the new pact in the summit view', 15_000, '.scr');
   await C.getByRole('button', { name: 'JOIN PACT-A' }).click();
   await waitText(C, /LEAVE PACT-A/, 'a second firm joins the pact from the desktop');
@@ -604,7 +611,7 @@ async function participantScenario(
   await waitText(fac, /DISCLOSURE ON/, 'Shift+D turns disclosure on', 15_000, '.scr');
   await waitText(control, /F7 DISCLOSURE ON/, 'the console shows disclosure on', 15_000);
   await A.getByRole('tab', { name: 'DESK' }).click();
-  check(await A.getByRole('button', { name: 'LOCKED' }).isDisabled(), 'the desk is locked during the summit');
+  check((await A.locator('[data-commit-status="locked"]').count()) === 1 && (await A.locator('.desk-foot .btn-signal').count()) === 0, 'the desk is locked during the summit');
   await key(fac, 'F8');
   await waitText(A, /^(?![\s\S]*Industry summit in session)[\s\S]*T-\d\d:\d\d/, 'leaving the summit clears the banner and restores the countdown', 15_000);
   await A.getByRole('button', { name: /^Card:/ }).click();
@@ -616,7 +623,7 @@ async function participantScenario(
   await A.getByRole('button', { name: 'Done' }).click();
   await snapPlay(A, 'play-poach');
   await A.getByRole('button', { name: /Recommit|COMMIT/ }).click();
-  await waitText(A, /Committed/, 'POACH with a target commits');
+  await waitText(A, /COMMITTED/, 'POACH with a target commits');
   const dec2 = await adminGet<{ card: string; target: string | null }>(`games/${g}/decisions/2/${firmA}`);
   check(dec2.card === 'POACH' && dec2.target !== null && dec2.target !== firmA, 'the stored POACH has a target other than the own firm');
   await key(fac, 'F9');
@@ -665,7 +672,7 @@ async function participantScenario(
   await ctxA.setOffline(false);
   await waitText(A, /^(?![\s\S]*Offline\. Reconnecting)[\s\S]*/, 'the offline banner clears after reconnecting', 30_000);
   await A.getByRole('button', { name: /COMMIT|Recommit/ }).click();
-  await waitText(A, /Committed/, 'a commit goes through after reconnecting');
+  await waitText(A, /COMMITTED/, 'a commit goes through after reconnecting');
 
   // Close the quarter: -30 s twice on the console puts the deadline at now.
   // The console ignores a press while the previous action runs, so wait for each to finish.
@@ -673,7 +680,7 @@ async function participantScenario(
   await waitText(control, /Removed 30 s/, 'the first −30 s is applied');
   await control.getByRole('button', { name: '−30 s' }).click();
   await waitText(A, /Quarter closed/, 'the desk shows the closed state after the deadline', 15_000);
-  check(await A.getByRole('button', { name: 'LOCKED' }).isDisabled(), 'the commit button is locked after the deadline');
+  check((await A.locator('[data-commit-status="locked"]').count()) === 1 && (await A.locator('.desk-foot .btn-signal').count()) === 0, 'the commit bar is locked after the deadline');
   await snapPlay(A, 'play-locked');
   await key(fac, 'F9');
   await waitText(A, /Q3 Y1 RESULT/, 'quarter 3 resolves', 15_000);

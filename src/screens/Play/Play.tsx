@@ -33,7 +33,7 @@ import {
   type PlayView,
 } from './model';
 import { OwnResultsCard } from '../Results/OwnResultsCard';
-import { Book, RevealCard, Wire } from './Panels';
+import { Book, RevealCard, StepStrip, Wire } from './Panels';
 import { PactsTab } from './PactsTab';
 import { useHeldFor, useServerNow } from './useServerNow';
 
@@ -314,9 +314,11 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
               pacts={pactsSub.data}
               firmId={firmId}
               cardNotices={priv.data?.notices[String(round)] ?? []}
+              firmCount={Object.keys(firms).length}
             />
           ) : (
             <>
+              {round <= 1 ? <StepStrip /> : null}
               <Desk
                 view={view}
                 draft={draft}

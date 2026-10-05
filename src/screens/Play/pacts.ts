@@ -52,3 +52,20 @@ export function sortPacts(pacts: Record<string, Pact>): Pact[] {
     (a, b) => Number(b.status === 'active') - Number(a.status === 'active') || a.createdRound - b.createdRound || a.name.localeCompare(b.name),
   );
 }
+
+/** Terms as short symbols (spec §14.3): `pace ≤ 2 · safety ≥ 15%`. `≤` and `≥` are drawn by the component. */
+export function termsParts(t: PactTerms): Array<{ label: string; op: 'le' | 'ge'; value: string }> {
+  const parts: Array<{ label: string; op: 'le' | 'ge'; value: string }> = [];
+  if (t.maxPace !== null) parts.push({ label: 'pace', op: 'le', value: String(t.maxPace) });
+  if (t.minSafety !== null) parts.push({ label: 'safety', op: 'ge', value: `${t.minSafety}%` });
+  return parts;
+}
+
+/** Plain-text form of `termsParts`, for assistive technology and tests. */
+export function termsShort(t: PactTerms): string {
+  return (
+    termsParts(t)
+      .map((p) => `${p.label} ${p.op === 'le' ? '≤' : '≥'} ${p.value}`)
+      .join(' · ') || '–'
+  );
+}

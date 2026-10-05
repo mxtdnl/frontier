@@ -23,10 +23,12 @@ interface Props {
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
+  /** Rules paragraph shown at the top of the sheet. */
+  rules?: string;
 }
 
 /** Trigger plus modal sheet. POACH reveals a target list. */
-export function CardPicker({ cards, value, target, onChange, lastCard, lastTarget, insolvent, targets, open, onOpen, onClose }: Props) {
+export function CardPicker({ cards, value, target, onChange, lastCard, lastTarget, insolvent, targets, open, onOpen, onClose, rules }: Props) {
   const dlg = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = dlg.current;
@@ -57,6 +59,7 @@ export function CardPicker({ cards, value, target, onChange, lastCard, lastTarge
           <span>Esc to close</span>
         </div>
         <div className="sheet-body">
+          {rules ? <p className="dim">{rules}</p> : null}
           {insolvent ? <p className="notice err">Insolvent firms cannot play cards.</p> : null}
           <div role="radiogroup" aria-label="Action card" className="stack" style={{ gap: '0.5lh' }}>
             {cards.map((c) => {

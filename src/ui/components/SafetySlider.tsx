@@ -45,8 +45,8 @@ export function SafetySlider({ value, min = 0, max = 30, onChange, label, disabl
           onChange={(e) => onChange(clamp(Number(e.target.value)))}
         />
         <div className="slider-ends" aria-hidden="true">
-          <span>{min}</span>
-          <span>{max}</span>
+          <span>{min}%</span>
+          <span>{max}%</span>
         </div>
       </div>
     </div>

@@ -33,6 +33,7 @@ import {
 } from '../../state/facilitator';
 import type { Pact } from '../../engine';
 import type { FirmNode, RoundNode } from '../../firebase/schema';
+import { nextLine } from './next';
 import { Countdown, DataTable, GlyphCheck, Panel, PresenceDot, Tag } from '../../ui/components';
 import { fmt, fmtTime, quarterLabel } from '../../ui/format';
 import { matchKey } from '../../ui/keys';
@@ -268,6 +269,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
   const queued = new Set(engine?.pendingAudits ?? []);
   const auditLog = auditOutcomes(rounds, pacts, firms);
 
+  const next = nextLine({ phase: pub.phase, round: pub.round, paused: pub.paused, committed, total: rows.length, incomplete });
   const tableRows = firmTable(rows, sort, filters, isOpen);
   const sortButton = (key: FirmSort, label: string) => (
     <button type="button" className="btn" aria-pressed={sort === key} onClick={() => setSort(key)}>
@@ -290,15 +292,32 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
             {isOpen ? ` · ${committed}/${rows.length} CMT` : ` · ${rows.length} FIRMS`}
           </span>
         </header>
-        <div className="row">
-          <button type="button" className="btn" aria-pressed={pub.disclosure} disabled={busyNow || pub.phase === 'ended'} onClick={() => run(() => toggleDisclosure(ctx, seenRef.current))}>
-            F7 DISCLOSURE {pub.disclosure ? 'ON' : 'OFF'}
-          </button>
-          <button type="button" className="btn" disabled={busyNow} onClick={() => run(() => toggleSummit(ctx, seenRef.current))}>F8 SUMMIT</button>
-          <button type="button" className="btn btn-signal" disabled={busyNow} onClick={() => run(() => advance(ctx, seenRef.current))}>F9 ADVANCE</button>
-          <button type="button" className="btn" disabled={busyNow} onClick={pressEnd}>F10 END</button>
-          <button type="button" className="btn" onClick={auditKey}>F6 AUDIT</button>
+        <div className="ctl-groups" data-ctl-groups="">
+          <div className="ctl-group" role="group" aria-label="Routine" data-group="routine">
+            <span className="ctl-group-label dim">ROUTINE</span>
+            <button type="button" className="btn" disabled={!isOpen} onClick={() => run(() => addTime(ctx, -30_000))}>−30 s</button>
+            <button type="button" className="btn" disabled={!isOpen} onClick={() => run(() => addTime(ctx, 30_000))}>+30 s</button>
+            <button type="button" className="btn" disabled={!isOpen} onClick={() => run(() => setPaused(ctx, !pub.paused))}>
+              {pub.paused ? 'Resume' : 'Pause'}
+            </button>
+          </div>
+          <div className="ctl-group" role="group" aria-label="Session flow" data-group="flow">
+            <span className="ctl-group-label dim">SESSION FLOW</span>
+            <button type="button" className="btn" onClick={auditKey}>F6 AUDIT</button>
+            <button type="button" className="btn" aria-pressed={pub.disclosure} disabled={busyNow || pub.phase === 'ended'} onClick={() => run(() => toggleDisclosure(ctx, seenRef.current))}>
+              F7 DISCLOSURE {pub.disclosure ? 'ON' : 'OFF'}
+            </button>
+            <button type="button" className={`btn${next.key === 'F8' ? ' btn-signal' : ''}`} disabled={busyNow} onClick={() => run(() => toggleSummit(ctx, seenRef.current))}>F8 SUMMIT</button>
+            <button type="button" className={`btn${next.key === 'F9' ? ' btn-signal' : ''}`} disabled={busyNow} onClick={() => run(() => advance(ctx, seenRef.current))}>F9 ADVANCE</button>
+          </div>
+          <div className="ctl-group is-irreversible" role="group" aria-label="Irreversible" data-group="irreversible">
+            <span className="ctl-group-label">IRREVERSIBLE</span>
+            <button type="button" className="btn" disabled={busyNow} onClick={pressEnd}>F10 END</button>
+            <HoldReveal label="END" value={engine ? (engine.endRound === null ? 'MANUAL' : String(engine.endRound)) : '–'} />
+            <HoldReveal label="TAU" value={engine ? fmt(engine.tau) : '–'} />
+          </div>
         </div>
+        <p className="ctl-next" data-next={next.key ?? ''}>{next.text}</p>
         <div role="status" aria-live="polite">{notice ? <p className="notice">{notice}</p> : null}</div>
       </div>
 
@@ -355,18 +374,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
                 {meta.settings.mode === 'multiplayer' ? 'Multiplayer mode' : 'Team mode'}, at most {MAX_FIRMS_BY_MODE[meta.settings.mode]} firms
               </span>
             </div>
-            <div className="row">
-              <button type="button" className="btn" disabled={!isOpen} onClick={() => run(() => addTime(ctx, -30_000))}>−30 s</button>
-              <button type="button" className="btn" disabled={!isOpen} onClick={() => run(() => addTime(ctx, 30_000))}>+30 s</button>
-              <button type="button" className="btn" disabled={!isOpen} onClick={() => run(() => setPaused(ctx, !pub.paused))}>
-                {pub.paused ? 'Resume' : 'Pause'}
-              </button>
-            </div>
-            <div className="row">
-              <HoldReveal label="END" value={engine ? (engine.endRound === null ? 'MANUAL' : String(engine.endRound)) : '–'} />
-              <HoldReveal label="TAU" value={engine ? fmt(engine.tau) : '–'} />
-            </div>
-            <p className="dim">Hidden values show while the button is held. They never appear on the board or on participant devices.</p>
+            <p className="dim">END and TAU show their value while the button in the IRREVERSIBLE group is held. They never appear on the board or on participant devices.</p>
           </div>
         </Panel>
 
@@ -407,14 +415,14 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
               {
                 key: 'p',
                 label: 'PRESENCE',
-                w: 24,
+                w: 12,
                 render: (f) =>
                   f.members.length === 0 ? (
                     <span className="dim">none</span>
                   ) : (
                     f.members.map((m) => (
-                      <span key={m.uid} style={{ marginRight: '2ch' }}>
-                        <PresenceDot online={m.online} label={m.label} /> {m.label}
+                      <span key={m.uid} style={{ marginRight: '1ch' }}>
+                        <PresenceDot online={m.online} label={m.label} />
                       </span>
                     ))
                   ),
