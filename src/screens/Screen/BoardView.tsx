@@ -34,8 +34,8 @@ export function boardTags(f: BoardRow): string[] {
 /** Width the tag column keeps before the headers fall back to mnemonics. */
 const MIN_TAG_W = 12;
 /** Fixed column widths: rank to COMMITTED (or CMT), then PACE, SAFETY and EXPOSURE (or SAFE and EXPO). */
-const FULL_W = { base: 55, disclosure: 21 } as const;
-const SHORT_W = { base: 50, disclosure: 16 } as const;
+const FULL_W = { base: 51, disclosure: 21 } as const;
+const SHORT_W = { base: 46, disclosure: 16 } as const;
 
 /**
  * Mnemonic headers used where full words would squeeze the tags off the row (lit-room mode with
@@ -59,28 +59,28 @@ export function boardColumns(disclosure: boolean, reveal: boolean, lit = false):
     {
       key: 'share',
       label: 'SHARE',
-      w: 8,
+      w: 7,
       align: 'r',
       render: (f) => <span data-roll="" data-prev={prev(fmtShare(f.prevShare))}>{fmtShare(f.share)}</span>,
     },
     {
       key: 'profit',
       label: 'PROFIT',
-      w: 9,
+      w: 8,
       align: 'r',
       render: (f) => <span data-roll="" data-prev={prev(fmt(f.prevProfit))}>{fmt(f.profit)}</span>,
     },
     {
       key: 'value',
       label: 'VALUE',
-      w: 9,
+      w: 8,
       align: 'r',
       render: (f) => <span data-roll="" data-prev={prev(fmt(f.prevValue))}>{fmt(f.value)}</span>,
     },
     {
       key: 'chg',
       label: 'CHANGE',
-      w: 9,
+      w: 8,
       align: 'r',
       render: (f) => <Delta value={f.dValue} prev={prev(fmt(0))} />,
     },

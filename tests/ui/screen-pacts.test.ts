@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { PARAMS, type Pact } from '../../src/engine';
 import type { FirmNode, FirmPublicNode, PublicNode, RoundNode } from '../../src/firebase/schema';
 import { boardColumns, boardMnemonics, boardTagW } from '../../src/screens/Screen/BoardView';
-import { boardTagWidth } from '../../src/ui/layout';
+import { boardTagWidth, tagWidthCh } from '../../src/ui/layout';
 import { INITIAL_VALUATION, boardRows, pactRows, type ScreenData } from '../../src/screens/Screen/model';
 
 const firm = (ticker: string, createdAt: number): FirmNode => ({ name: `${ticker} Inc`, ticker, createdAt, order: 0, isBot: false, botPolicy: null });
@@ -50,6 +50,10 @@ describe('disclosure columns on the board (spec §9.3)', () => {
   it('uses full-word headers where width allows (Session 12)', () => {
     expect(boardColumns(false, false).map((c) => c.label)).toEqual(['#', 'FIRM', 'SHARE', 'PROFIT', 'VALUE', 'CHANGE', 'COMMITTED', '']);
     expect(boardMnemonics(true, false)).toEqual([]);
+  });
+
+  it('with disclosure on, a BREACH tag and a pact tag still fit beside the full-word headers', () => {
+    expect(boardTagW(true, false)).toBeGreaterThanOrEqual(tagWidthCh('BREACH') + tagWidthCh('PACT-A'));
   });
 
   it('falls back to keyed mnemonics in lit-room mode with disclosure on, keeping room for tags', () => {
