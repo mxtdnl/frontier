@@ -92,9 +92,25 @@ describe('participant-visible nodes', () => {
   });
 
   it('restores round-keyed maps that come back as arrays', () => {
-    const pp = { violations: { 1: { f0: true as const }, 2: { f1: true as const } }, detected: {}, sanctions: { f0: 1 }, lastAuditRound: 2 };
+    const pp = {
+      violations: { 1: { f0: true as const }, 2: { f1: true as const } },
+      detected: {},
+      checked: { 1: { f0: true as const, f1: true as const }, 2: { f1: true as const } },
+      sanctions: { f0: 1 },
+      lastAuditRound: 2,
+    };
     expect(Array.isArray(storeAndRead(pp.violations))).toBe(true);
-    expect(fromPactPrivate(storeAndRead(pp))).toEqual({ ...pp, violations: { '1': { f0: true }, '2': { f1: true } } });
+    expect(Array.isArray(storeAndRead(pp.checked))).toBe(true);
+    expect(fromPactPrivate(storeAndRead(pp))).toEqual({
+      ...pp,
+      violations: { '1': { f0: true }, '2': { f1: true } },
+      checked: { '1': { f0: true, f1: true }, '2': { f1: true } },
+    });
+  });
+
+  it('loads a pact record written before checked members were noted', () => {
+    const old = { violations: { 3: { f0: true as const } }, detected: {}, sanctions: {}, lastAuditRound: 0 };
+    expect(fromPactPrivate(storeAndRead(old)).checked).toEqual({});
   });
 
   it('restores a round with no audits, no disclosure and empty headlines', () => {

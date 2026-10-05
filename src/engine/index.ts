@@ -22,6 +22,9 @@ export { exposureLabel, exposureOf, estimatedCost, dataLine } from './data';
 export {
   buildResults,
   dataLinesOf,
+  pactQuarters,
+  PACT_QUARTER,
+  type PactQuarterCode,
   type FinalResults,
   type FirmFinal,
   type PactFinal,

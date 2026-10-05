@@ -4,7 +4,7 @@ import type { Rng } from './rng';
 import type { AuditBreach, AuditResult, Card, DisclosureEntry, FirmState, Pace, Pact, PactPrivate } from './types';
 
 export function emptyPactPrivate(): PactPrivate {
-  return { violations: {}, detected: {}, sanctions: {}, lastAuditRound: 0 };
+  return { violations: {}, detected: {}, checked: {}, sanctions: {}, lastAuditRound: 0 };
 }
 
 /** PACT-A … PACT-Z, then PACT-AA, PACT-AB … */
@@ -22,7 +22,7 @@ export function breaches(terms: Pact['terms'], pace: Pace, safety: number): bool
   return (terms.maxPace !== null && pace > terms.maxPace) || (terms.minSafety !== null && safety < terms.minSafety);
 }
 
-/** Step 11a. Records a private violation for each active-pact member that broke the terms. */
+/** Step 11a. Notes each active-pact member checked, and records a private violation for each that broke the terms. */
 export function recordViolations(
   pacts: ReadonlyArray<Pact>,
   priv: Record<string, PactPrivate>,
@@ -34,7 +34,9 @@ export function recordViolations(
     const pp = (priv[pact.id] ??= emptyPactPrivate());
     for (const [firmId, joined] of Object.entries(pact.members)) {
       const d = applied.get(firmId);
-      if (!d || joined > round || !breaches(pact.terms, d.pace, d.safety)) continue;
+      if (!d || joined > round) continue;
+      (pp.checked[String(round)] ??= {})[firmId] = true;
+      if (!breaches(pact.terms, d.pace, d.safety)) continue;
       (pp.violations[String(round)] ??= {})[firmId] = true;
     }
   }

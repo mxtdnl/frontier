@@ -485,6 +485,7 @@ export function fromPactPrivate(v: Raw): PactPrivateNode {
   return {
     violations: rec(o.violations, trueMap),
     detected: rec(o.detected, trueMap),
+    checked: rec(o.checked, trueMap),
     sanctions: rec(o.sanctions, (x) => num(x)),
     lastAuditRound: num(o.lastAuditRound),
   };
@@ -649,6 +650,7 @@ export function fromResults(v: Raw): ResultsNode | null {
         detected: num(o.detected),
         undetected: num(o.undetected),
         perFirm: rec(o.perFirm, (r) => ({ detected: num(obj(r).detected), undetected: num(obj(r).undetected) })),
+        quarters: rec(o.quarters, (q) => str(q)),
       };
     }),
     dataLines: arr(v.dataLines, (x) => str(x)),
