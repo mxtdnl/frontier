@@ -699,7 +699,7 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 7. **The status line takes one grid row.** The board legend shrank from two lines to one, so board capacity is unchanged: 12 / 11 / 10 / 9 two-line rows.
 
 **Acceptance against the session criteria**
-- On the board screenshots, the solid amber HTML fills are the brand block, the primary key, the countdown and the trust numeral; the new `checkAmber` e2e check enforces this on every projector screenshot. **Exception, reported rather than changed:** the trust chart's end tag (a small solid amber box carrying the latest trust value, added by Session 11's `LineChart` spec) and the amber trust line are SVG and are not counted by the check. I treated both as part of the trust value. If the owner wants the tag outlined instead, it is a one-line CSS change.
+- On the board screenshots, the solid amber HTML fills are the brand block, the primary key, the countdown and the trust numeral; the new `checkAmber` e2e check enforces this on every projector screenshot. **Exception, reported rather than changed:** the trust chart's end tag (a small solid amber box carrying the latest trust value, added by Session 11's `LineChart` spec) and the amber trust line are SVG and are not counted by the check. I treated both as part of the trust value. Owner decision 2026-10-05: keep the end tag as it is.
 - Every projector label is a word, or a tag or mnemonic explained by the key strip.
 
 **Tests**
@@ -725,7 +725,7 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
   - Screenshot review found HUMN's pact tag pushed into `+1` with disclosure on. The numeric columns were narrowed to fix it.
 
 **Open issues**
-- The trust chart's solid amber end tag and the amber trust line remain (see Acceptance). The owner decides.
+- None from the end tag: the owner decided on 2026-10-05 to keep the trust chart's solid amber end tag as it is.
 - The phone summit banner and the PACTS notice still say the same thing twice (audit section 02, LOW). This is left to Session 15, which owns the phone.
 - The control console still uses CMT and its own button styles; Session 15 regroups it.
 - The firebase CLI was missing from the container again and was installed with `npm install -g firebase-tools`, as CLAUDE.md says. The environment setup script should be checked.
