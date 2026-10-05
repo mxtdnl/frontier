@@ -817,7 +817,7 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 - `npm run test:e2e:rehearsal`: all checks passed (141).
 - `npm run test:e2e:scale`: all checks passed (1,360, was 935).
 - `npm run test:a11y`: 100 in all 30 snapshots, including BOOK at 390 and 1440 px.
-- `npm run test:e2e:long` (30 quarters, 16 firms): all checks passed. The quarter-30 board shows the trend line over the last 14 quarters, and six-digit values such as 3260.0 fit their columns.
+- `npm run test:e2e:long` (30 quarters, 16 firms): all checks passed. The quarter-30 board shows the trend line over the last 14 quarters, and six-character values such as 3260.0 fit their columns.
 - `test:e2e:hardening` and `test:e2e:scale-run` were not run. No data paths, rules, orchestrator or countdown code changed. The hardening run checks the countdown; the scale run checks write sizes and replays.
 - **Failures found and fixed during the session:**
   - Share segments were narrower than their shares, because flex padding set a minimum width. They now use percentage widths.
