@@ -641,3 +641,17 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 **Next steps**
 - Owner: confirm the connection limit; try a multiplayer session on the live site with in-app bot firms (`#/new` → Multiplayer mode → **Add 10 mixed** four or five times).
 - Session 12: colour, chrome and screen-level clarity. Then 13–15, then Session 16 (recalibration).
+
+## 2026-10-05 — Favicon
+
+**Done**
+- Replaced the empty favicon (`data:,`) in `index.html` with the owner's supplied image, resized to 64×64 and embedded as a PNG data URI (about 1.6 kB). A data URI is used because the build is a single file and nothing else is deployed alongside `index.html`.
+
+**Spec deviations (with reasons)**
+1. The favicon carries brain imagery, a blurred edge and a glow-like halo, which spec §15 (brain imagery) and §16 (glow, blur) forbid. The owner approved the deviation on 2026-10-05: the favicon is a browser tab icon, not a core component of the exercise or the tool. The spec text was not amended. `lint:design` and `lint:copy` do not scan `index.html`, so neither check is affected.
+
+**Open issues**
+- None. `tests/e2e/harness/participant.html` still has an empty favicon; it is a test harness page and was left unchanged.
+
+**Next steps**
+- Owner: after merging, hard-refresh the live site and confirm the icon appears in the browser tab. Browsers cache favicons, so it may take a reload or a new tab.
