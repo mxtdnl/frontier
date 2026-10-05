@@ -43,7 +43,7 @@ The app is a single-page app using hash routing. It is built to one `index.html`
 
 | Route | Who | Auth | Purpose |
 |---|---|---|---|
-| `#/` | Anyone | — | Landing: "Join a game" or "Facilitator sign-in" |
+| `#/` | Anyone | — | Landing: the FRONTIER wordmark with the Office of Frontier Systems line beneath, a four-cell code field with a button of the same width, and "Facilitator sign-in" |
 | `#/j/:code` | Participants | Anonymous | Join flow: game code, then found or join a firm |
 | `#/play/:gameId` | Participants | Anonymous + membership | Control centre (mobile-first, responsive to desktop) |
 | `#/screen/:gameId` | Facilitator | Email/password + facilitator allowlist | Projected board, with facilitator keyboard controls |
@@ -567,9 +567,9 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
 
 Panels:
 - **Game**: phase, round, timer controls (+30 s, −30 s, pause), endRound and τ shown masked until held.
-- **Firms**: presence dots per member, committed ✓, decision received time, AUTO forecast, bot policy.
+- **Firms**: a row of presence dots per firm (one dot per member device, filled when online), committed ✓, decision received time, AUTO forecast, bot policy.
 - **Pacts**: terms, members, unaudited violation counts (private), Audit button.
-- **Controls**: Disclosure, Summit, Advance, End.
+- **Controls**: grouped by consequence (Session 15). ROUTINE: timer (+30 s, −30 s, pause). SESSION FLOW: F6 audit, F7 disclosure, F8 summit, F9 advance. IRREVERSIBLE: END and TAU, in a group outlined in `--down`. A NEXT line names the expected key for the current phase (for example "NEXT · F9 opens quarter 1"). The control strip carries the same grouping.
 - **Export**: JSON and DATA lines.
 - **Danger**: remove a firm, lock joins, delete the game.
 
@@ -582,16 +582,21 @@ Scale rules (Session 10):
 
 ### 14.3 Participant control centre (`#/play`) — mobile-first
 
-- Header: firm ticker, quarter, countdown, cash, last-quarter profit.
-- Bottom tab bar on mobile, left rail on desktop. Tabs:
+- Header: the standard top bar (§16.1). The firm ticker is the brand block, followed by the quarter and the phase block. The countdown is the largest element and is right-aligned (2× the line size, `--signal`). Cash and last-quarter profit sit in a line below.
+- Bottom tab bar on mobile, left rail on desktop. The active tab has a 2 px `--signal` top border (left border on the desktop rail) and `--signal` text on `--raise`, not a solid block. Tabs:
   - **DESK**: the decisions
   - **BOOK**: own P&L history and "against the field": a zero-based valuation chart with every other firm as a thin dim line, the own firm in `--signal` with its value tag, a dotted zero line, a key, and a sentence such as "Rank 1 of 9. Highest valuation for 13 quarters running." (or "Up 2 places since last quarter." / "Down 1 place since last quarter." / "Same place as last quarter."). The chart and the sentence use only `rounds/*/results` (valuations and ranks every signed-in user may read, §13); no other firm's private data
   - **PACTS**: propose, join, leave, terms, members
   - **WIRE**: the feed
-- DESK contents: pace selector (4 segments, ≥ 44 px targets); safety slider plus numeric stepper; card picker sheet, with a target list for POACH (above 8 targets the list gains a ticker filter field and scrolls inside the sheet); an *Estimated cost this quarter* line; a *Public exposure* label; the commit button (signal amber, full width).
-- After commit: "Committed 14:02:11 · edit until close". The committing device's label is shown to teammates.
-- Reveal state: a quarter result card with revenue, costs, profit, Δshare, valuation, rank, incident or audit notices and the headlines.
-- Summit state: a banner, with the PACTS tab auto-selected.
+- **Three-step strip** (lobby, briefing and quarter 1 only): `1 DECIDE → 2 COMMIT → 3 REVEAL`, one line each: "Set pace, safety and an optional card." / "Press COMMIT. Edit until the timer ends." / "Results appear for every firm at once."
+- DESK contents, in order:
+  - **PACE**: 4 segments, ≥ 44 px targets. The selected segment is a `--raise` fill with a 3 px `--signal` bottom border (drawn as a border), not a solid block.
+  - **SAFETY · share of reference budget**: slider plus numeric stepper, with `0%` and `30%` printed at the ends.
+  - **CARD**: the picker trigger, with the selected card's one-line effect (`CARD_INFO`) under the card name. The card rules (no repeat in consecutive quarters, POACH target, insolvency) are printed inside the card sheet, not on the desk. The target list gains a ticker filter above 8 targets and scrolls inside the sheet.
+  - **Decision ticket**: a 1 px bordered block directly above COMMIT holding *Estimated cost this quarter* and *Public exposure* as a four-step meter (LOW, MED, HIGH, SEVERE, filled up to the current step) plus the label word. At 360×640 the ticket and the COMMIT bar are both inside the viewport without scrolling; the TEAM panel sits below them.
+  - **Commit bar**: before commit, the signal COMMIT button, full width. After commit, a full-width status bar: "COMMITTED 14:02:31 · edit until close", plus the committing device's label for teammates. When the draft differs from the committed decision the bar reads "CHANGES NOT COMMITTED" with a RECOMMIT button. Locked and offline states keep the bar and state why.
+- Reveal state: opens with one result sentence ("You ranked 2nd of 9, ▲1. Profit 57.7."; variants: "▼2", "unchanged", quarter 1 with no movement, negative profit "Loss 12.4."), then the figures (revenue, costs, profit, Δshare, valuation, rank), then notices as lines with a 2 px left rule coloured by kind (card dropped, incident, insolvency and breach in `--down`; audits and clean outcomes in `--dim`), then the headlines.
+- Summit state: one banner (the banner is the only notice of the summit; the PACTS tab adds none), with the PACTS tab auto-selected. Pact terms read "pace ≤ 2 · safety ≥ 15%" (either part alone when only one is set).
 - `ended`: the own-firm results card (§14.4) and a "Watch the board" note.
 - PACTS member lists follow the long-list rule (§14.1); `+N more` is a button that shows the full list.
 
