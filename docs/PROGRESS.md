@@ -969,3 +969,95 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 **Next steps**
 - Owner: after merging, open the live site on a phone, join a session and check that the countdown, the ticket and COMMIT are visible together, and that the bar changes to COMMITTED. Open `#/control/<id>` and check the three button groups and the NEXT line.
 - Session 16: recalibration.
+
+## 2026-10-05 — Session 16: earlier moratorium under greedy play
+
+**Owner decisions (2026-10-05)**
+- **C5**, the target for a half-greedy room, at every N from 4 to 50: a moratorium by quarter 14 in at least 80% of seeds, with the median moratorium quarter at 11 or earlier.
+- **Recommended parameter set accepted**, with a flat step in DRAW from pace 3 to pace 4. Uniform DRAW scaling was not chosen.
+
+**Spec changes** (written into `docs/spec.md` before the code)
+- §8.1: C5 added; all five conditions must hold.
+- §8.2: the greedy-share diagnostic.
+- §18: "C1–C5 pass".
+- §6.5: a note that the exposure cutoffs follow DRAW. This is the same calibration deviation Session 2 logged.
+
+**Done**
+- **`tools/calibration/scenarios.ts`:** C5 in `runConditions` (⌊N/2⌋ greedy bots, the rest sustainable, 14 quarters). Also `greedyCount`, `greedyShare` and `greedyShareRates`, for rooms with a quarter, a third, a half or two thirds of the firms greedy (round(share × N), at least 1).
+- **`tools/calibrate.ts`:**
+  - C5 in the conditions table, with its own section (share by quarters 11 and 14, median, percentiles)
+  - the greedy-share table (by quarters 10, 12 and 14, at every N)
+  - "C1–C5" throughout.
+- **`src/engine/params.ts`:**
+
+| parameter | before | after |
+|---|---|---|
+| R | 0.25 | 0.13 |
+| DRAW | [0.125, 0.3125, 0.6875, 1.125] | [0.125, 0.25, 1.2, 1.4] |
+| INC_TRUST | 4.0 | 1.5 |
+| EXPO_CUTS | [0.1875, 0.4375, 0.75] | [0.15, 0.55, 1.21] |
+
+- **`docs/CALIBRATION.md`:** every attempt, with before and after tables:
+  - R alone
+  - R × DRAW with INC_TRUST at 4
+  - the INC_TRUST grids
+  - the finalists rejected for an unstable passive path
+  - the single-firm (M1) comparison that chose the flat pace 3 → 4 step
+  - the kept values at 200 and 500 seeds
+  - the exposure label changes.
+- **Reports:** `reports/calibration.md` (200 seeds) and `reports/calibration-500.md` (500 seeds): C1–C5 pass at every N. `reports/strategy-audit.md` re-run; its title no longer names Session 9. `reports/scale-run.md` re-run.
+- **`docs/REVIEW.md`:** M1–M3 re-measured.
+- **Rehearsal:** the fixed seed changes from 5 to 2. Seed 5's moratorium moved to quarter 8, the lower edge of the test's 8–11 window and inside the disclosure quarters. Seed 2's is in quarter 10, as the script's comment says. Updated in `scripts/e2e-rehearsal.ts` and `tests/tools/rehearsal-model.test.ts`.
+- **`docs/RUNBOOK.md`:**
+  - §4: a "When to expect the moratorium" table, and the at-least-6-firms advice with the new M1 figures
+  - §9: the large-room note.
+
+**Results (200 seeds)**
+
+Half-greedy room, moratorium by quarter 14 (median quarter):
+
+| N | before | after |
+|---|---|---|
+| 4 | 34.5% (none) | 98% (11) |
+| 12 | 21.5% (none) | 100% (10) |
+| 50 | 2.5% (none) | 100% (11) |
+
+- **C1:** the all-greedy median moves from quarter 6 to quarter 5, still inside 5–9. Every passing set found had a median of 5, because total pressure rises linearly with the share of greedy firms.
+- **C2:** all-sustainable rooms never reach the moratorium by quarter 30. Trust settles near 80 (was 86), and mean firm value at quarter 14 is about 740 (was about 845). The results screen's ALTERNATIVE figures fall by the same proportion. Trust recovers about half as fast once pressure eases.
+- **C3:** greed still pays alone (+348% to +595%).
+- **C4:** one greedy bot causes a moratorium by quarter 14 in at most 0.4% of seeds (500 seeds, N = 4).
+- **A third of the room greedy:** rarely a moratorium within 14 quarters (0–25%).
+
+**Test results**
+- `npm run typecheck` passes. `npm test`: 539 passed (was 536; three new greedy-share tests, and the smoke test now checks C5). `lint:copy` and `lint:design` pass, and `npm run build` succeeds.
+- `npm run test:rules`: 161 passed.
+- `test:e2e`: 304 checks. `test:e2e:rehearsal`: 152 checks; the moratorium arrives in quarter 10. Both re-run on the final code.
+- `test:e2e:long`: 133 checks. `test:e2e:scale`: 1,364 checks. `test:e2e:hardening`: 44 checks. `test:e2e:scale-run`: 226 checks; largest write 376 KB at 50 firms. All pass.
+- `test:a11y` was not run: no screen, style or copy in the app changed.
+- **Failures found and fixed during the session:**
+  - **`test:e2e:scale-run`, replay check.** Three quarters failed "stored result equals the replay". The market size and profits differed in the last of 17 digits.
+    - Cause: the stored result is computed in the facilitator's browser, the replay in Node. Their engines differ in the last bit of `Math.pow(x, 1.4)` for about 1 input in 10 (measured: Chromium 141 against Node 22). The market size uses this function (§6.3 step 8).
+    - The same run on the unchanged main branch gave no replay mismatch over 28 quarters. The new parameters' trust path hits affected values; the engine itself is unchanged.
+    - Fix: the check compares numbers within a relative 1e-9, and every other value exactly. On a failure it now names the differing paths.
+  - **`test:e2e:scale-run`, results panel 3.** The check failed on firm BTBQ, which finished at a value shown as 0 (just below zero): a zero-length bar is correct. The check now accepts that case and still requires the alternative marker.
+  - **`test:e2e`, once.** "F8 enters the summit" failed during a run that shared the CPU with the 17-minute strategy audit. The F8 keypress was not acted on. Nothing in this session touches that path. It passed on both later runs (304 checks).
+
+**Spec deviations**
+- Exposure cutoffs (§6.5), as in Session 2. Pace 1 and 2 keep the spec's label at every safety from 0 to 30, and the reference points hold. Two boundaries move:
+  - pace 3 now reads HIGH up to safety 27 (was 18)
+  - pace 4 now reads SEVERE up to safety 6 (was 16).
+- **Seeds while searching.** Wide grids were screened at 60–100 seeds; every kept candidate ran at 200 seeds. The session text asks for 200 per change. This is logged in `docs/CALIBRATION.md`.
+
+**Open issues**
+- **M1, a single reckless firm** (pace 4, safety 0, LOBBY):
+  - By quarter 14: 22–31% at N = 4 (was 17–22%), 1–3% at N = 5 (was 2–6%), 0–0.2% at N = 6 (was 0.8–1.4%).
+  - By quarter 30: almost always at N ≤ 5, and 16–68% at N = 6.
+  - Sessions that run past quarter 14 with fewer than 7 firms are now much more exposed.
+- **Pacing.** A half-greedy room's median moratorium is quarter 11, while the default hidden end is 10–14, so some sessions end just before it. The runbook suggests a fixed 14-quarter end when this matters.
+- **Safety offsets aggressive pace less than before.** A room all at pace 3 with safety 15 now always reaches the moratorium (median quarter 8). Only safety 30 prevents it.
+- **M2 (POACH) and M3 (weak pact sanctions)** are unchanged.
+- **Session 14's spec text** (§9.2, §14.4) is still not in `docs/spec.md`.
+
+**Next steps**
+- Owner: merge, then run a short live session with bot firms (runbook §8) and confirm it plays as before. Then, in a real class, note the quarter of the moratorium and how many firms raced, to compare with the runbook table.
+- Owner: decide whether M1 needs more than the runbook advice, for example a warning on `#/new` below 6 firms.

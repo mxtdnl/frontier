@@ -7,6 +7,7 @@ How to read the result tables:
 - C2: the % of seeds with a moratorium by quarter 30, then the median gain in valuation over C1. Pass requires at most 1% and a gain of at least 40%.
 - C3: the median gain of the greedy firm over the rest. Pass requires at least 25%.
 - C4: the % of seeds with a moratorium by quarter 14. Pass requires at most 5%.
+- C5 (from Session 16): with half the firms greedy, the % of seeds with a moratorium by quarter 14, then the median moratorium quarter. Pass requires at least 80% and a median of 11 or earlier.
 
 ---
 
