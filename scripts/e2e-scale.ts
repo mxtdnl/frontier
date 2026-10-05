@@ -216,6 +216,10 @@ async function performanceChecks(page: Page, n: number, name: string, want: { ba
       trends: rows.filter((tr) => tr.querySelector('[data-trend], .trend-empty')).length,
       badNeg,
       boxes: document.querySelectorAll('[data-board-mode] [data-committed]').length,
+      keyCut: (() => {
+        const k = document.querySelector<HTMLElement>('[data-key-strip]');
+        return k ? k.scrollWidth > k.clientWidth + 1 : false;
+      })(),
     };
   });
   check(r.strip && r.segs + r.below <= n && r.segs > 0, `${name}: value share strip with ${r.segs} segments, ${r.below} below zero`);
@@ -224,6 +228,8 @@ async function performanceChecks(page: Page, n: number, name: string, want: { ba
   check(r.bars === (want.bar ? r.rows : 0), `${name}: ${want.bar ? 'a value bar on every row' : 'no value bar column'} (${r.bars}/${r.rows})`);
   check(r.trends === (want.trend ? r.rows : 0), `${name}: ${want.trend ? 'a trend line on every row' : 'no trend column'} (${r.trends}/${r.rows})`);
   check(r.badNeg === 0, `${name}: negative values have red bars left of zero`);
+  // Reported, not failed: with many different tags on screen the one-line key strip can run out of room (§14.1).
+  if (r.keyCut) console.log(`note ${name}: the key strip is cut at the right edge`);
 }
 
 async function firmsChecks(page: Page, n: number, name: string, wantPage: number): Promise<void> {

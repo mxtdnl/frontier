@@ -115,7 +115,12 @@ function game(facilitatorUid: string, code: string): Record<string, unknown> {
       },
     },
     wire: { 'd-1-on': { at: 1, round: 1, seq: 1, kind: 'disclosure-on', text: 'Assembly passes frontier disclosure rule' } },
-    rounds: { 1: { T: 72, dT: 0, M: 400, incidents: 0, headlines: [{ kind: 'ambient', text: 'Markets open.' }] } },
+    rounds: {
+      1: {
+        T: 72, dT: 0, M: 400, incidents: 0, headlines: [{ kind: 'ambient', text: 'Markets open.' }],
+        results: { fA: { share: 0.7, profit: 10, valuation: 300, rank: 1 }, fB: { share: 0.3, profit: 8, valuation: 250, rank: 2 } },
+      },
+    },
     pacts: {
       p1: { name: 'PACT-A', proposer: 'fA', terms: { maxPace: 2 }, members: { fA: 1 }, createdRound: 1, status: 'active' },
     },

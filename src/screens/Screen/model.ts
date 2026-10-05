@@ -231,12 +231,15 @@ export function tickerTone(kind: string): TickerTone {
   return 'wire';
 }
 
-/** What each board tag means, in board priority order. */
+/**
+ * What each board tag means, in board priority order. Kept short so the one-line key strip holds the commit mark and
+ * the usual tags at once (Session 13 added the commit mark).
+ */
 export const TAG_MEANING: ReadonlyArray<readonly [string, string]> = [
-  ['BREACH', 'pact terms breached'],
-  ['INSOLV', 'forced to lowest pace'],
-  ['AUTO', 'default settings applied'],
-  ['BOT', 'automated firm'],
+  ['BREACH', 'terms breached'],
+  ['INSOLV', 'lowest pace forced'],
+  ['AUTO', 'defaults applied'],
+  ['BOT', 'automated'],
 ];
 
 /**
@@ -248,7 +251,7 @@ export function tagKey(shown: ReadonlyArray<ReadonlyArray<string>>, anyMore: boo
   const out = TAG_MEANING.filter(([t]) => on.has(t)).map(([tag, text]) => ({ tag, text }));
   const pacts = [...on].filter((t) => !TAG_MEANING.some(([k]) => k === t)).sort();
   // Pact names are PACT-A, PACT-B…; several share one entry.
-  if (pacts.length) out.push({ tag: pacts.length === 1 ? (pacts[0] as string) : 'PACT-', text: pacts.length === 1 ? 'member of this pact' : 'member of the named pact' });
-  if (anyMore) out.push({ tag: '+N', text: 'more tags not shown' });
+  if (pacts.length) out.push({ tag: pacts.length === 1 ? (pacts[0] as string) : 'PACT-', text: 'pact member' });
+  if (anyMore) out.push({ tag: '+N', text: 'more tags' });
   return out;
 }

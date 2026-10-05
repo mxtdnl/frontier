@@ -150,7 +150,7 @@ describe('board key strip (Session 12)', () => {
     expect(tagKey([[], []], false)).toEqual([]);
   });
   it('gives one entry for pact tags and one for a +N count', () => {
-    expect(tagKey([['PACT-A']], false)).toEqual([{ tag: 'PACT-A', text: 'member of this pact' }]);
+    expect(tagKey([['PACT-A']], false)).toEqual([{ tag: 'PACT-A', text: 'pact member' }]);
     const k = tagKey([['PACT-B'], ['PACT-A', 'BOT']], true);
     expect(k.map((x) => x.tag)).toEqual(['BOT', 'PACT-', '+N']);
   });

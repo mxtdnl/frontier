@@ -49,6 +49,14 @@ describe('public nodes', () => {
     }
   });
 
+  it("lets a participant read every firm's public valuation and rank by quarter, used by the phone BOOK (Session 13)", async () => {
+    await assertSucceeds(get('uA', g('rounds/1/results/fB/valuation')));
+    await assertSucceeds(get('uA', g('rounds/1/results')));
+    await assertSucceeds(get('uA', g('firmsPublic/fB/valuation')));
+    // The BOOK chart needs nothing private from another firm, and the rules refuse it anyway.
+    await assertFails(get('uA', g('firmsPrivate/fB')));
+  });
+
   it('denies signed-out users everything', async () => {
     for (const p of ['public', 'firms', 'firmsPublic', 'rounds', 'pacts', 'meta', 'wire']) {
       await assertFails(anon().ref(g(p)).get());

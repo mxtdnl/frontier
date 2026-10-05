@@ -1,5 +1,6 @@
 import type { AuditResult, FirmRoundResult, Headline, Pact } from '../../engine';
-import type { NoticeEntry } from '../../firebase/schema';
+import type { FirmNode, NoticeEntry, RoundNode } from '../../firebase/schema';
+import { bookSentence, fieldSeries, rankByQuarter } from '../../ui/performance';
 import { DataTable, Delta, LineChart, Panel } from '../../ui/components';
 import { fmt, fmtSigned, quarterLabel } from '../../ui/format';
 import { resultNotices, shareChangePp, type BookRow, type WireItem } from './model';
@@ -41,20 +42,43 @@ export function RevealCard({ round, history, audits, headlines, pacts, firmId, c
   );
 }
 
-export function Book({ rows }: { rows: BookRow[] }) {
+interface BookProps {
+  rows: BookRow[];
+  /** Public data only: every firm's valuation per quarter from `rounds/{r}/results` (§14.3, Session 13). */
+  rounds: Record<string, RoundNode>;
+  firms: Record<string, FirmNode>;
+  firmId: string;
+}
+
+/** BOOK (§14.3): "against the field" chart and sentence, then the firm's own quarterly results. */
+export function Book({ rows, rounds, firms, firmId }: BookProps) {
   if (rows.length === 0) return <p className="notice" role="status">No quarters resolved yet. Results appear here after the first reveal.</p>;
-  const values = rows.map((b) => b.valuation);
+  const ids = Object.keys(firms);
+  const field = fieldSeries(ids, firmId, rounds);
+  const refs = Object.entries(firms).map(([id, f]) => ({ id, ticker: f.ticker }));
+  const own = rankByQuarter(refs, rounds).ranks[firmId] ?? [];
+  const ticker = firms[firmId]?.ticker ?? 'Own firm';
+  const values = field.own;
+  const others = field.others.length;
   return (
     <div className="stack">
-      <div>
-        <span className="dim">VALUATION</span>
+      <div data-book-field="" data-others={others}>
+        <span style={{ fontWeight: 600 }}>VALUATION · AGAINST {others} OTHER FIRM{others === 1 ? '' : 'S'}</span>
         <LineChart
-          series={[{ values, label: 'Valuation', tone: 'signal' }]}
+          series={[{ values, label: ticker, tone: 'signal' }]}
+          context={field.others}
+          zeroDotted
           domain="zero"
-          startQuarter={rows[0]?.round ?? 1}
+          startQuarter={field.start}
           height="10lh"
-          description={`Own valuation by quarter, from ${fmt(values[0] ?? 0)} to ${fmt(values[values.length - 1] ?? 0)}`}
+          description={`${ticker} valuation by quarter, from ${fmt(values[0] ?? 0)} to ${fmt(values[values.length - 1] ?? 0)}, drawn against ${others} other firms`}
         />
+        <p className="book-key" aria-hidden="true">
+          <span><span className="sw" />{ticker}</span>
+          <span><span className="sw other" />other firms</span>
+          <span><span className="sw zero" />zero</span>
+        </p>
+        <p data-book-sentence="">{bookSentence(own, ids.length)}</p>
       </div>
       <div className="scroll-x">
         <DataTable

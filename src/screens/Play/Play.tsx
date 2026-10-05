@@ -336,7 +336,7 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
             </>
           )
         ) : null}
-        {tab === 'BOOK' ? <Book rows={book} /> : null}
+        {tab === 'BOOK' && firmId ? <Book rows={book} rounds={roundsSub.data} firms={firms} firmId={firmId} /> : null}
         {tab === 'PACTS' ? (
           <PactsTab
             phase={pub.phase}
