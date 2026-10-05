@@ -960,6 +960,11 @@
   justify-content: space-evenly;
   font-size: 1.25em;
 }
+/* PACT RECORD with no pact: the same spread, without list markers. */
+.res-prompts.is-plain {
+  list-style: none;
+  padding-left: 0;
+}
 /* PACT RECORD quarter strips (§14.4). */
 .ps-wrap {
   flex: 1 1 0;

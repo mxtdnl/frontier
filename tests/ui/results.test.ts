@@ -1,11 +1,12 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { findViolations } from '../../scripts/lib/copy-rules';
 import { describe, expect, it } from 'vitest';
 import { PARAMS, buildResults, nextPactName, resolveRound, type EngineState, type Pact } from '../../src/engine';
 import { fromResults } from '../../src/firebase/schema';
 import { fmt, fmtShare, quarterLabel } from '../../src/ui/format';
 import { OwnResultsCard } from '../../src/screens/Results/OwnResultsCard';
-import { Attribution, Counterfactual, Debrief, FinalBoard, PactRecord, TrustTrace } from '../../src/screens/Results/Results';
+import { Attribution, Counterfactual, Debrief, FinalBoard, PactRecord, TrustTrace, noPactLines } from '../../src/screens/Results/Results';
 import { DEBRIEF_HEADLINE, ownResultSentence, panelHeadline } from '../../src/screens/Results/headlines';
 import { attributionRows, attributionView, counterfactualTrustSeries, finalBoardRows, headlineFigures, pactLines, pactStripRows, rankedFirms, trustSeries } from '../../src/screens/Results/model';
 import type { FinalResults } from '../../src/engine';
@@ -229,6 +230,17 @@ describe('results panels', () => {
     const out = html(createElement(PactRecord, { r }));
     expect(out).toContain('No pacts were formed.');
     expect(out).not.toContain('data-pact-strip');
+  });
+
+  it('with no pact the panel carries three lines of explanation to fill the height', () => {
+    const r = { ...read(false), pacts: [] };
+    const out = html(createElement(PactRecord, { r }));
+    expect(out).toContain('data-no-pacts');
+    expect((out.match(/<li>/g) ?? []).length).toBe(3);
+    const lines = noPactLines({ rounds: 14, final: Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`f${i}`, {}])) as never });
+    expect(lines[1]).toBe('No firm proposed one in 14 quarters across 9 firms. No audit ran and no breach could occur.');
+    expect(noPactLines({ rounds: 1, final: { a: {} } as never })[1]).toContain('1 quarter across 1 firm.');
+    for (const l of lines) expect(findViolations(l, { allowNonTelegraphing: true })).toEqual([]);
   });
 
   it('every panel opens with its headline (§14.4)', () => {
