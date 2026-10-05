@@ -4,7 +4,7 @@ import { getFirebase } from '../../firebase/init';
 import { isPermissionDenied, rememberSession, useParticipantAuth } from '../../firebase/participant';
 import { navigate, useRoute } from '../../router';
 import { useFirms, useMeta, useOwnMember, usePublic } from '../../state';
-import { Panel } from '../../ui/components';
+import { CodeField, Panel, Wordmark } from '../../ui/components';
 import { FILTER_ABOVE, filterByTicker } from '../../ui/layout';
 import {
   INITIALS_MAX,
@@ -74,22 +74,18 @@ function JoinFlow({ uid, initialCode }: { uid: string; initialCode: string }) {
   }
   return (
     <main className="page stack" style={{ maxWidth: '60ch' }}>
-      <h1 className="signal">JOIN A SESSION</h1>
-      <form className="stack" onSubmit={(e) => void confirm(e)} noValidate>
+      <Wordmark />
+      <h2 className="signal">JOIN A SESSION</h2>
+      <form className="stack code-form" onSubmit={(e) => void confirm(e)} noValidate>
         <div className="field">
           <label htmlFor="code">Session code</label>
-          <input
+          <CodeField
             id="code"
-            type="text"
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            maxLength={4}
             value={code}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? 'code-err' : undefined}
-            onChange={(e) => {
-              setCode(cleanCode(e.target.value));
+            invalid={!!error}
+            describedBy={error ? 'code-err' : undefined}
+            onChange={(c) => {
+              setCode(c);
               setError('');
             }}
           />

@@ -923,3 +923,49 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 - Owner: after merging, run a short session on the live site, end it, and step through the six results panels with F9. Check that each bold sentence is readable from the back of the room. Check the phone results card.
 - Owner: approve the spec text above (one line in the next session is enough).
 - Session 15: phone and plain pages.
+
+## 2026-10-05 — Session 15: phone and plain pages
+
+**Spec changes** (each a spec change approved by the owner on 2026-10-03 (UI audit); written into `docs/spec.md` before the code):
+- §14.3 rewritten: header with the countdown as the largest element; amber top border on the active tab; three-step strip; DESK order (PACE, SAFETY with 0% and 30% ends, CARD with its one-line effect, decision ticket, commit bar); commit status bar and its states; result sentence; notices with a left rule; one summit banner; pact terms as symbols.
+- §14.2: console buttons grouped as ROUTINE, SESSION FLOW and IRREVERSIBLE (red outline), a NEXT line, presence as a row of dots.
+- §3: landing page with the FRONTIER wordmark, the Office of Frontier Systems line and a four-cell code field.
+
+**Done**
+- **Header:** the countdown is 2× the line size and right-aligned. Cash and profit stay beneath.
+- **DESK:**
+  - Selected pace is a raised fill with an amber bottom border.
+  - The SAFETY label reads "SAFETY · share of reference budget", with 0% and 30% at the ends.
+  - The selected card's effect (`CARD_INFO`) shows under its name. The rules paragraph moved into the card sheet.
+  - The decision ticket (estimated cost; exposure as a four-step meter plus the word) sits directly above COMMIT. Ticket and commit bar are one sticky block at the bottom of the scroll area, so both are in view at 360×640 (settles REVIEW L8).
+- **Commit bar:** COMMIT becomes a full-width bar, "COMMITTED 14:02:31 · edit until close · device AB", green. A changed draft shows "CHANGES NOT COMMITTED" with RECOMMIT. Locked, offline and error states keep the bar and say why.
+- **Tabs:** active tab has an amber top border and amber text on `--raise` (left border on the desktop rail).
+- **Quarter result:** one sentence ("You ranked 2nd of 9, ▲1. Profit 57.7."), then the figures, then notices with a 2 px left rule (red for alerts).
+- **Three-step strip** (DECIDE → COMMIT → REVEAL) in the lobby, briefing and quarter 1.
+- **Summit:** the duplicate notice is gone. Pact terms read "pace ≤ 2 · safety ≥ 15%".
+- **Landing and join:** wordmark, four-cell code field (one text input over four cells), button the same width as the field.
+- **Console:** buttons grouped by consequence, expected key solid, NEXT line (`src/screens/Control/next.ts`), presence as dots. The timer buttons and the END and TAU holds moved into the strip's groups.
+- **Results panel 5 with no pact (fix to a Session 14 defect):** `test:e2e:long` failed on the Session 14 merge commit (confirmed on a clean checkout): with no pact the panel showed only its headline, 92% empty, which breaks Session 14's fill rule. It now carries three explanatory lines spread over the panel height (`noPactLines`).
+
+**Choices (spec silent)**
+1. `≤`, `≥` and `→` are not in the typeface (Session 1), so they are drawn as small SVG strokes (`GlyphLe`, `GlyphGe`, `GlyphArrow`) with text alternatives.
+2. The exposure meter fills in white for LOW and MED and in red for HIGH and SEVERE. The word is always printed.
+3. After a clean commit the button disappears (the bar replaces it); it returns as RECOMMIT when the draft changes.
+4. The F9 button is solid only when F9 is the expected key. During RESOLVING or a pause no console key is solid.
+5. Console presence shows dots only; the device labels are in each dot's tooltip and screen-reader label.
+
+**Tests**
+- New `tests/ui/phone-session15.test.ts`: result sentence (rise, fall, unchanged, quarter 1, loss, ordinals, copy rules), commit bar states, exposure meter, pact terms symbols, notice kinds, step strip, console NEXT line for every phase. New results test for the empty pact record.
+- e2e: new `checkDeskFit` runs in `snapPlay` at 360×640, 390×844 and 1440×900 for every DESK state captured: ticket, commit bar and button are all inside the viewport. Existing selectors updated for the new texts.
+- `npm run typecheck` passes. `npm test`: 536 passed (was 514). `lint:copy` and `lint:design` pass.
+- `test:e2e` (304 checks), `test:e2e:rehearsal`, `test:e2e:scale`, `test:e2e:hardening`, `test:e2e:long`, `test:e2e:scale-run` (largest write 378 KB at 50 firms) and `test:a11y` (100 in all 30 snapshots) all pass. `test:rules` was not run: no rules or paths changed.
+- Screenshots reviewed: DESK open, reveal and summit on phones, the landing page, the console at 1440×900, and results panel 5 with no pact. No gradients, glow or rounded corners; countdown, tabs and bars as specified.
+
+**Open issues**
+- The Session 14 spec text (§9.2, §14.4) is still not in `docs/spec.md`; the owner has not yet approved it.
+- With a long first quarter, the three-step strip pushes the card section below the fold at 360×640. The ticket and COMMIT stay in view; the card is one scroll away.
+- The firebase CLI and npm packages were missing from the container again and were installed (`npm install -g firebase-tools`, `npm ci`). The environment setup script should be checked.
+
+**Next steps**
+- Owner: after merging, open the live site on a phone, join a session and check that the countdown, the ticket and COMMIT are visible together, and that the bar changes to COMMITTED. Open `#/control/<id>` and check the three button groups and the NEXT line.
+- Session 16: recalibration.

@@ -291,6 +291,24 @@ export async function checkPhone(page: Page, label: string): Promise<void> {
   if (r.tiny.length) fail(`${label}: text under 14px: ${r.tiny.join(' | ')}`);
 }
 
+/**
+ * Spec §14.3 (settles REVIEW L8): when the desk shows a decision ticket, the ticket and the commit
+ * bar are both inside the viewport together, at every size, without scrolling the page.
+ */
+export async function checkDeskFit(page: Page, label: string): Promise<void> {
+  const r = await page.evaluate(() => {
+    const ticket = document.querySelector<HTMLElement>('[data-ticket]');
+    const bar = document.querySelector<HTMLElement>('[data-commit-status]');
+    if (!ticket || !bar) return null;
+    const btn = Array.from(document.querySelectorAll<HTMLElement>('.desk-foot button')).find((b) => /COMMIT/i.test(b.textContent ?? ''));
+    const rects = [ticket, bar, btn ?? ticket].map((el) => el.getBoundingClientRect());
+    const inside = rects.map((b) => b.top >= -0.5 && b.bottom <= window.innerHeight + 0.5 && b.left >= -0.5 && b.right <= window.innerWidth + 0.5);
+    return { ticket: inside[0] as boolean, bar: inside[1] as boolean, btn: inside[2] as boolean, h: window.innerHeight };
+  });
+  if (!r) return;
+  if (!r.ticket || !r.bar || !r.btn) fail(`${label}: decision ticket and commit bar are not both in view (ticket ${r.ticket}, bar ${r.bar}, button ${r.btn})`);
+}
+
 export const SIZES = [[360, 640], [390, 844], [1440, 900]] as const;
 
 /** Captures a participant page at the three required sizes and runs the layout checks. */
@@ -301,6 +319,7 @@ export async function snapPlay(page: Page, name: string): Promise<void> {
     await page.waitForTimeout(150);
     await shot(page, name);
     await checkPhone(page, `${name} ${w}x${hgt}`);
+    await checkDeskFit(page, `${name} ${w}x${hgt}`);
     await checkCharts(page, `${name} ${w}x${hgt}`);
   }
   await page.setViewportSize(base);

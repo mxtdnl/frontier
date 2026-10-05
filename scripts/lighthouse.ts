@@ -120,7 +120,7 @@ await withDevServer(async () => {
     await audit('play: card picker');
     await page.getByRole('button', { name: 'Done' }).click();
     await page.getByRole('button', { name: 'COMMIT' }).click();
-    await waitText(page, /Committed \d\d:\d\d:\d\d/, 'the decision is committed');
+    await waitText(page, /COMMITTED \d\d:\d\d:\d\d/, 'the decision is committed');
     await audit('play: DESK committed');
     for (const tab of ['BOOK', 'PACTS', 'WIRE'] as const) {
       await page.getByRole('tab', { name: tab }).click();

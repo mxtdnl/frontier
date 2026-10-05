@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { recallSession } from '../firebase/participant';
 import { navigate } from '../router';
-import { cleanCode, isValidCode } from './Join/validate';
+import { CodeField, Wordmark } from '../ui/components';
+import { isValidCode } from './Join/validate';
 
 /** `#/`: join with a code, resume, or go to the facilitator sign-in (spec §3). */
 export function Index() {
@@ -20,23 +21,17 @@ export function Index() {
 
   return (
     <main className="page stack" style={{ maxWidth: '60ch' }}>
-      <h1 className="signal">FRONTIER</h1>
-      <form className="stack" onSubmit={submit} noValidate aria-label="Join a session">
+      <Wordmark />
+      <form className="stack code-form" onSubmit={submit} noValidate aria-label="Join a session">
         <div className="field">
           <label htmlFor="code">Session code</label>
-          <input
+          <CodeField
             id="code"
-            type="text"
-            inputMode="text"
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            maxLength={4}
             value={code}
-            aria-describedby={error ? 'code-err' : undefined}
-            aria-invalid={error ? true : undefined}
-            onChange={(e) => {
-              setCode(cleanCode(e.target.value));
+            invalid={!!error}
+            describedBy={error ? 'code-err' : undefined}
+            onChange={(c) => {
+              setCode(c);
               setError('');
             }}
           />

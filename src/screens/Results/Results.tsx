@@ -360,9 +360,27 @@ export function PactRecord({ r }: { r: FinalResults }) {
           <PactStrips r={r} pacts={lines.map((l) => l.pact)} />
           <p className="dim">Counts are quarters in which a member broke the terms. Undetected means no audit examined that quarter.</p>
         </>
-      ) : null}
+      ) : (
+        <ul className="res-prompts is-plain" data-no-pacts="">
+          {noPactLines(r).map((l) => (
+            <li key={l}>{l}</li>
+          ))}
+        </ul>
+      )}
     </Panel>
   );
+}
+
+/** What the PACT RECORD says when no pact was formed: three lines that spread over the panel height (§14.4). */
+export function noPactLines(r: Pick<FinalResults, 'rounds' | 'final'>): string[] {
+  const q = `${r.rounds} ${r.rounds === 1 ? 'quarter' : 'quarters'}`;
+  const n = Object.keys(r.final).length;
+  const f = `${n} ${n === 1 ? 'firm' : 'firms'}`;
+  return [
+    'A pact binds its members to a pace limit, a safety floor, or both. Audits can find a breach and a breach is fined.',
+    `No firm proposed one in ${q} across ${f}. No audit ran and no breach could occur.`,
+    'Ask the room: what would have made a pact worth signing?',
+  ];
 }
 
 const CELL_CLASS: Record<PactQuarterCode, string> = {

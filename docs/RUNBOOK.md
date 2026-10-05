@@ -78,6 +78,15 @@ Do this the day before, then again 15 minutes before class.
 
 **Reading the projector (Session 12).** The top bar shows the quarter, the phase as a coloured block with its word, the commit count, disclosure, and the countdown on the right. The line under it says in one sentence what is happening and what teams should do; after each reveal it summarises the quarter (trust change, who is 1st, incidents). The bar at the bottom shows only the keys that do something right now; the solid key is the one you most likely want next (usually **F9**, **F8** during a summit). Hidden keys still work if pressed. To type a command (`TRST`, `FIRM BTC`, `HELP`), just start typing: the command line appears in the top bar.
 
+**What a team sees on the phone (Session 15).**
+- The header has the firm's ticker, the quarter, the phase and, largest of all, the countdown on the right. Cash and last profit sit beneath it.
+- In the lobby, the briefing and quarter 1, the DESK opens with a three-step strip: DECIDE, COMMIT, REVEAL, one line each.
+- The DESK shows PACE (the chosen segment has an amber underline), SAFETY with 0% and 30% at the ends, and CARD with the chosen card's one-line effect under its name. The card rules are inside the card sheet.
+- Directly above the COMMIT button sits a bordered ticket with the estimated cost and a four-step exposure meter with its word (LOW, MED, HIGH, SEVERE). Ticket and button stay on screen on a small phone.
+- After COMMIT the button becomes a green bar, "COMMITTED 14:02:31 · edit until close", with the device initials. If the team changes a setting the bar reads "CHANGES NOT COMMITTED" and a RECOMMIT button appears. After the timer ends the bar says the desk is locked.
+- At the reveal, the card opens with one sentence ("You ranked 2nd of 9, ▲1. Profit 57.7."), then the figures, then notices with a coloured rule on the left (red for something that went against the firm).
+- During a summit one banner is shown. Pact terms read "pace ≤ 2 · safety ≥ 15%".
+
 **Board pages (above 16 firms).** The board shows 10 firms at a time and turns to the next page every 8 seconds; the heading reads `PAGE 2/5`. Above the page, the leader and the firm that moved most (3 places or more) stay pinned. Rotation holds for 30 seconds after you press any key, and while you type a command. Each reveal starts on page 1. Use `FIRM <TICKER>` for any one firm's history.
 
 **Firm performance (Session 13).** Across the top of the board, the VALUE SHARE strip shows each firm's share of the total value of firms above zero; the caption counts firms below zero. Each row shows MOVE (places gained ▲ or lost ▼ since last quarter), a valuation bar from zero (red to the left when below zero) and, when there is room, a TREND line of the last 14 quarters on one scale for every firm. With disclosure on the trend line is left out to make room. Type `FIRMS` for one small chart per firm on the same scale (pages of 16 above 16 firms, turning every 8 seconds), and `RANKS` for every firm's rank by quarter with the leader in amber and the biggest faller in red. Esc returns to the board.
@@ -112,10 +121,14 @@ If a key press shows "Working on the last key. Press again in a moment.", the pr
 
 ### The console (`#/control/…`)
 
-- **Control strip** at the top stays in view however far you scroll: **F7 DISCLOSURE**, **F8 SUMMIT**, **F9 ADVANCE**, **F10 END**, **F6 AUDIT**, the phase, the quarter, the commit count and the latest message.
-- **Session panel:** phase, quarter, trust, timer, **−30 s**, **+30 s**, **Pause** and **Resume**, and the **MODE** with its firm limit.
-- **Hold to reveal TAU** and the end quarter: they show only while you hold the button down. Use them privately. Never show the console on the projector.
-- **Firms panel:** who is online (**ON** shows devices online out of joined), who has committed, when, AUTO forecast, bot policy. In the lobby each row also has **REMOVE** (press twice within 3 s). The table scrolls inside the panel. **SORT** by **FIRM**, **CMT** (firms still to commit first) or **ONLINE** (fewest online first). **SHOW** **NOT COMMITTED** (during an open quarter) or **OFFLINE** (human firms with no device online).
+- **Control strip** at the top stays in view however far you scroll. Its buttons are grouped by what they do:
+  - **ROUTINE:** **−30 s**, **+30 s**, **Pause** and **Resume**. Safe to press at any time.
+  - **SESSION FLOW:** **F6 AUDIT**, **F7 DISCLOSURE**, **F8 SUMMIT**, **F9 ADVANCE**. The key you are expected to press next is the solid one.
+  - **IRREVERSIBLE** (red outline): **F10 END**, and the **END** and **TAU** buttons that show the hidden end quarter and TAU only while you hold them down. Use them privately. Never show the console on the projector.
+  - A **NEXT** line under the groups names the key to press and why, for example "NEXT · F9 resolves quarter 3. 2 of 5 firms have committed; the rest take their defaults."
+  - The phase, quarter, commit count and latest message sit above the groups.
+- **Session panel:** phase, quarter, trust, timer and the **MODE** with its firm limit.
+- **Firms panel:** who is online (a row of dots, one per device, filled when online; **ON** shows devices online out of joined), who has committed, when, AUTO forecast, bot policy. In the lobby each row also has **REMOVE** (press twice within 3 s). The table scrolls inside the panel. **SORT** by **FIRM**, **CMT** (firms still to commit first) or **ONLINE** (fewest online first). **SHOW** **NOT COMMITTED** (during an open quarter) or **OFFLINE** (human firms with no device online).
 - **LOCK JOINS / REOPEN JOINS** (DANGER panel, lobby only): closes or reopens joining before the briefing.
 - **Pacts panel:** unaudited counts, an **AUDIT** button per pact, audit outcomes.
 - **Export:** **DOWNLOAD HISTORY (.json)** and **DOWNLOAD DATA LINES (.txt)**. Download both before you delete the session.

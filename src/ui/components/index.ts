@@ -17,6 +17,7 @@ export { Tag, type TagKind } from './Tag';
 export { PresenceDot } from './PresenceDot';
 export { QR } from './QR';
 export { Countdown, useRemainingMs } from './Countdown';
-export { GlyphUp, GlyphDown, GlyphCheck } from './Glyph';
+export { GlyphUp, GlyphDown, GlyphCheck, GlyphLe, GlyphGe, GlyphArrow } from './Glyph';
 export { FirmMultiples, type FirmCard } from './FirmMultiples';
 export { RankChart, type RankLine } from './RankChart';
+export { CodeField, Wordmark } from './CodeField';

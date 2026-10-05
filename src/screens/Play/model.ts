@@ -137,7 +137,37 @@ export function cardNoticeText(n: NoticeEntry): string {
   }
 }
 
+export interface ResultNotice {
+  text: string;
+  /** `alert` (card dropped, incident, insolvency, breach) or `info`. Drives the left rule's colour. */
+  kind: 'alert' | 'info';
+}
+
 /** Notices on the quarter result card. Only the firm's own outcome and audits naming it. */
+export function resultNoticeItems(
+  result: FirmRoundResult,
+  audits: ReadonlyArray<AuditResult>,
+  pacts: Record<string, Pact>,
+  firmId: string,
+  cards: ReadonlyArray<NoticeEntry> = [],
+): ResultNotice[] {
+  const out: ResultNotice[] = cards.map((n) => ({ text: cardNoticeText(n), kind: 'alert' }));
+  if (result.auto) out.push({ text: 'No decision was received. Last quarter’s settings were applied.', kind: 'alert' });
+  if (result.incident) out.push({ text: 'Incident reported against the firm. Revenue was reduced this quarter.', kind: 'alert' });
+  if (result.insolvent) out.push({ text: 'Insolvent. Action cards are unavailable until cash is positive.', kind: 'alert' });
+  for (const a of audits) {
+    const b = a.breaches.find((x) => x.firmId === firmId);
+    if (!b) continue;
+    const name = pacts[a.pactId]?.name ?? 'Pact';
+    out.push({
+      text: `${name} audit found a breach. ${b.waived ? 'Fine waived.' : `Fine ${b.fine.toFixed(1)}.`}${b.expelled ? ' Firm removed from the pact.' : ''}`,
+      kind: 'alert',
+    });
+  }
+  if (out.length === 0) out.push({ text: 'No notices this quarter.', kind: 'info' });
+  return out;
+}
+
 export function resultNotices(
   result: FirmRoundResult,
   audits: ReadonlyArray<AuditResult>,
@@ -145,20 +175,7 @@ export function resultNotices(
   firmId: string,
   cards: ReadonlyArray<NoticeEntry> = [],
 ): string[] {
-  const out: string[] = cards.map((n) => cardNoticeText(n));
-  if (result.auto) out.push('No decision was received. Last quarter’s settings were applied.');
-  if (result.incident) out.push('Incident reported against the firm. Revenue was reduced this quarter.');
-  if (result.insolvent) out.push('Insolvent. Action cards are unavailable until cash is positive.');
-  for (const a of audits) {
-    const b = a.breaches.find((x) => x.firmId === firmId);
-    if (!b) continue;
-    const name = pacts[a.pactId]?.name ?? 'Pact';
-    out.push(
-      `${name} audit found a breach. ${b.waived ? 'Fine waived.' : `Fine ${b.fine.toFixed(1)}.`}${b.expelled ? ' Firm removed from the pact.' : ''}`,
-    );
-  }
-  if (out.length === 0) out.push('No notices this quarter.');
-  return out;
+  return resultNoticeItems(result, audits, pacts, firmId, cards).map((n) => n.text);
 }
 
 export interface WireItem {
@@ -178,4 +195,71 @@ export function shareChangePp(history: Record<string, FirmRoundResult>, round: n
   const before = history[String(round - 1)];
   if (!now || !before) return null;
   return (now.share - before.share) * 100;
+}
+
+/** Exposure labels in meter order (spec §14.3): the meter fills up to the current step. */
+export const EXPOSURE_STEPS: ReadonlyArray<ExposureLabel> = ['LOW', 'MED', 'HIGH', 'SEVERE'];
+
+/** 1 to 4: how many meter steps are filled for the label. */
+export const exposureStep = (label: ExposureLabel): number => EXPOSURE_STEPS.indexOf(label) + 1;
+
+/** "2nd", "11th". Local copy keeps this module free of chart code. */
+function nth(n: number): string {
+  const t = n % 100;
+  if (t >= 11 && t <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
+}
+
+export interface ResultSentence {
+  /** The whole sentence in words, for assistive technology and tests. */
+  text: string;
+  /** "You ranked 2nd of 9". */
+  head: string;
+  /** Rank movement: positive is up, 0 is no change. The component draws a ▲ or ▼ for a non-zero value. */
+  move: number;
+  /** Quarter 1 has no previous rank, so no movement is stated. */
+  hasMovement: boolean;
+  /** "Profit 57.7." or "Loss 12.4." */
+  tail: string;
+}
+
+/**
+ * The line that opens a quarter result (spec §14.3): "You ranked 2nd of 9, ▲1. Profit 57.7."
+ * `move` is the engine's `rankDelta` (previous rank minus rank, so positive is up).
+ */
+export function resultSentence(r: Pick<FirmRoundResult, 'rank' | 'rankDelta' | 'profit'>, firmCount: number, round: number): ResultSentence {
+  const head = `You ranked ${nth(r.rank)} of ${firmCount}`;
+  const hasMovement = round > 1;
+  const move = hasMovement ? r.rankDelta : 0;
+  const movement = !hasMovement ? '' : move === 0 ? ', unchanged' : `, ${move > 0 ? 'up' : 'down'} ${Math.abs(move)}`;
+  const rounded = Number(Math.abs(r.profit).toFixed(1));
+  const tail = r.profit < 0 && rounded !== 0 ? `Loss ${rounded.toFixed(1)}.` : `Profit ${rounded.toFixed(1)}.`;
+  return { text: `${head}${movement}. ${tail}`, head, move, hasMovement, tail };
+}
+
+export type CommitBarKind = 'idle' | 'committed' | 'dirty' | 'locked' | 'offline' | 'error';
+
+export interface CommitBarInput {
+  open: boolean;
+  committed: boolean;
+  dirty: boolean;
+  offline: boolean;
+  error: string;
+  /** Wall-clock text of the commit (hh:mm:ss) and the device label; empty when not committed. */
+  time: string;
+  device: string;
+  /** Why the desk is locked, when it is. */
+  lockedText: string;
+}
+
+/** What the full-width commit bar says (spec §14.3). */
+export function commitBar(i: CommitBarInput): { kind: CommitBarKind; text: string } {
+  if (i.error) return { kind: 'error', text: i.error };
+  if (i.offline && i.open) return { kind: 'offline', text: 'OFFLINE · reconnect to commit' };
+  if (!i.open) {
+    return { kind: 'locked', text: i.committed ? `COMMITTED ${i.time} · ${i.lockedText}` : `NOT COMMITTED · ${i.lockedText}` };
+  }
+  if (i.committed && i.dirty) return { kind: 'dirty', text: 'CHANGES NOT COMMITTED' };
+  if (i.committed) return { kind: 'committed', text: `COMMITTED ${i.time} · edit until close · ${i.device}` };
+  return { kind: 'idle', text: 'NOT COMMITTED' };
 }
