@@ -99,6 +99,11 @@ export interface PactPrivate {
   violations: Record<string, Record<string, true>>;
   /** round → firmId → true. Breaches published by an audit. */
   detected: Record<string, Record<string, true>>;
+  /**
+   * round → firmId → true. Every member checked against the terms that round (§9.2), breach or not.
+   * Records written before 2026-10-05 have none; results then show breaches only.
+   */
+  checked: Record<string, Record<string, true>>;
   /** firmId → number of detected violations (one per audit that found the firm). */
   sanctions: Record<string, number>;
   /** 0 if never audited. */

@@ -151,11 +151,13 @@ Never ask a participant to read out a hidden value. The projector and the partic
 
 1. When the session ends, press **F9** on the projector to open the results.
 2. Download both exports from the console, **before** deleting anything.
-3. Participants see their own results card on their phones (rank, valuation compared with the sustainable path, their exposure share, their own undetected violations).
+3. Participants see their own results card on their phones. It opens with one sentence, such as "You finished 2nd of 9, 12.5% below your peak.", then shows rank, valuation compared with the sustainable path, their share of the damage and of the value as two short bars, and their own undetected violations.
 
 ## 7. Debrief flow
 
 Allow 20 to 30 minutes. On the projector, press **F9** to step forward and **Esc** to step back. The step is saved, so a reload returns to the same panel.
+
+Every panel opens with one bold sentence that states its main point, written from the session's data (for example "Trust fell from 72.0 to 45.6 over 14 quarters."). Read it out, then ask the room to discuss.
 
 With about 20 firms or more, two panels hold a list that scrolls inside the panel (the heading and the axis stay in view):
 - **FINAL BOARD**: every firm in rank order.
@@ -167,7 +169,7 @@ With about 20 firms or more, two panels hold a list that scrolls inside the pane
 2. **TRUST TRACE.** Point at the labelled MORATORIUM line if there was one, and at the red squares (quarters that lost 5 or more trust). If you want the hidden threshold shown (a dashed red line with a hatched band below it), it must have been switched on at creation.
 3. **COUNTERFACTUAL.** Three figures: the industry's actual value, the ALTERNATIVE (every firm at pace 2, safety 15) and the VALUE LOST between them. If the industry finished below zero, no percentage is shown. The hatched area on the chart is the trust lost. Ask whether any single firm could have prevented it.
 4. **ATTRIBUTION.** Each firm's share of the damage (red, to the left) against its share of the value (amber, to the right). If no firm finished above zero, the right side says so. This is the fairness conversation.
-5. **PACT RECORD.** Violations that no audit caught are now shown. Ask what the pacts did and did not achieve.
+5. **PACT RECORD.** Violations that no audit caught are now shown. Under the table, each pact has a row of quarter cells per firm: a solid red cell is a breach an audit found, a red outline is a breach no audit found, a dim dot is a quarter that kept the terms, and a blank cell is a quarter in which the firm was not bound (before it joined, after it left or was expelled, or after the pact dissolved). Firms that left are marked "former". Ask what the pacts did and did not achieve.
 6. **DEBRIEF.** Five prompts, shown on screen:
    1. When did your firm first notice trust falling, and what did you change?
    2. Which pacts held and which broke? Was the difference monitoring, sanctions or trust?

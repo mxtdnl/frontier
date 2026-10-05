@@ -11,6 +11,8 @@ import {
   type EngineState,
   type Pact,
 } from '../../src/engine';
+import { fromResults } from '../../src/firebase/schema';
+import { storeAndRead } from '../firebase/rtdb';
 import { dec, game } from './helpers';
 
 /** A fixed-seed session: 6 firms, mixed policies, one pact with breaches, one audit, 9 quarters. */
@@ -130,6 +132,27 @@ describe('final results (spec §10, §14.4)', () => {
     expect(sumDet).toBe(found);
     expect(sumUnd).toBe(total - found);
     expect(r.final.f3?.undetected).toBe(0);
+  });
+
+  it('pact quarter codes agree with the counts, one code per quarter', () => {
+    const r = buildResults(state, { revealTau: false });
+    const pact = r.pacts[0]!;
+    expect(Object.keys(pact.quarters).sort()).toEqual(['f0', 'f1', 'f2']);
+    for (const [firmId, line] of Object.entries(pact.quarters)) {
+      expect(line).toHaveLength(9);
+      expect(line).toMatch(/^[-cdu]+$/);
+      const counts = pact.perFirm[firmId] ?? { detected: 0, undetected: 0 };
+      expect(line.split('d').length - 1).toBe(counts.detected);
+      expect(line.split('u').length - 1).toBe(counts.undetected);
+    }
+    // f0 holds pace 2 and safety 15 throughout, so every quarter is kept.
+    expect(pact.quarters.f0).toBe('c'.repeat(9));
+    expect(buildResults(play().state, { revealTau: false }).pacts).toEqual(r.pacts);
+  });
+
+  it('pact quarter codes survive the database round trip', () => {
+    const r = buildResults(state, { revealTau: false });
+    expect(fromResults(storeAndRead(r))?.pacts).toEqual(r.pacts);
   });
 
   it('DATA lines equal the lines emitted at resolution', () => {

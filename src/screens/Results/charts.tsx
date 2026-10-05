@@ -5,11 +5,14 @@ import { CH, useChartSize } from '../../ui/components/useChartSize';
 import { fmt, fmtShare } from '../../ui/format';
 import type { ButterflyRow, DumbbellRow } from './model';
 
-/** Vertical layout shared by both charts: a header row, the firm rows, an axis row and (optionally) a key row. */
+/**
+ * Vertical layout shared by both charts: a header row, the firm rows, an axis row and (optionally) a key row.
+ * Rows share the panel height (§14.4: every panel fills the projector); marks keep their own size caps.
+ */
 function rowLayout(H: number, lh: number, n: number, key: boolean) {
   const top = lh * 1.4;
   const bottom = H - lh * (key ? 2.6 : 1.4);
-  const rowH = Math.max(lh * 0.9, Math.min(lh * 2, (bottom - top) / Math.max(1, n)));
+  const rowH = Math.max(lh * 0.9, (bottom - top) / Math.max(1, n));
   return { top, rowH, axisY: top + rowH * n + lh * 0.7, keyY: top + rowH * n + lh * 1.9 };
 }
 

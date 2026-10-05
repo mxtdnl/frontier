@@ -9,11 +9,12 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createWriteStream, mkdirSync } from 'node:fs';
 import { buildResults, dataLinesOf } from '../src/engine';
-import { engineStateOf, fromEngine } from '../src/firebase/schema';
+import { engineStateOf, fromEngine, fromResults } from '../src/firebase/schema';
+import { ownResultSentence, panelHeadline } from '../src/screens/Results/headlines';
 import { fmt } from '../src/ui/format';
 import { adminSet } from './emulator-rules';
 import {
-  BASE, OUT, adminGet, check, h, runWithStack, screenText, shot, signUp, snapProjector, waitText, watchPage,
+  BASE, OUT, adminGet, check, checkResultsPanel, h, runWithStack, screenText, shot, signUp, snapProjector, waitText, watchPage,
 } from './lib/e2e-kit';
 import { DISCLOSURE_ON, HUMAN, REHEARSAL_QUARTERS, simulateRehearsal } from './lib/rehearsal-model';
 
@@ -207,6 +208,14 @@ await runWithStack(async (browser) => {
 
       await fac.goto(`${BASE}#/results/${g}`);
       await waitText(fac, /RESULTS[\s\S]*FINAL BOARD/, 'the results screen opens', 15_000, '.scr');
+      // Each panel opens with the headline its builder writes from the stored results (§14.4).
+      const stored = fromResults(await adminGet<unknown>(`games/${g}/results`));
+      const headlineIs = async (n: number): Promise<void> => {
+        const want = stored ? panelHeadline(stored, n - 1) : '?';
+        const got = await checkResultsPanel(fac, `results panel ${n}`);
+        check(got === want, `panel ${n} opens with its headline: "${got}"`);
+      };
+      await headlineIs(1);
       await snapProjector(fac, 'rehearsal-results-1');
       const panels: Array<[number, RegExp]> = [[2, /TRUST TRACE/], [3, /COUNTERFACTUAL[\s\S]*INDUSTRY VALUE[\s\S]*ALTERNATIVE[\s\S]*VALUE LOST/], [4, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE/], [5, /PACT RECORD[\s\S]*UNDETECTED/], [6, /DEBRIEF/]];
       for (const [n, re] of panels) {
@@ -215,6 +224,24 @@ await runWithStack(async (browser) => {
         await waitText(fac, re, `panel ${n} shows its content`, 5_000, '.scr');
         if (n === 2) check(/moratorium from Q\d Y\d/.test(await screenText(fac)) && /MORATORIUM Q\d Y\d/.test(await screenText(fac)) && !/τ|tau/i.test(await screenText(fac)), 'the trust trace labels the moratorium and shows no tau line');
         if (n === 3) check((await screenText(fac)).replace(/\s+/g, ' ').includes(`INDUSTRY VALUE ${fmt(res.industry.actual, 0)}`), 'panel 3 shows the stored actual industry value');
+        if (n === 5) {
+          // The pact quarter strip (§14.4): one row per bound firm, one cell per quarter, the breach cells counted in the table.
+          const strip = await fac.evaluate(() => {
+            const rows = [...document.querySelectorAll<HTMLElement>('[data-pact-strip] .ps-row[data-firm]')];
+            return {
+              rows: rows.length,
+              cells: rows.map((row) => row.querySelectorAll('[data-cell]').length),
+              breaches: document.querySelectorAll('[data-pact-strip] [data-cell="d"], [data-pact-strip] [data-cell="u"]').length,
+              key: document.querySelector('[data-key="pact-strip"]')?.textContent ?? '',
+            };
+          });
+          const pacts = stored?.pacts ?? [];
+          const breaches = pacts.reduce((a, p) => a + p.detected + p.undetected, 0);
+          check(strip.rows > 0 && strip.cells.every((c) => c === REHEARSAL_QUARTERS), `the pact strip has ${strip.rows} rows of ${REHEARSAL_QUARTERS} quarter cells`);
+          check(strip.breaches === breaches, `the pact strip shows the ${breaches} breaches the table counts`);
+          check(/detected breach[\s\S]*undetected breach[\s\S]*kept the terms/.test(strip.key), 'the pact strip key names its cells');
+        }
+        await headlineIs(n);
         await snapProjector(fac, `rehearsal-results-${n}`);
       }
 
@@ -223,6 +250,9 @@ await runWithStack(async (browser) => {
       await waitText(human, /Counterfactual/, 'the human sees the results card', 20_000);
       const t = await human.locator('body').innerText();
       check(humanRow !== undefined && t.includes(fmt(humanRow.valuation)) && t.includes(fmt(humanRow.counterfactual)), 'the card shows valuation and counterfactual from the results');
+      const own = stored?.final[firmId];
+      check(own !== undefined && t.includes(ownResultSentence(own, FIRMS)), 'the card opens with the result sentence');
+      check((await human.locator('.hbar').count()) === 2, 'the card shows damage and value shares as two bars');
       await shot(human, 'rehearsal-human-card');
     }
     console.log(`rehearsal events: ${events.join(', ')}`);

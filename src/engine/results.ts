@@ -6,7 +6,7 @@
 import { attribution, compareIndustry, runCounterfactual, type AttributionRow, type CounterfactualResult } from './counterfactual';
 import { dataLine } from './data';
 import { PARAMS, type Params } from './params';
-import type { EngineState, PactTerms } from './types';
+import type { EngineState, PactPrivate, PactTerms } from './types';
 
 export interface FirmFinal {
   firmId: string;
@@ -42,6 +42,47 @@ export interface PactFinal {
   undetected: number;
   /** firmId → violation-quarters. Only firms with at least one violation appear. */
   perFirm: Record<string, { detected: number; undetected: number }>;
+  /**
+   * firmId → one code per resolved quarter, quarter 1 first (§14.4 PACT RECORD strip): see `PactQuarterCode`.
+   * Every firm ever checked against the terms, or in breach, appears; current members and former members alike.
+   */
+  quarters: Record<string, string>;
+}
+
+/** One character per quarter in `PactFinal.quarters`. */
+export const PACT_QUARTER = {
+  /** Not bound by the terms that quarter (not yet joined, left, expelled, or the pact had dissolved). */
+  none: '-',
+  /** Checked and kept the terms. */
+  kept: 'c',
+  /** Broke the terms; published by an audit. */
+  detected: 'd',
+  /** Broke the terms; never published. */
+  undetected: 'u',
+} as const;
+export type PactQuarterCode = (typeof PACT_QUARTER)[keyof typeof PACT_QUARTER];
+
+/**
+ * Quarter codes for one pact (§9.2, §14.4). A breach outranks the checked note; a record written before
+ * `checked` existed shows breaches only. Firms in creation order.
+ */
+export function pactQuarters(state: Pick<EngineState, 'firms' | 'round'>, pp: PactPrivate | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!pp) return out;
+  for (const f of state.firms) {
+    let line = '';
+    let any = false;
+    for (let r = 1; r <= state.round; r++) {
+      const key = String(r);
+      let code: PactQuarterCode = PACT_QUARTER.none;
+      if (pp.violations[key]?.[f.id]) code = pp.detected[key]?.[f.id] ? PACT_QUARTER.detected : PACT_QUARTER.undetected;
+      else if (pp.checked?.[key]?.[f.id]) code = PACT_QUARTER.kept;
+      if (code !== PACT_QUARTER.none) any = true;
+      line += code;
+    }
+    if (any) out[f.id] = line;
+  }
+  return out;
 }
 
 export type CounterfactualSummary = Omit<CounterfactualResult, 'incidentDraws'>;
@@ -111,6 +152,7 @@ export function buildResults(state: EngineState, opts: { revealTau: boolean }, p
       detected,
       undetected,
       perFirm,
+      quarters: pactQuarters(state, pp),
     };
   });
 

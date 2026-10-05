@@ -917,6 +917,15 @@
   align-items: center;
   white-space: nowrap;
 }
+/* The per-firm comparison grows its rows to fill the column (§14.4), and scrolls when they do not fit. */
+.cmp-list {
+  display: flex;
+  flex-direction: column;
+}
+.cmp-list > .cmp-row:not(.res-sticky-top):not(.res-sticky-bottom) {
+  flex: 1 0 1lh;
+  max-height: 3lh;
+}
 .cmp-axis {
   position: relative;
   display: flex;
@@ -926,6 +935,109 @@
 .cmp-axis > span:nth-child(2):not(:last-child) {
   position: absolute;
   transform: translateX(-50%);
+}
+
+/* Results panel headline (§14.4): the panel's point in one sentence, above the chart. */
+.res-headline {
+  margin: 0 0 1lh;
+  color: var(--text);
+  font-size: 1.25em;
+  font-weight: 600;
+  line-height: 1.35;
+}
+/* Debrief prompts spread over the panel height. */
+.res-prompts {
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0;
+  padding-left: 4ch;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  font-size: 1.25em;
+}
+/* PACT RECORD quarter strips (§14.4). */
+.ps-wrap {
+  flex: 1 1 0;
+  min-height: 6lh;
+  display: flex;
+  flex-direction: column;
+  margin: 1lh 0 0.5lh;
+}
+/* Rows share the panel height, and the list scrolls when they do not fit; cells keep their size. */
+.ps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1lh;
+}
+.ps-pact {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+.ps-row {
+  display: grid;
+  grid-template-columns: 16ch repeat(var(--ps-q), minmax(1ch, 4ch));
+  align-items: center;
+  flex: 1 0 1.5lh;
+  white-space: nowrap;
+}
+.ps-head {
+  flex: 0 0 1lh;
+  border-bottom: var(--rule-w) solid var(--grid);
+}
+.ps-q {
+  overflow: visible;
+}
+.ps-q.is-year,
+.ps-row .ps-cell.is-year {
+  border-left: var(--rule-w) solid var(--grid);
+  padding-left: 2px;
+}
+.ps-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1lh;
+  min-width: 1ch;
+  vertical-align: middle;
+}
+.ps-cell::before {
+  content: '';
+  box-sizing: border-box;
+  width: calc(100% - 6px);
+  max-width: 3ch;
+  min-width: 1ch;
+  height: 1lh;
+}
+.ps-detected::before {
+  background: var(--down);
+}
+.ps-undetected::before {
+  border: 2px solid var(--down);
+}
+.ps-kept::before {
+  width: 6px;
+  min-width: 6px;
+  height: 6px;
+  background: var(--dim);
+}
+.ps-none::before {
+  height: 0;
+}
+.ps-key {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 3ch;
+  padding-top: 0.5lh;
+  border-top: var(--rule-w) solid var(--grid);
+}
+.ps-key .ps-cell {
+  width: 3ch;
+}
+.ps-key .ps-detected::before,
+.ps-key .ps-undetected::before {
+  height: 0.75lh;
 }
 
 /* ---------- Notices ---------- */

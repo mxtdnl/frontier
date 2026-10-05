@@ -1,7 +1,8 @@
 import type { FirmFinal } from '../../engine';
 import type { ResultsNode } from '../../firebase/schema';
-import { Delta, Panel } from '../../ui/components';
+import { Delta, HBar, Panel } from '../../ui/components';
 import { fmt, fmtShare } from '../../ui/format';
+import { ownResultSentence } from './headlines';
 
 interface Props {
   ticker: string;
@@ -32,9 +33,13 @@ export function OwnResultsCard({ ticker, firmId, results, unavailable, rank, val
     );
   }
   const gap = own.counterfactual - own.valuation;
+  const firms = Object.keys(results.final).length;
   return (
     <div className="stack">
-      <Panel title={`${own.ticker} FINAL`} right={`RANK ${own.rank} OF ${Object.keys(results.final).length}`} bodyClassName="pad">
+      <Panel title={`${own.ticker} FINAL`} right={`RANK ${own.rank} OF ${firms}`} bodyClassName="pad">
+        <p className="res-headline" data-headline="">
+          {ownResultSentence(own, firms)}
+        </p>
         <dl className="kv">
           <dt>Valuation</dt><dd>{fmt(own.valuation)}</dd>
           <dt>Peak valuation</dt><dd>{fmt(own.peakValuation)}</dd>
@@ -43,11 +48,28 @@ export function OwnResultsCard({ ticker, firmId, results, unavailable, rank, val
         </dl>
         <p className="dim" style={{ marginTop: '1lh' }}>Counterfactual: every firm holds pace 2 and safety 15 with no cards and no pacts, on the same incident draws.</p>
       </Panel>
-      <Panel title="YOUR SHARE OF THE DAMAGE" bodyClassName="pad">
-        <dl className="kv">
-          <dt>Exposure share</dt><dd>{fmtShare(own.drawShare)}</dd>
-          <dt>Value share</dt><dd>{fmtShare(own.valueShare)}</dd>
-        </dl>
+      <Panel title="YOUR SHARE OF THE DAMAGE" bodyClassName="pad stack">
+        <HBar
+          label="DAMAGE"
+          labelW={7}
+          textW={7}
+          value={own.drawShare}
+          domain={[0, 1]}
+          tone="down"
+          text={fmtShare(own.drawShare)}
+          describe={`Share of the damage ${fmtShare(own.drawShare)}`}
+        />
+        <HBar
+          label="VALUE"
+          labelW={7}
+          textW={7}
+          value={own.valueShare}
+          domain={[0, 1]}
+          tone="signal-outline"
+          text={fmtShare(own.valueShare)}
+          describe={`Share of the value ${fmtShare(own.valueShare)}`}
+        />
+        <p className="dim">Damage is your share of all exposure drawn from trust. Value is your share of the industry's final value; a firm below zero holds none.</p>
       </Panel>
       <Panel title="YOUR PACT RECORD" bodyClassName="pad">
         <dl className="kv">

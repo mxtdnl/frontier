@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fineFor, nextPactName, PARAMS, resolveRound, type EngineState, type Pact, type PactTerms } from '../../src/engine';
+import { fineFor, nextPactName, PACT_QUARTER, pactQuarters, PARAMS, resolveRound, type EngineState, type Pact, type PactTerms } from '../../src/engine';
 import { dec, firm, game, NO_INC } from './helpers';
 
 const p = PARAMS;
@@ -140,6 +140,62 @@ describe('dissolution', () => {
     addPact(s, ['f0', 'f1'], CAP2);
     for (let i = 0; i < 4; i++) s = resolveRound(s, {}, NO_INC).state;
     expect(s.pacts[0]?.status).toBe('active');
+  });
+});
+
+describe('checked members and the quarter record (§9.2, §14.4)', () => {
+  const { none, kept, detected, undetected } = PACT_QUARTER;
+
+  it('notes every member checked, breach or not, and no one else', () => {
+    const g = game(4);
+    addPact(g, ['f0', 'f1'], CAP2);
+    const r = resolveRound(g, { f0: dec(3, 10), f1: dec(2, 9), f2: dec(4, 0) }, NO_INC);
+    expect(r.state.pactsPrivate.p1?.checked['1']).toEqual({ f0: true, f1: true });
+  });
+
+  it('is blank before a firm joins and after it leaves', () => {
+    let s = game(3);
+    addPact(s, ['f0', 'f1'], CAP2);
+    s = resolveRound(s, { f0: dec(4, 0), f1: dec(2, 15), f2: dec(4, 0) }, NO_INC).state;
+    s.pacts[0]!.members.f2 = 2;
+    s = resolveRound(s, { f0: dec(2, 15), f1: dec(2, 15), f2: dec(4, 0) }, NO_INC).state;
+    delete s.pacts[0]!.members.f0;
+    s = resolveRound(s, { f0: dec(4, 0), f1: dec(2, 15), f2: dec(2, 15) }, NO_INC).state;
+    expect(pactQuarters(s, s.pactsPrivate.p1)).toEqual({
+      f0: undetected + kept + none,
+      f1: kept + kept + kept,
+      f2: none + undetected + kept,
+    });
+  });
+
+  it('marks detected breaches, and is blank after a firm is expelled', () => {
+    let s = game(3);
+    addPact(s, ['f0', 'f1'], CAP2);
+    for (let i = 0; i < 3; i++) {
+      s.pendingAudits = ['p1'];
+      s = resolveRound(s, { f0: dec(4, 0) }, NO_INC).state;
+    }
+    s = resolveRound(s, { f0: dec(4, 0) }, NO_INC).state;
+    expect(s.pacts[0]?.members.f0).toBeUndefined();
+    // With one member left the pact dissolved at the end of quarter 3, so quarter 4 is blank for f1 too.
+    expect(s.pacts[0]?.status).toBe('dissolved');
+    expect(pactQuarters(s, s.pactsPrivate.p1)).toEqual({ f0: detected.repeat(3) + none, f1: kept.repeat(3) + none });
+  });
+
+  it('is blank after the pact dissolves', () => {
+    let s = game(3);
+    addPact(s, ['f0'], CAP2);
+    for (let i = 0; i < 3; i++) s = resolveRound(s, { f0: dec(4, 0) }, NO_INC).state;
+    expect(s.pacts[0]?.status).toBe('dissolved');
+    expect(pactQuarters(s, s.pactsPrivate.p1)).toEqual({ f0: undetected + undetected + none });
+  });
+
+  it('shows breaches only for a record written before checked members were noted', () => {
+    const s = game(3);
+    s.round = 3;
+    const pp = { violations: { 2: { f1: true as const } }, detected: { 2: { f1: true as const } }, checked: {}, sanctions: {}, lastAuditRound: 2 };
+    expect(pactQuarters(s, pp)).toEqual({ f1: none + detected + none });
+    expect(pactQuarters(s, undefined)).toEqual({});
   });
 });
 

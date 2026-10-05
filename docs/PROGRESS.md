@@ -843,3 +843,83 @@ Full findings, with reproductions and proposed fixes: `docs/REVIEW.md`.
 **Next steps**
 - Owner: after merging, open a session on the live site and type `FIRMS`, then `RANKS`, on the projector; check the board strip and bars at the room's resolution. On a phone, open BOOK after the second quarter.
 - Session 14: results narrative.
+
+## 2026-10-05 — Session 14: results narrative
+
+**Spec deviation (open, needs the owner)**
+- The session rules say the spec is updated before the code. The edit to `docs/spec.md` (§9.2 and §14.4) was refused by the container's permission check, and I did not retry it. **The spec does not yet describe this session's changes.** The text to add is below, under "Spec text to add". The owner can either approve the edit in a later session or paste it in.
+
+**Owner decision (2026-10-05)**
+- Approved: the engine notes, each quarter, which members of a pact it checked against the terms. Without this record, the pact strip could not tell a compliant quarter from one in which the firm was no longer a member. The record is private (facilitator only). The participant results card reads none of it.
+
+**Done**
+- **Engine** (`src/engine/pacts.ts`, `types.ts`, `results.ts`)
+  - `PactPrivate.checked[round][firmId]`: each active-pact member checked at step 11a, breach or not.
+  - `PactFinal.quarters[firmId]`: one character per resolved quarter. `-` means not bound, `c` kept the terms, `d` detected breach, `u` undetected breach. `pactQuarters()` builds it in `buildResults`, and it is deterministic.
+  - Pact records written before this change have no `checked` entries and load with an empty record; their strip shows breaches only.
+- **Headlines** (`src/screens/Results/headlines.ts`): one builder per panel, plus the participant card sentence. Rehearsal examples:
+  - FINAL BOARD: "All 9 firms finished below their peak. All 9 finished below zero."
+  - TRUST TRACE: "Trust fell from 72.0 to 0.0 over 14 quarters. The moratorium began in Q2 Y3."
+  - COUNTERFACTUAL: "Holding pace 2 and safety 15 would have left the industry worth 8117; it finished at −1256." When the industry kept positive value, the sentence gives a ratio such as "3.2×".
+  - ATTRIBUTION: "HUMN caused 22.7% of the damage. No firm finished with positive value."
+  - PACT RECORD: "1 pact formed. Members broke the terms 13 times; 7 breaches were never detected."
+  - DEBRIEF: the fixed line "Five questions. Discuss each in your firm, then with the room."
+  - Card: "You finished 2nd of 9, below zero at −105.0, from a peak of 417.6."
+- **Pact record strip**:
+  - one row of quarter cells per firm bound by the pact: members first, then former members marked "former"
+  - a solid red cell for a detected breach, a red outline for an undetected one, a dim dot for a quarter that kept the terms, blank when the firm was not bound
+  - year rules, a key in words, and a description of each row for screen readers.
+- **Panels fill the height.**
+  - Dumbbell and butterfly rows share the panel height, and their marks keep their size caps.
+  - The counterfactual per-firm rows and the strip rows grow, and the debrief prompts spread out.
+- **Participant card**: the sentence first, then damage and value shares as two short bars on a 0–100% scale (damage red, value as an amber outline).
+- RUNBOOK §6 and §7 describe the headlines, the strip and the card.
+
+**Choices (spec silent)**
+1. The headline is 1.25em, weight 600, `--text`, the first element in each panel body.
+2. Industry totals in headlines are whole numbers, as on the figures. A ratio that would read "1.0×" becomes a difference ("worth 40 more than it kept").
+3. With two firms the FINAL BOARD headline says "Both" instead of "All 2". In the attribution headline, a tie means equal shares as displayed. All tied firms are named, in ticker order. A firm at or below zero "kept none of the value".
+4. "Below zero" in the headlines means below zero as displayed (one decimal), so the sentence matches the red figures.
+5. The pact headline counts breaches as firm-quarters, the same unit as the table, and adds how many pacts dissolved.
+6. Fill rule used by the e2e check: no results panel may leave more than 20% of its height empty below its content.
+
+**Tests**
+- `tests/engine/pacts.test.ts`:
+  - checked members are noted for members only
+  - the strip is blank before a firm joins and after it leaves, after an expulsion, and after dissolution
+  - an older record shows breaches only.
+- `tests/engine/results.test.ts`: the quarter codes match the counts, the same seed gives the same output, and the codes survive the database round trip.
+- `tests/firebase/schema.test.ts`: `checked` maps that come back as arrays are restored, and records without `checked` still load.
+- `tests/ui/results-headlines.test.ts` (new, 28 tests): every builder and its edge cases, and every sentence passes the copy rules, including the stricter projector rules.
+- `tests/ui/results.test.ts`:
+  - every panel opens with its headline
+  - the strip cells match the codes and counts; the former-member order; unknown codes are ignored
+  - a 30-member strip at 50 firms
+  - the card sentence and its two bars.
+- e2e: a new `checkResultsPanel`, run on every results screenshot in every e2e script. It checks that the headline is first and not empty, and that no more than 20% of the panel is left empty.
+  - The rehearsal also checks that each headline equals its builder's output from the stored results, the strip (rows, 14 cells each, breaches equal to the table), the key, and the card sentence and bars.
+  - The main e2e checks the card sentence and the DAMAGE bar.
+
+**Test results**
+- `npm run typecheck` passes. `npm test`: 514 passed (was 471). `lint:copy`, `lint:design` and `npm run build` pass.
+- `npm run test:e2e`: all checks passed (297 `ok` lines).
+- `npm run test:e2e:rehearsal`: all checks passed (152, was 141). All six panels were reviewed at 1280×720 and 1920×1080, plus the human's card.
+- `npm run test:e2e:scale`: all checks passed (1,364, was 1,360), including the headline and fill checks on the results panels at every firm count from 2 to 50.
+- Not run: `test:rules`, `test:e2e:long`, `test:e2e:hardening` and `test:e2e:scale-run`. No rules, paths, orchestrator or countdown code changed. The new `checked` record is written through the existing `pactsPrivate` path.
+
+**Spec text to add** (not yet in `docs/spec.md`; see the deviation above)
+- §9.2 Compliance, after the first sentence: "Every member checked is also noted privately as `checked[pactId][round][firmId]`, so the results can show, quarter by quarter, when each firm was bound by the terms (§14.4). Pact records written before 2026-10-05 have no `checked` entries; their results show breaches only."
+- §14.4, before the panel list:
+  - "Every panel opens with one sentence written from the data (builders in `src/screens/Results/headlines.ts`; variants as listed in this PROGRESS entry), and every panel fills the height between the top bar and the F-key bar."
+- §14.4 item 5, appended: "Under the table, a quarter strip per pact, as described in this PROGRESS entry under Done."
+- §14.4 participant card, appended: "The card opens with one sentence ("You finished 2nd of 9, 12.5% below your peak."; variants for at peak and below zero) and shows share of the damage and of the value as two short bars."
+
+**Open issues**
+- The spec deviation above.
+- Above 24 firms, ATTRIBUTION lists 12 firms plus OTHERS. The headline still names the firm with the largest share of the damage, which is always listed.
+- With two or three firms the dumbbell rows are tall and widely spaced. This is because rows now share the panel height.
+
+**Next steps**
+- Owner: after merging, run a short session on the live site, end it, and step through the six results panels with F9. Check that each bold sentence is readable from the back of the room. Check the phone results card.
+- Owner: approve the spec text above (one line in the next session is enough).
+- Session 15: phone and plain pages.

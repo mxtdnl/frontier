@@ -12,7 +12,8 @@
 import { readFileSync } from 'node:fs';
 import type { Browser, BrowserContext, Page } from 'playwright';
 import { PARAMS, estimatedCost } from '../src/engine';
-import { fmt } from '../src/ui/format';
+import { ownResultSentence } from '../src/screens/Results/headlines';
+import { fmt, fmtShare } from '../src/ui/format';
 import { adminSet } from './emulator-rules';
 import {
   BASE, adminGet, blockOutside, check, fail, h, refused, runWithStack, screenText, shot, signUp, snapPlay, snapProjector, tabTo, waitText,
@@ -684,7 +685,7 @@ async function participantScenario(
 
   // ── Session 7: results, export, delete ──
   console.log('--- Session 7: results ---');
-  type Fin = { ticker: string; rank: number; valuation: number; counterfactual: number; drawShare: number; undetected: number };
+  type Fin = { ticker: string; rank: number; valuation: number; peakValuation: number; counterfactual: number; drawShare: number; undetected: number };
   type Res = { rounds: number; industry: { actual: number; counterfactual: number; destroyed: number }; final: Record<string, Fin>; dataLines: string[] };
   const res = await adminGet<Res | null>(`games/${g}/results`);
   check(res !== null && res.rounds === 3, 'results were written once the session ended (3 quarters)');
@@ -698,7 +699,8 @@ async function participantScenario(
     const textA = await A.locator('body').innerText();
     check(own !== undefined && textA.includes(`RANK ${own.rank} OF 4`), 'phone A shows its final rank');
     check(own !== undefined && textA.includes(fmt(own.valuation)) && textA.includes(fmt(own.counterfactual)), 'phone A shows valuation and counterfactual');
-    check(/Exposure share/.test(textA) && /Undetected/.test(textA), 'phone A shows its exposure share and undetected violations');
+    check(/DAMAGE/.test(textA) && textA.includes(fmtShare(own?.drawShare ?? -1)) && /Undetected/.test(textA), 'phone A shows its share of the damage and undetected violations');
+    check(own !== undefined && textA.includes(ownResultSentence(own, 4)), 'phone A opens with its result sentence');
     const others = Object.entries(res.final).filter(([id]) => id !== firmA).map(([, f]) => f.ticker);
     check(others.every((t) => !new RegExp(`\\b${t}\\b`).test(textA)), "phone A does not show another firm's ticker");
     await snapPlay(A, 'play-results-card');
