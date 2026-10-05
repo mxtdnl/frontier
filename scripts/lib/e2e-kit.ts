@@ -152,7 +152,9 @@ export async function checkCharts(page: Page, label: string): Promise<void> {
     document.querySelectorAll<HTMLElement>('.cmp-row[data-firm]').forEach((row) => {
       const fill = row.querySelector<HTMLElement>('.hbar-fill');
       const marker = row.querySelector<HTMLElement>('.hbar-marker');
-      if (!fill || fill.getBoundingClientRect().width < 0.5 || !marker) problems.push(`comparison ${row.dataset.firm}: no visible bar or marker`);
+      // A firm that finished at a value shown as 0 has a zero-length bar; the zero line and marker still show.
+      const atZero = /^[−-]?0$/.test(row.querySelector<HTMLElement>('.num')?.textContent?.trim() ?? '');
+      if (!fill || (fill.getBoundingClientRect().width < 0.5 && !atZero) || !marker) problems.push(`comparison ${row.dataset.firm}: no visible bar or marker`);
     });
     return { charts, problems };
   });
