@@ -11,10 +11,11 @@ export function TrustView({ data }: { data: ScreenData }) {
   const delta = data.pub.round === 0 ? 0 : data.pub.T - previousTrust(data.rounds);
   return (
     <Panel title="TRST · PUBLIC TRUST HISTORY" bodyClassName="col">
-      <div className="row" style={{ paddingTop: '0.5lh', alignItems: 'flex-end' }}>
+      <p className="dim" style={{ paddingTop: '0.5lh' }}>{BRIEFING_LINES.market[0]}</p>
+      <div className="row" style={{ alignItems: 'flex-end' }}>
         <div className="big signal">{fmt(data.pub.T)}</div>
         <div>
-          <Delta value={delta} /> <span className="dim">QoQ</span>
+          <Delta value={delta} /> <span className="dim">since last quarter</span>
         </div>
       </div>
       <div className="col" style={{ flex: '1 1 0', margin: '1lh 0' }} data-trust-chart="">
@@ -44,8 +45,8 @@ export function PactsView({ data, emphasis = false }: { data: ScreenData; emphas
           rowKey={(p) => p.id}
           columns={[
             { key: 'id', label: 'PACT', w: 9, render: (p) => <Tag pact={p.name} /> },
-            { key: 'pace', label: 'MAXPACE', w: 9, align: 'r', render: (p) => p.maxPace ?? '–' },
-            { key: 'safe', label: 'MINSAFE', w: 10, align: 'r', render: (p) => p.minSafety ?? '–' },
+            { key: 'pace', label: 'MAX PACE', w: 10, align: 'r', render: (p) => p.maxPace ?? '–' },
+            { key: 'safe', label: 'MIN SAFETY', w: 12, align: 'r', render: (p) => p.minSafety ?? '–' },
             // Beside the board at a summit the panel is narrow; the members need the room more than the audit line.
             ...(emphasis ? [] : [{ key: 'audit', label: 'AUDIT', w: 27, render: (p: PactRow) => <AuditCell audit={p.lastAudit} /> }]),
             {
@@ -78,7 +79,7 @@ export function PactsView({ data, emphasis = false }: { data: ScreenData; emphas
 function AuditCell({ audit }: { audit: PactRow['lastAudit'] }) {
   if (!audit) return <span className="dim">none yet</span>;
   const result = audit.breaches === 0 ? 'clean' : `${audit.breaches} breach${audit.breaches === 1 ? '' : 'es'}`;
-  return <>{quarterLabel(audit.round)} {audit.kind === 'manual' ? 'MAN' : 'AUTO'} · {result}</>;
+  return <>{quarterLabel(audit.round)} {audit.kind === 'manual' ? 'MANUAL' : 'AUTO'} · {result}</>;
 }
 
 interface AuditViewProps {
@@ -144,7 +145,7 @@ export function FirmView({ ticker, data }: { ticker: string; data: ScreenData })
         <div className="row">
           <span>{f.name}</span>
           <span className="dim">SHARE</span> <span>{fmtShare(f.share)}</span>
-          <span className="dim">VAL</span> <span>{fmt(f.value)}</span>
+          <span className="dim">VALUE</span> <span>{fmt(f.value)}</span>
           <Delta value={f.dValue} />
         </div>
         <LineChart
@@ -211,7 +212,11 @@ export function LobbyView({ code, firms, memberCounts }: { code: string; firms: 
             <div className="big signal" aria-label={`Join code ${code.split('').join(' ')}`}>{code}</div>
             <span className="dim">ADDRESS</span>
             <span style={{ overflowWrap: 'anywhere' }}>{url}</span>
-            <span className="dim" style={{ marginTop: '1lh' }}>Scan the code or enter it on the join page. Form a firm or join one.</span>
+            <ol className="join-steps" aria-label="How to join">
+              <li><span className="step-n">1</span>Scan the code or enter it on the join page.</li>
+              <li><span className="step-n">2</span>Form a firm or join one.</li>
+              <li><span className="step-n">3</span>Wait for the briefing.</li>
+            </ol>
           </div>
         </div>
       </Panel>
@@ -225,7 +230,7 @@ export function LobbyView({ code, firms, memberCounts }: { code: string; firms: 
             columns={[
               { key: 't', label: 'TICKER', w: 8, render: (f) => f.ticker },
               { key: 'n', label: 'FIRM', w: 0, render: (f) => <>{f.name} {f.isBot ? <Tag kind="BOT" /> : null}</> },
-              { key: 'm', label: 'MBRS', w: 6, align: 'r', render: (f) => (f.isBot ? <span className="dim">{'–'}</span> : (memberCounts[f.id] ?? 0)) },
+              { key: 'm', label: 'DEVICES', w: 9, align: 'r', render: (f) => (f.isBot ? <span className="dim">{'–'}</span> : (memberCounts[f.id] ?? 0)) },
             ]}
           />
         ) : (

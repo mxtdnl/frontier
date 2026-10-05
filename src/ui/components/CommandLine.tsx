@@ -11,7 +11,7 @@ interface Props {
   onEscape: () => void;
 }
 
-/** Terminal-style command entry shown as `FRNT [input] <GO>`. */
+/** Terminal-style command entry shown as `[input] <GO>`, visible in the top bar only while it has focus (spec §14.1). */
 export const CommandLine = forwardRef<CommandLineHandle, Props>(function CommandLine({ onSubmit, onEscape }, ref) {
   const input = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState('');
@@ -43,7 +43,7 @@ export const CommandLine = forwardRef<CommandLineHandle, Props>(function Command
 
   return (
     <form className="cmd" onSubmit={submit} role="search" aria-label="Command line">
-      <label htmlFor="cmd-input">FRNT</label>
+      <label htmlFor="cmd-input" className="sr-only">Command</label>
       <input
         id="cmd-input"
         ref={input}
@@ -57,7 +57,7 @@ export const CommandLine = forwardRef<CommandLineHandle, Props>(function Command
         maxLength={24}
         aria-describedby="cmd-hint"
       />
-      <button type="submit" className="fkey" style={{ color: 'inherit' }} aria-label="Go">
+      <button type="submit" className="cmd-go" aria-label="Go">
         {'<GO>'}
       </button>
       <span id="cmd-hint" className="sr-only">

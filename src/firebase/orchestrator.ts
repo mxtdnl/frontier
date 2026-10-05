@@ -406,7 +406,7 @@ export async function toggleDisclosure(ctx: Ctx, seen?: Seen): Promise<ActionRes
   }
   return ok(
     on
-      ? 'Disclosure ON. PACE, SAFE and EXPO appear from the next resolution.'
+      ? 'Disclosure ON. PACE, SAFETY and EXPOSURE appear from the next resolution.'
       : 'Disclosure OFF. Nothing is published from the next resolution.',
   );
 }

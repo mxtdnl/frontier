@@ -118,3 +118,7 @@ export function mergeWire(rounds: Record<string, RoundNode>, wire: Record<string
   // Stable merge: within one position, live events (newer) come before resolved headlines.
   return [...live, ...resolved].map((item, i) => ({ item, i })).sort((a, b) => b.item.seq - a.item.seq || a.i - b.i).map((x) => x.item);
 }
+
+/** Headline kinds that report harm (incidents, breaches, insolvency, the moratorium); the ticker marks them ▼. */
+const ALARM_KINDS: ReadonlySet<Headline['kind']> = new Set<Headline['kind']>(['incident', 'breach', 'insolvency', 'collapse', 'moratorium']);
+export const isAlarmKind = (kind: string): boolean => ALARM_KINDS.has(kind as Headline['kind']);

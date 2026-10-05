@@ -18,52 +18,145 @@
   clip-path: polygon(0% 55%, 12% 43%, 38% 68%, 88% 12%, 100% 25%, 38% 95%);
 }
 
-/* ---------- TopBar ---------- */
+/* ---------- TopBar (spec §14.1, §16.1) ---------- */
 .topbar {
-  background: var(--signal);
-  color: var(--signal-ink);
+  position: relative;
+  background: var(--panel);
+  color: var(--text);
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 0 2ch;
-  padding: 0 1ch;
+  padding: 0 1ch 0 0;
   height: 2lh;
+  border-bottom: 2px solid var(--signal);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
 }
+.topbar > * {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
 .topbar .grow {
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
 }
 .topbar .sep {
   font-weight: 400;
+  color: var(--dim);
 }
 .topbar-notice {
   font-weight: 400;
   overflow: hidden;
   text-overflow: clip;
 }
+.tb-brand {
+  background: var(--signal);
+  color: var(--signal-ink);
+  padding: 0 1ch;
+}
+.tb-clock {
+  margin-left: auto;
+  font-size: 1.5em;
+  line-height: 1;
+  color: var(--signal);
+}
+.tb-clock .tb-paused {
+  font-size: 0.67em;
+  margin-left: 1ch;
+  color: var(--dim);
+}
+/* Phase blocks (spec §16.1): each phase distinct, always with its word. */
+.phase {
+  padding: 0 1ch;
+  margin: 0.25lh 0;
+  border: 2px solid transparent;
+}
+.phase-lobby {
+  border-color: var(--dim);
+  color: var(--text);
+}
+.phase-briefing {
+  border-color: var(--text);
+  color: var(--text);
+}
+.phase-open {
+  background: var(--up);
+  border-color: var(--up);
+  color: var(--signal-ink);
+}
+.phase-resolving {
+  border-color: var(--signal-dim);
+  color: var(--signal);
+}
+.phase-reveal {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--signal-ink);
+}
+.phase-summit {
+  background: var(--wire);
+  border-color: var(--wire);
+  color: var(--signal-ink);
+}
+.phase-ended {
+  background: var(--dim);
+  border-color: var(--dim);
+  color: var(--signal-ink);
+}
+/* Phone header: the same bar, allowed to wrap on a narrow screen. */
+.topbar.topbar-play {
+  height: auto;
+  min-height: 2lh;
+  flex-wrap: wrap;
+}
 
-/* ---------- CommandLine ---------- */
+/* ---------- Status line (spec §14.1) ---------- */
+.status-line {
+  height: 100%;
+  padding: 0 1ch;
+  background: var(--base);
+  border-bottom: var(--rule-w) solid var(--rule);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- CommandLine: shown only while the facilitator types (spec §14.1) ---------- */
 .cmd {
   display: flex;
   align-items: center;
   gap: 1ch;
 }
+.topbar .cmd:not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 .cmd-input {
   width: 22ch;
   background: transparent;
   border: 0;
-  border-bottom: var(--rule-w) solid var(--signal-ink);
-  color: var(--signal-ink);
+  border-bottom: var(--rule-w) solid var(--signal);
+  color: var(--text);
   text-transform: uppercase;
   font-weight: 600;
   padding: 0;
-  caret-color: var(--signal-ink);
+  caret-color: var(--signal);
 }
 .cmd-input:focus-visible {
-  outline: 2px solid var(--signal-ink);
+  outline: 2px solid var(--signal);
   outline-offset: 2px;
+}
+.cmd .cmd-go {
+  border: 0;
+  padding: 0;
+  color: var(--signal);
 }
 
 /* ---------- FKeyBar ---------- */
@@ -83,12 +176,21 @@
   padding: 0;
   display: inline-flex;
   gap: 1ch;
+  color: var(--dim);
+}
+/* Outlined key caps; the next expected action is the one solid key (spec §14.1). */
+.fkey .k {
+  border: var(--rule-w) solid var(--signal-dim);
+  color: var(--signal);
+  padding: 0 1ch;
+}
+.fkey.is-primary {
   color: var(--text);
 }
-.fkey .k {
+.fkey.is-primary .k {
   background: var(--signal);
+  border-color: var(--signal);
   color: var(--signal-ink);
-  padding: 0 1ch;
   font-weight: 600;
 }
 
@@ -109,9 +211,14 @@
   justify-content: space-between;
   gap: 2ch;
   padding: 0 1ch;
-  color: var(--dim);
+  color: var(--text);
+  font-weight: 600;
   border-bottom: var(--rule-w) solid var(--rule);
   white-space: nowrap;
+}
+.panel-title > span + span {
+  color: var(--dim);
+  font-weight: 400;
 }
 .panel-body {
   position: relative;
@@ -141,21 +248,27 @@
 }
 .tbl th {
   color: var(--dim);
+  background: var(--raise);
   border-bottom: var(--rule-w) solid var(--rule);
+}
+/* Row rules and alternate-row fill (spec §14.1, Session 12). */
+.tbl td {
+  border-bottom: var(--rule-w) solid var(--grid);
+}
+.tbl tbody tr:nth-child(even) td {
+  background: var(--raise);
 }
 .tbl .num {
   text-align: right;
   padding-right: 1ch;
 }
+/* The row rule sits inside the row's own height, so the board capacity rules (§14.1) hold. */
 .tbl.tall td {
-  height: 2lh;
-}
-/* Paged board: a rule under the pinned rows, inside the row's own height. */
-.tbl tr.pin-last td {
-  border-bottom: var(--rule-w) solid var(--rule);
-}
-.tbl.tall tr.pin-last td {
   height: calc(2lh - var(--rule-w));
+}
+/* Paged board: a stronger rule under the pinned rows. */
+.tbl tr.pin-last td {
+  border-bottom-color: var(--rule);
 }
 .tbl tr.own td {
   color: var(--signal);
@@ -205,8 +318,10 @@
 .tag-insolv {
   color: var(--down);
 }
+/* Amber budget (§16.1): pact tags are amber text in a dim amber outline, never a fill. */
 .tag-pact {
   color: var(--signal);
+  border-color: var(--signal-dim);
 }
 
 /* ---------- PresenceDot ---------- */
@@ -245,7 +360,10 @@
   font-family: var(--font);
   font-variant-numeric: tabular-nums;
 }
-.lc .lc-grid,
+.lc .lc-grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
 .lc .lc-tick {
   stroke: var(--rule);
   stroke-width: 1;
@@ -331,7 +449,7 @@
   font-weight: 600;
 }
 .lc .lc-hatch {
-  stroke: var(--dim);
+  stroke: var(--signal-dim);
   stroke-width: 1;
 }
 .lc .lc-hatch-down {
@@ -428,8 +546,17 @@
 .ticker-window {
   flex: 1;
   min-width: 0;
+  margin-left: 2ch;
   overflow: hidden;
   color: var(--wire);
+}
+.ticker-q {
+  color: var(--dim);
+  margin-right: 1ch;
+}
+.ticker-sep {
+  color: var(--dim);
+  margin: 0 2ch;
 }
 .ticker-run {
   display: inline-block;
@@ -447,7 +574,7 @@
 .ticker-static {
   list-style: none;
   margin: 0;
-  padding: 0 1ch;
+  padding: 0 1ch 0 2ch;
   color: var(--wire);
 }
 .ticker-static li {
@@ -798,19 +925,24 @@
 }
 
 /* ---------- Notices ---------- */
+/* Notices (spec §16.1): half-line padding and a 2 px left rule coloured by kind, no box. */
 .notice {
-  border: var(--rule-w) solid var(--rule);
-  padding: 0 1ch;
+  border-left: 2px solid var(--dim);
+  padding: 0.5lh 1ch;
 }
 .notice.err {
-  border-color: var(--down);
+  border-left-color: var(--down);
   color: var(--down);
 }
+/* Banners: the summit in wire, distinct from the top bar; alerts in the down colour. */
 .banner {
-  background: var(--signal);
+  background: var(--wire);
   color: var(--signal-ink);
   padding: 0.5lh 1ch;
   font-weight: 600;
+}
+.banner.is-alert {
+  background: var(--down);
 }
 
 /* ---------- Participant tabs, key-value lists ---------- */
@@ -975,4 +1107,33 @@ legend {
   display: flex;
   justify-content: space-between;
   white-space: nowrap;
+}
+
+/* ---------- Board key strip (spec §14.1): one line, only the tags on screen ---------- */
+.key-strip {
+  display: flex;
+  gap: 0 2ch;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.key-strip .key-tag {
+  color: var(--text);
+}
+
+/* ---------- Lobby join steps (spec §14.1) ---------- */
+.join-steps {
+  list-style: none;
+  margin: 1lh 0 0;
+  padding: 0;
+}
+.join-steps li {
+  display: flex;
+  gap: 1ch;
+}
+.join-steps .step-n {
+  flex: 0 0 3ch;
+  text-align: center;
+  border: var(--rule-w) solid var(--signal-dim);
+  color: var(--signal);
 }

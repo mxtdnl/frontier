@@ -49,3 +49,20 @@ export function Countdown({ deadline, offset = 0, frozenMs }: Props) {
     </span>
   );
 }
+
+/**
+ * Milliseconds left on a server deadline, re-rendering four times a second while it runs.
+ * `frozenMs` (paused timer) is returned as is; null when there is no clock.
+ */
+export function useRemainingMs(deadline: number | null, offset = 0, frozenMs: number | null = null): number | null {
+  const [now, setNow] = useState(() => Date.now());
+  const running = frozenMs === null && deadline !== null;
+  useEffect(() => {
+    if (!running) return;
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, [running]);
+  if (frozenMs !== null) return frozenMs;
+  if (deadline === null) return null;
+  return Math.max(0, deadline - (now + offset));
+}

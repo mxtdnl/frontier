@@ -475,7 +475,7 @@ The facilitator's client runs resolution. There are no Cloud Functions, so the p
 The layout is built on a monospace character grid (§16.2). Regions:
 
 ```
-┌ TOP BAR (dark panel, 2 px amber rule): FRONTIER │ Q3 Y2 │ [OPEN] │ 6/8 COMMITTED │ DISCLOSURE OFF │      01:47 ┐
+┌ TOP BAR (dark panel, 2 px amber rule): FRONTIER │ Q3 Y2 │ [OPEN] │ 6/8 COMMITTED │ DISCLOSURE OFF │    T-01:47 ┐
 ├ STATUS LINE: Q3 Y2 · Decisions open. Set pace, safety and a card, then commit. 01:47 left. ───────────────────┤
 ├ BOARD (left ~62%) ─────────────────────────────────┬ TRUST (right ~38%) ───────────────────────────────┤
 │ #  FIRM   SHARE  PROFIT  VALUE  CHANGE  COMMITTED  │ PUBLIC TRUST                                      │

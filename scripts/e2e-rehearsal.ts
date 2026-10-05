@@ -121,7 +121,7 @@ await runWithStack(async (browser) => {
       }
       if (r === DISCLOSURE_ON.from) {
         await key('Shift+D');
-        await waitText(fac, /DISCL ON/, 'Shift+D turns disclosure on', 15_000, '.scr');
+        await waitText(fac, /DISCLOSURE ON/, 'Shift+D turns disclosure on', 15_000, '.scr');
         events.push('disclosure on');
       }
       if (r === 5 || r === 8) {
@@ -140,7 +140,7 @@ await runWithStack(async (browser) => {
       }
       if (r === DISCLOSURE_ON.to + 1) {
         await key('Shift+D');
-        await waitText(fac, /DISCL OFF/, 'Shift+D turns disclosure off', 15_000, '.scr');
+        await waitText(fac, /DISCLOSURE OFF/, 'Shift+D turns disclosure off', 15_000, '.scr');
         events.push('disclosure off');
       }
 
@@ -154,7 +154,7 @@ await runWithStack(async (browser) => {
       if (r === DISCLOSURE_ON.from + 1 || r === DISCLOSURE_ON.to) {
         await fac.waitForTimeout(1700);
         const head = (await fac.locator('.scr table.tbl thead').innerText()).replace(/\s+/g, ' ');
-        check(/PACE/.test(head) && /SAFE/.test(head) && /EXPO/.test(head), `quarter ${r}: the PACE, SAFE and EXPO columns show while disclosure is on`);
+        check(/PACE/.test(head) && /SAFETY/.test(head) && /EXPOSURE/.test(head), `quarter ${r}: the PACE, SAFETY and EXPOSURE columns show while disclosure is on`);
         check(round?.disclosure != null, `quarter ${r}: a disclosure snapshot is published`);
       }
       if (r === 5 || r === 8) {

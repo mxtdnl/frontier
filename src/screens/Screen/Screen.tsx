@@ -3,16 +3,17 @@ import { advance, endSession, queueAudit, toggleDisclosure, toggleSummit, type A
 import { navigate, useRoute } from '../../router';
 import { useFirms, useFirmsPublic, usePacts, usePublic, useRounds, useServerTimeOffset, useWire } from '../../state';
 import { useCommitSync, useDecisions, useAutoResolve, useLiveWire, useMembers, useMeta, useOrchestrator, useResultsPublisher } from '../../state/facilitator';
-import { CommandLine, Countdown, FKeyBar, Panel, Ticker, TopBar, type CommandLineHandle } from '../../ui/components';
+import { Brand, CommandLine, Countdown, FKeyBar, Panel, PhaseBlock, StatusLine, Ticker, TopBar, useRemainingMs, type CommandLineHandle } from '../../ui/components';
 import { parseCommand } from '../../ui/commands';
 import { fmt, quarterLabel } from '../../ui/format';
-import { matchKey, type KeyAction } from '../../ui/keys';
+import { matchKey, projectorKeys, type KeyAction } from '../../ui/keys';
 import { BOARD_HOLD_MS, BOARD_ROTATE_MS, boardCapacity, boardMode } from '../../ui/layout';
 import { useLitRoom } from '../../ui/litRoom';
 import { playReveal } from '../../ui/reveal';
+import { statusSentence } from '../../ui/status';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
 import { BoardPanel, TrustPanel } from './BoardView';
-import { boardRows, committedCount, pactRows, previousTrust, wireItems, type ScreenData } from './model';
+import { boardRows, committedCount, latestRound, pactRows, previousTrust, revealInput, tickerTone, wireItems, type ScreenData } from './model';
 import { AuditView, BriefingView, FirmView, HelpView, LobbyView, PactsView, TrustView, WireView } from './Views';
 
 type View = { kind: 'board' | 'trust' | 'pacts' | 'wire' | 'help' | 'audit' } | { kind: 'firm'; ticker: string };
@@ -59,6 +60,8 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   const offset = useServerTimeOffset();
   const ctx = useOrchestrator(g, uid);
   const decisions = useDecisions(g, pub && pub.phase === 'open' ? pub.round : null).data;
+  const frozenClock = pub && (pub.phase === 'summit' || pub.paused) ? (pub.pausedRemainingMs ?? 0) : null;
+  const leftMs = useRemainingMs(pub && pub.phase === 'open' ? pub.deadline : null, offset, frozenClock);
 
   useLitRoom(meta?.settings.litRoom ?? false);
 
@@ -288,7 +291,18 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   const delta = pub.T - previousTrust(rounds);
   const ticker = wireItems(rounds, wire)
     .slice(0, 12)
-    .map((h) => h.text);
+    .map((h) => ({ text: h.text, round: h.round, tone: tickerTone(h.kind) }));
+  const status = statusSentence({
+    phase: pub.phase,
+    round: pub.round,
+    paused: pub.paused,
+    leftMs,
+    collapsed: pub.collapsed,
+    resolved: latestRound(rounds),
+    reveal: revealInput(data) ?? undefined,
+  });
+  const activePacts = Object.values(pacts).filter((p) => p.status === 'active').length;
+  const keys = projectorKeys({ phase: pub.phase, view: view.kind, activePacts });
   pactIdsRef.current = pactRows(data).slice(0, 9).map((p) => p.id);
 
   let main;
@@ -327,50 +341,34 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   const timerShown = pub.phase === 'open' || pub.phase === 'summit';
   return (
     <div className="scr-wrap">
-      <div className="scr" ref={root}>
+      <div className="scr has-status" ref={root}>
         <TopBar>
+          <Brand />
           <CommandLine ref={cmd} onSubmit={submit} onEscape={() => setView({ kind: 'board' })} />
-          {showQuarter ? (
-            <>
-              <span className="sep">|</span>
-              <span>{quarterLabel(pub.round)}</span>
-            </>
-          ) : null}
-          <span className="sep">|</span>
-          <span>{PHASE_LABEL[pub.phase]}</span>
-          {timerShown && (pub.deadline !== null || frozen) ? (
-            <>
-              <span className="sep">|</span>
-              <span>
-                T-<Countdown deadline={pub.deadline ?? 0} offset={offset} frozenMs={frozen ? (pub.pausedRemainingMs ?? 0) : undefined} />
-                {frozen ? ' PAUSED' : ''}
-              </span>
-            </>
-          ) : null}
+          {showQuarter ? <span>{quarterLabel(pub.round)}</span> : null}
+          <PhaseBlock kind={pub.phase} word={PHASE_LABEL[pub.phase]} />
           {pub.phase === 'open' || pub.phase === 'summit' || pub.phase === 'resolving' ? (
-            <>
-              <span className="sep">|</span>
-              <span>{committedCount(rows)}/{rows.length} COMMITTED</span>
-            </>
+            <span>{committedCount(rows)}/{rows.length} COMMITTED</span>
           ) : null}
-          {pub.phase === 'lobby' ? (
-            <>
-              <span className="sep">|</span>
-              <span>{rows.length} FIRMS</span>
-            </>
-          ) : null}
-          <span className="sep">|</span>
-          <span>DISCL {pub.disclosure ? 'ON' : 'OFF'}</span>
+          {pub.phase === 'lobby' ? <span>{rows.length} FIRMS</span> : null}
+          <span className="tb-disc">DISCLOSURE {pub.disclosure ? 'ON' : 'OFF'}</span>
           <span className="grow topbar-notice" role="status" aria-live="polite">
             {notice}
           </span>
+          {timerShown && (pub.deadline !== null || frozen) ? (
+            <span className="tb-clock">
+              T-<Countdown deadline={pub.deadline ?? 0} offset={offset} frozenMs={frozen ? (pub.pausedRemainingMs ?? 0) : undefined} />
+              {frozen ? <span className="tb-paused">PAUSED</span> : null}
+            </span>
+          ) : null}
         </TopBar>
+        <StatusLine text={status} />
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {pub.phase === 'summit' ? <div className="scr-banner" role="status">Industry summit in session</div> : null}
           <div style={{ flex: 1, minHeight: 0, display: 'grid' }}>{main}</div>
         </div>
         <Ticker items={ticker.length ? ticker : ['Wire quiet.']} />
-        <FKeyBar onAction={act} />
+        <FKeyBar onAction={act} keys={keys} />
         {reveal ? (
           <p className="sr-only" role="status" aria-live="polite">
             {`${quarterLabel(pub.round)} resolved. Public trust ${fmt(pub.T)}, ${delta < 0 ? 'down' : 'up'} ${fmt(Math.abs(delta))}.`}

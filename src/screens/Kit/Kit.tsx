@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react';
 import { CARDS, FIRMS, HEADLINES, PACE_OPTIONS, TRUST, TRUST_HISTORY, prevProfit, prevRank, prevShare, prevValue, type MockFirm } from '../../mock/fixtures';
 import {
+  Brand,
+  PhaseBlock,
+  StatusLine,
   CardPicker,
   CommitButton,
   CommandLine,
@@ -22,6 +25,7 @@ import {
 } from '../../ui/components';
 import { fmt, fmtShare } from '../../ui/format';
 import { useLitRoom } from '../../ui/litRoom';
+import { projectorKeys } from '../../ui/keys';
 import { playReveal } from '../../ui/reveal';
 import { boardColumns } from '../Screen/BoardView';
 import type { BoardRow } from '../Screen/model';
@@ -119,13 +123,20 @@ export function Kit() {
         <Panel title="TOPBAR / COMMANDLINE / FKEYBAR" bodyClassName="pad">
           <div className="stack">
             <TopBar>
+              <Brand />
               <CommandLine onSubmit={() => {}} onEscape={() => {}} />
-              <span className="sep">|</span>
               <span>Q3 Y2</span>
-              <span className="sep">|</span>
-              <span>OPEN</span>
+              <PhaseBlock kind="open" word="OPEN" />
+              <span className="tb-clock">T-01:42</span>
             </TopBar>
-            <FKeyBar onAction={() => {}} />
+            <StatusLine text="Q3 Y2 resolved · Trust ▼5.9 to 45.6 · BTC takes 1st · 2 incidents." />
+            <div className="row">
+              {(['lobby', 'briefing', 'open', 'resolving', 'reveal', 'summit', 'ended'] as const).map((k) => (
+                <PhaseBlock key={k} kind={k} word={k.toUpperCase()} />
+              ))}
+            </div>
+            <span className="dim">Tab to the command line to show it. Keys for an open quarter on the board:</span>
+            <FKeyBar onAction={() => {}} keys={projectorKeys({ phase: 'open', view: 'board', activePacts: 1 })} />
           </div>
         </Panel>
 
@@ -186,7 +197,7 @@ export function Kit() {
         </Panel>
 
         <Panel title="TICKER" bodyClassName="pad">
-          <Ticker items={HEADLINES.map((h) => h.text)} />
+          <Ticker items={HEADLINES.map((h) => ({ text: h.text, round: h.round, tone: /breached|outage|administration/.test(h.text) ? ('down' as const) : ('wire' as const) }))} />
         </Panel>
 
         <Panel title="COUNTDOWN / QR" bodyClassName="pad">

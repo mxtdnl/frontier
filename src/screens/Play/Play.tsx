@@ -19,7 +19,7 @@ import {
   useServerTimeOffset,
   useWire,
 } from '../../state';
-import { Countdown, Delta } from '../../ui/components';
+import { Brand, Countdown, Delta, PhaseBlock, TopBar, type PhaseKind } from '../../ui/components';
 import { fmt, quarterLabel } from '../../ui/format';
 import { Desk } from './Desk';
 import {
@@ -30,11 +30,25 @@ import {
   poachTargets,
   wireItems,
   type Draft,
+  type PlayView,
 } from './model';
 import { OwnResultsCard } from '../Results/OwnResultsCard';
 import { Book, RevealCard, Wire } from './Panels';
 import { PactsTab } from './PactsTab';
 import { useHeldFor, useServerNow } from './useServerNow';
+
+/** Phase block on the phone header: each view distinct, always with its word (§16.1). */
+const PHONE_PHASE: Record<PlayView, readonly [PhaseKind, string]> = {
+  lobby: ['lobby', 'LOBBY'],
+  briefing: ['briefing', 'BRIEFING'],
+  open: ['open', 'OPEN'],
+  paused: ['briefing', 'PAUSED'],
+  closed: ['resolving', 'CLOSED'],
+  resolving: ['resolving', 'RESOLVING'],
+  reveal: ['reveal', 'REVEAL'],
+  summit: ['summit', 'SUMMIT'],
+  ended: ['ended', 'ENDED'],
+};
 
 type Tab = 'DESK' | 'BOOK' | 'PACTS' | 'WIRE';
 const TABS: Tab[] = ['DESK', 'BOOK', 'PACTS', 'WIRE'];
@@ -237,24 +251,18 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
   return (
     <div className="play">
       <header className="play-head">
-        {offline ? <div className="banner" role="alert">Offline. Reconnecting automatically. Committing is paused until the connection returns.</div> : null}
-        <div className="topbar" style={{ height: 'auto', padding: '0.5lh 1ch', flexWrap: 'wrap', gap: '0 2ch' }}>
-          <span>{firm.ticker}</span>
+        {offline ? <div className="banner is-alert" role="alert">Offline. Reconnecting automatically. Committing is paused until the connection returns.</div> : null}
+        <TopBar className="topbar-play">
+          {/* On the phone the brand block carries the firm's own ticker: the own firm is the amber mark (§16.1). */}
+          <Brand text={firm.ticker} />
           <span>{round > 0 ? quarterLabel(round) : 'PRE-OPEN'}</span>
-          <span>
-            {view === 'open' && pub.deadline !== null ? (
-              <>T-<Countdown deadline={pub.deadline} offset={offset} /></>
-            ) : view === 'paused' || view === 'summit' ? (
-              pub.pausedRemainingMs !== null ? <>PAUSED T-<Countdown deadline={0} frozenMs={pub.pausedRemainingMs} /></> : 'PAUSED'
-            ) : view === 'ended' ? (
-              'ENDED'
-            ) : view === 'lobby' || view === 'briefing' ? (
-              'WAITING'
-            ) : (
-              'CLOSED'
-            )}
-          </span>
-        </div>
+          <PhaseBlock kind={PHONE_PHASE[view][0]} word={PHONE_PHASE[view][1]} />
+          {view === 'open' && pub.deadline !== null ? (
+            <span className="tb-clock">T-<Countdown deadline={pub.deadline} offset={offset} /></span>
+          ) : (view === 'paused' || view === 'summit') && pub.pausedRemainingMs !== null ? (
+            <span className="tb-clock">T-<Countdown deadline={0} frozenMs={pub.pausedRemainingMs} /></span>
+          ) : null}
+        </TopBar>
         <div className="row" style={{ padding: '0.5lh 1ch', borderBottom: 'var(--rule-w) solid var(--rule)', gap: '0 3ch' }}>
           <span><span className="dim">CASH</span> {priv.data ? fmt(priv.data.cash) : '–'}</span>
           <span><span className="dim">PROFIT</span> {lastRow ? <Delta value={lastRow.profit} /> : '–'}</span>
