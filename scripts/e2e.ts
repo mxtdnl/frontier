@@ -76,7 +76,7 @@ async function scenario(browser: Browser): Promise<void> {
   const g = /#\/screen\/([^/?]+)/.exec(fac.url())?.[1] ?? '';
   check(g.length > 5, `session created (${g})`);
   await waitText(fac, /LOBBY/, 'the projector opens on the lobby', 15_000, '.scr');
-  const code = (await fac.locator('.scr .big.signal').first().innerText()).trim();
+  const code = (await fac.locator('.scr [data-join-code]').first().innerText()).trim();
   check(/^[A-HJ-NP-Z]{4}$/.test(code), `join code ${code} uses A–Z without I and O`);
   check((await fac.locator('.qr svg').count()) === 1, 'the lobby shows a QR code');
   check((await screenText(fac)).includes(`#/j/${code}`), 'the lobby shows the join address');
@@ -353,7 +353,7 @@ async function participantScenario(
   await fac.waitForURL(/#\/screen\/[^/?]+/);
   const g = /#\/screen\/([^/?]+)/.exec(fac.url())?.[1] ?? '';
   await waitText(fac, /LOBBY/, 'participant run: the lobby loads', 15_000, '.scr');
-  const code = (await fac.locator('.scr .big.signal').first().innerText()).trim();
+  const code = (await fac.locator('.scr [data-join-code]').first().innerText()).trim();
   const control = watch(await facCtx.newPage(), 'participant-run control');
   await control.setViewportSize({ width: 1440, height: 900 });
   await control.goto(`${BASE}#/control/${g}`);

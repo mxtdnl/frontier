@@ -57,7 +57,7 @@ await runWithStack(async (browser) => {
   await fac.waitForURL(/#\/screen\/[^/?]+/);
   const g = /#\/screen\/([^/?]+)/.exec(fac.url())?.[1] ?? '';
   await waitText(fac, /LOBBY/, 'the lobby opens', 15_000, '.scr');
-  const code = (await fac.locator('.scr .big.signal').first().innerText()).trim();
+  const code = (await fac.locator('.scr [data-join-code]').first().innerText()).trim();
   await control.goto(`${BASE}#/control/${g}`);
   await waitText(control, /CONTROL/, 'the console opens');
   const engine0 = await adminGet<{ tau: number; endRound: number }>(`games/${g}/engine`);

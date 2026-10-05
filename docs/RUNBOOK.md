@@ -76,13 +76,15 @@ Do this the day before, then again 15 minutes before class.
 3. Press **F9** to resolve. Teams that did not commit get the default decision and are marked AUTO. The board reveals the new results.
 4. Press **F9** again for the next quarter.
 
+**Reading the projector (Session 12).** The top bar shows the quarter, the phase as a coloured block with its word, the commit count, disclosure, and the countdown on the right. The line under it says in one sentence what is happening and what teams should do; after each reveal it summarises the quarter (trust change, who is 1st, incidents). The bar at the bottom shows only the keys that do something right now; the solid key is the one you most likely want next (usually **F9**, **F8** during a summit). Hidden keys still work if pressed. To type a command (`TRST`, `FIRM BTC`, `HELP`), just start typing: the command line appears in the top bar.
+
 **Board pages (above 16 firms).** The board shows 10 firms at a time and turns to the next page every 8 seconds; the heading reads `PAGE 2/5`. Above the page, the leader and the firm that moved most (3 places or more) stay pinned. Rotation holds for 30 seconds after you press any key, and while you type a command. Each reveal starts on page 1. Use `FIRM <TICKER>` for any one firm's history.
 
 **Summit.** Press **F8** during an open quarter or a reveal. The timer pauses and decisions are refused ("Industry summit in session"). Teams can propose, join and leave pacts. Press **F8** again to return.
 
 **Audit.** Press **F6** (**Shift+F**), then the number of the pact. The audit runs when the quarter resolves. The result appears in the wire, on the board as a BREACH tag, and on the console.
 
-**Disclosure.** **F7** (**Shift+D**) turns the PACE, SAFE and EXPO columns on or off. They fill in at the next resolution.
+**Disclosure.** **F7** (**Shift+D**) turns the PACE, SAFETY and EXPOSURE columns on or off. In lit-room mode they are headed SAFE and EXPO, explained in the key strip under the board. They fill in at the next resolution.
 
 **Collapse.** When trust falls below the hidden line, the reveal shows the moratorium headline. Press **F9** to continue under the moratorium or **F10** to end.
 
@@ -108,7 +110,7 @@ If a key press shows "Working on the last key. Press again in a moment.", the pr
 
 ### The console (`#/control/…`)
 
-- **Control strip** at the top stays in view however far you scroll: **F7 DISCL**, **F8 SUMMIT**, **F9 ADVANCE**, **F10 END**, **F6 AUDIT**, the phase, the quarter, the commit count and the latest message.
+- **Control strip** at the top stays in view however far you scroll: **F7 DISCLOSURE**, **F8 SUMMIT**, **F9 ADVANCE**, **F10 END**, **F6 AUDIT**, the phase, the quarter, the commit count and the latest message.
 - **Session panel:** phase, quarter, trust, timer, **−30 s**, **+30 s**, **Pause** and **Resume**, and the **MODE** with its firm limit.
 - **Hold to reveal TAU** and the end quarter: they show only while you hold the button down. Use them privately. Never show the console on the projector.
 - **Firms panel:** who is online (**ON** shows devices online out of joined), who has committed, when, AUTO forecast, bot policy. In the lobby each row also has **REMOVE** (press twice within 3 s). The table scrolls inside the panel. **SORT** by **FIRM**, **CMT** (firms still to commit first) or **ONLINE** (fewest online first). **SHOW** **NOT COMMITTED** (during an open quarter) or **OFFLINE** (human firms with no device online).

@@ -13,7 +13,7 @@ export function TrustView({ data }: { data: ScreenData }) {
     <Panel title="TRST · PUBLIC TRUST HISTORY" bodyClassName="col">
       <p className="dim" style={{ paddingTop: '0.5lh' }}>{BRIEFING_LINES.market[0]}</p>
       <div className="row" style={{ alignItems: 'flex-end' }}>
-        <div className="big signal">{fmt(data.pub.T)}</div>
+        <div className="big signal" data-amber="trust">{fmt(data.pub.T)}</div>
         <div>
           <Delta value={delta} /> <span className="dim">since last quarter</span>
         </div>
@@ -141,7 +141,7 @@ export function FirmView({ ticker, data }: { ticker: string; data: ScreenData })
   return (
     <Panel title={`FIRM · ${f.ticker}`} bodyClassName="pad">
       <div className="stack">
-        <div className="big signal">{f.ticker}</div>
+        <div className="big">{f.ticker}</div>
         <div className="row">
           <span>{f.name}</span>
           <span className="dim">SHARE</span> <span>{fmtShare(f.share)}</span>
@@ -209,7 +209,7 @@ export function LobbyView({ code, firms, memberCounts }: { code: string; firms: 
           </div>
           <div className="stack">
             <span className="dim">CODE</span>
-            <div className="big signal" aria-label={`Join code ${code.split('').join(' ')}`}>{code}</div>
+            <div className="big" data-join-code="" aria-label={`Join code ${code.split('').join(' ')}`}>{code}</div>
             <span className="dim">ADDRESS</span>
             <span style={{ overflowWrap: 'anywhere' }}>{url}</span>
             <ol className="join-steps" aria-label="How to join">

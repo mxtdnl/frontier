@@ -258,9 +258,9 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
           <span>{round > 0 ? quarterLabel(round) : 'PRE-OPEN'}</span>
           <PhaseBlock kind={PHONE_PHASE[view][0]} word={PHONE_PHASE[view][1]} />
           {view === 'open' && pub.deadline !== null ? (
-            <span className="tb-clock">T-<Countdown deadline={pub.deadline} offset={offset} /></span>
+            <span className="tb-clock"><span>T-<Countdown deadline={pub.deadline} offset={offset} /></span></span>
           ) : (view === 'paused' || view === 'summit') && pub.pausedRemainingMs !== null ? (
-            <span className="tb-clock">T-<Countdown deadline={0} frozenMs={pub.pausedRemainingMs} /></span>
+            <span className="tb-clock"><span>T-<Countdown deadline={0} frozenMs={pub.pausedRemainingMs} /></span></span>
           ) : null}
         </TopBar>
         <div className="row" style={{ padding: '0.5lh 1ch', borderBottom: 'var(--rule-w) solid var(--rule)', gap: '0 3ch' }}>

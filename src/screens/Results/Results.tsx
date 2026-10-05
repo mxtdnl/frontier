@@ -284,7 +284,7 @@ function CompareList({ firms, domain }: { firms: ReturnType<typeof rankedFirms>;
             domain={domain}
             marker={x.counterfactual}
             markerTone="wire"
-            tone="signal"
+            tone="signal-outline"
             text=""
             describe={`${x.ticker} actual ${fmt(x.valuation, 0)}, alternative ${fmt(x.counterfactual, 0)}`}
           />

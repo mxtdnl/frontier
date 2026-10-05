@@ -357,7 +357,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
           </span>
           {timerShown && (pub.deadline !== null || frozen) ? (
             <span className="tb-clock">
-              T-<Countdown deadline={pub.deadline ?? 0} offset={offset} frozenMs={frozen ? (pub.pausedRemainingMs ?? 0) : undefined} />
+              <span>T-<Countdown deadline={pub.deadline ?? 0} offset={offset} frozenMs={frozen ? (pub.pausedRemainingMs ?? 0) : undefined} /></span>
               {frozen ? <span className="tb-paused">PAUSED</span> : null}
             </span>
           ) : null}

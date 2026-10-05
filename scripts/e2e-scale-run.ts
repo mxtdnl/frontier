@@ -98,7 +98,7 @@ async function runPlan(browser: Browser, plan: Plan, email: string, seed: number
   await fac.waitForURL(/#\/screen\/[^/?]+/);
   const g = /#\/screen\/([^/?]+)/.exec(fac.url())?.[1] ?? '';
   await waitText(fac, /LOBBY/, `${tag}: the lobby opens`, 15_000, '.scr');
-  const code = (await fac.locator('.scr .big.signal').first().innerText()).trim();
+  const code = (await fac.locator('.scr [data-join-code]').first().innerText()).trim();
   await control.goto(`${BASE}#/control/${g}`);
   await waitText(control, new RegExp(plan.mode === 'multiplayer' ? 'Multiplayer mode, at most 50 firms' : 'Team mode, at most 16 firms'), `${tag}: the console shows the mode`);
 

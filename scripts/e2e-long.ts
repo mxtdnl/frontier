@@ -38,7 +38,7 @@ await runWithStack(async (browser) => {
   await fac.waitForURL(/#\/screen\/[^/?]+/);
   const g = /#\/screen\/([^/?]+)/.exec(fac.url())?.[1] ?? '';
   await waitText(fac, /LOBBY/, 'the lobby opens', 15_000, '.scr');
-  const code = (await fac.locator('.scr .big.signal').first().innerText()).trim();
+  const code = (await fac.locator('.scr [data-join-code]').first().innerText()).trim();
   const engine0 = await adminGet<{ endRound: number | null }>(`games/${g}/engine`);
   check(engine0.endRound == null, 'manual mode stores no end round');
 

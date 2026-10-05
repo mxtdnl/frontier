@@ -492,6 +492,10 @@
 .hbar-fill.t-signal {
   background: var(--signal);
 }
+.hbar-fill.t-signal-outline {
+  background: transparent;
+  border: 2px solid var(--signal);
+}
 .hbar-fill.t-dim {
   background: var(--dim);
 }
