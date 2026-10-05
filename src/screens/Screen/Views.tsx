@@ -4,7 +4,7 @@ import { yDomain } from '../../ui/chart';
 import { fmt, fmtShare, quarterLabel } from '../../ui/format';
 import { KEY_BINDINGS } from '../../ui/keys';
 import { fillColumns, firmsGrid, firmsPage, lobbyColumns, tickerLine, truncateList } from '../../ui/layout';
-import { largestFaller, leaderOf, ordinal, rankByQuarter, ranksHeadline, type FirmRef } from '../../ui/performance';
+import { largestFaller, leaderOf, rankByQuarter, ranksHeadline, type FirmRef } from '../../ui/performance';
 import { BRIEFING_LINES } from './briefing';
 import { boardRows, joinUrl, pactRows, previousTrust, trustSeries, valuationSeries, wireItems, type BoardRow, type PactRow, type ScreenData } from './model';
 
@@ -203,7 +203,7 @@ export function RanksView({ data }: { data: ScreenData }) {
     return { id: f.id, ticker: f.ticker, ranks, tone, label };
   });
   const headline = ranksHeadline(firms, table);
-  const described = leader ? `Rank of each firm by quarter. ${leader.ticker} is ${ordinal(1)}.` : 'Rank of each firm by quarter.';
+  const described = headline ? `Rank of each firm by quarter. ${headline}` : 'Rank of each firm by quarter.';
   return (
     <Panel title="RANKS" right="rank by valuation, each quarter" bodyClassName="col">
       {headline ? <p className="ranks-headline" data-ranks-headline="">{headline}</p> : null}
