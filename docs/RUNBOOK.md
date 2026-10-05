@@ -64,7 +64,7 @@ Do this the day before, then again 15 minutes before class.
 - **Multiplayer mode:** each person presses **Found your firm**. The PIN they are shown lets them rejoin from another phone (**Rejoin your firm with its PIN**) if theirs dies. Nothing stops a second phone joining someone's firm with their PIN, so tell the room to keep PINs to themselves.
 - **Above 16 firms** the lobby lists firms in up to 4 columns: ticker and devices joined, or BOT.
 
-- **Use at least 6 firms.** With 4 firms, one firm playing flat out can trigger the moratorium on its own in about 1 session in 5 (Session 9 review, finding M1). Add bot firms on `#/new` to reach 6 if the class is small.
+- **Use at least 6 firms.** With 4 firms, one firm playing flat out (pace 4, safety 0) can trigger the moratorium on its own by quarter 14 in about 1 session in 4, and almost always if the session runs on to quarter 30. With 5 firms this happens by quarter 14 in 1 to 3 sessions in 100. With 6 or more it does not happen within 14 quarters, but it can in a session that runs much longer (Session 9 review, finding M1; re-measured in Session 16). Add bot firms on `#/new` to reach 6 if the class is small.
 - **Check the console's FIRMS panel before the briefing.** A firm whose PRESENCE reads *none* has no devices: its founder founded or joined another firm. Press **REMOVE** on that row twice within 3 seconds. Otherwise it plays on AUTO defaults all session. REMOVE works only in the lobby.
 - **Press LOCK JOINS** (DANGER panel) as soon as every team has formed. This stops anyone founding extra firms or trying more PINs (Session 9 review, findings H1 and H2). **REOPEN JOINS** undoes it while you are still in the lobby.
 
@@ -98,6 +98,18 @@ Do this the day before, then again 15 minutes before class.
 **Disclosure.** **F7** (**Shift+D**) turns the PACE, SAFETY and EXPOSURE columns on or off. In lit-room mode they are headed SAFE and EXPO, explained in the key strip under the board. They fill in at the next resolution.
 
 **Collapse.** When trust falls below the hidden line, the reveal shows the moratorium headline. Press **F9** to continue under the moratorium or **F10** to end.
+
+**When to expect the moratorium (Session 16 calibration, the same at every class size from 4 to 50 firms).**
+
+| How the room plays | Moratorium |
+|---|---|
+| Every firm racing (pace 3 or 4, little safety) | Around quarter 5 (usually quarters 4 to 6) |
+| Half the firms racing, half restrained | Around quarter 11 (usually 9 to 13); by quarter 14 in at least 98% of sessions |
+| A third of the firms racing | Usually not within 14 quarters |
+| Every firm restrained (pace 2, safety 15) or on the defaults | Never, even over 30 quarters |
+
+- With the default hidden end (quarter 10 to 14), a half-racing room can end a quarter or two before its moratorium. If you want every session to run long enough to see it, set **End mode** to **Fixed quarter** with 14 on `#/new`.
+- Trust recovers slowly once the room eases off: about 1 to 1.5 points a quarter. A room that has fallen far rarely climbs back within a session.
 
 **Ending.** The session ends by itself at the hidden end quarter, or after quarter 30. Press **F10** twice within 3 seconds to end early. If you press it during an open quarter, that quarter is discarded.
 
@@ -210,7 +222,7 @@ What to check: the countdown is the same on laptop and phone; the board is reada
 ## 9. Running 40 to 50 people
 
 - **Teams of 3 to 5** (10 to 16 firms): use **team mode**. A test with 16 firms on 50 devices ran 14 quarters without errors (`reports/scale-run.md`).
-- **One person each** (up to 50 firms): use **multiplayer mode**. A test with 50 firms on 50 devices ran 14 quarters without errors. Until Session 16 recalibrates the model, expect a mixed room to reach the moratorium later than a small class, and often not within 14 quarters (`docs/CALIBRATION.md`, Session 10).
+- **One person each** (up to 50 firms): use **multiplayer mode**. A test with 50 firms on 50 devices ran 14 quarters without errors. Since Session 16 a large room reaches the moratorium on the same timetable as a small class: if half the people race, expect it around quarter 11, and by quarter 14 in nearly every session (see "When to expect the moratorium" in section 4; `docs/CALIBRATION.md`, Session 16).
 - **Connection limit (check before the class).** Every open browser tab holds one live connection to the database: about 50 phones plus the projector and the console. The free (Spark) plan has a limit on simultaneous connections. This was **not verified** in Session 10 because the Firebase documentation could not be reached from the build environment. The limit is believed to be 100, but that has not been checked. To check it, open https://firebase.google.com/pricing and find the Realtime Database limit on simultaneous connections for the plan your project is on (the Firebase console shows which plan the project uses). The exact console clicks were not checked in Session 10.
 - Ask participants to keep one tab open each. A second tab, or a laptop and a phone at the same time, counts twice.
 
