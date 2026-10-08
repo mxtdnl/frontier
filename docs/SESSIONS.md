@@ -535,14 +535,26 @@ Read:
 | C1 by quarter 4 (limit 50%) | 26–36% | 39–44% |
 | M1 at N = 4 by quarter 14 | 22–31% | 29–41% |
 
-**Two new cards (owner to define before the session runs).** The owner adds the two card definitions here, in the same form as the §5.2 table:
-- mnemonic
-- cost
-- effect
-- constraint.
-For each card, also state whether it counts for the market or against it on Session 18's conduct ledger. If this paragraph still has no card definitions when the session starts, ask the owner for them first, one card at a time. Do not invent cards.
+**Two new cards (proposed 2026-10-08; owner to confirm or change at the start of the session).** The costs and effects are starting values; the card dominance check and the strategy audit decide whether they stand.
 
-**First question to ask the owner.** Confirm S7, or name another set from the report or from the table above. Then confirm the two cards.
+| Card | Cost (cash) | Effect | Constraint | Conduct ledger |
+|---|---|---|---|---|
+| `SHARE` Share safety tooling | 15 | Every firm's incident probability, yours included, ×0.75 this quarter (§6.3 step 5; stacks with PUBLISH) | Not in consecutive quarters | For the market |
+| `RUSH` Rush a release | 0 | You +4 capability this quarter (step 3, before POACH). Your trust draw d_i ×2 and your incident probability ×1.5 this quarter (steps 4 and 5) | Not in consecutive quarters | Against the market |
+
+- **Why these two.** The live sessions had cards for racing (BLITZ, POACH) and one for the market (PUBLISH). Neither new card tests what the lesson needs:
+  - `SHARE` is a public good. The firm pays the full cost, and every other firm gets the same protection for free. It tests free-riding (§1 objective 2).
+  - `RUSH` is a free private gain whose cost lands on public trust. It is the externality in its plainest form.
+- **Headlines (§15.4):**
+  - `SHARE`: "{FIRM} releases safety tooling to the industry"
+  - `RUSH`: "{FIRM} ships model ahead of evaluation schedule".
+  Both follow §15.3: no banned words before the results screen.
+- **Effect on the calibration checks.** Neither card changes C1–C5, because no bot plays them. Check them with the card dominance diagnostic and `tools/audit-strategies.ts`:
+  - `RUSH` is most at risk of dominating
+  - `SHARE` is most at risk of never being worth playing.
+- **If either fails,** ask the owner before changing the cost or effect.
+
+**Questions to ask the owner, one at a time, before the plan.** First, confirm S7 or name another set from the report or the table above. Then confirm or change `SHARE`, then `RUSH`.
 
 ### Steps
 
@@ -616,7 +628,7 @@ Run after Session 17. Read:
 2. **Research credit for PUBLISH.** Proposed: RESEARCH_CREDIT = 1.0 trust-point equivalents per PUBLISH card, × 8/N, priced like any trust point (Part C).
    - That is 4 times PUBLISH's real trust effect after Session 17, and equal to its effect before Session 17.
    - It is not money. It appears on the results screen only and never changes the engine.
-   - Ask the owner for the number, and whether either new Session 17 card earns a credit.
+   - Ask the owner for the number, and whether `SHARE` also earns a research credit. Proposed: no, because its benefit is already valued in Part C.
 3. **Net contribution method.** Confirm the method in Part C, its baseline (the ALTERNATIVE policy of §10), that BLITZ counts as rivalry alongside POACH, and where each new card sits on the conduct ledger.
 
 ### Part A — Incidents on the projector
@@ -679,7 +691,8 @@ Run after Session 17. Read:
    - **Rivalry taken.** Value moved from other firms by the firm's own cards:
      - BLITZ: the firm's revenue that quarter minus its revenue without the BLITZ multiplier (shares recomputed exactly).
      - POACH: POACH_LOSS × CAP_MULT × T_final / 100 for each completed POACH.
-     - Any new card that moves share or capability from rivals, valued the same way.
+     - RUSH: the capability it added, × CAP_MULT × T_final / 100 (permanent share gained against rivals). Its extra draw and incident risk are already in the market effect.
+   - **SHARE benefit.** The trust loss SHARE saved the other firms in expectation: Σ over other firms j of q_j × 0.25 × INC_TRUST × 8/N, × the value of a trust point that quarter. Here q_j is j's incident probability before the SHARE multiplier. It is added to the market effect: the firm's own trust terms cannot show it, because the benefit lands on other firms.
    - **Value created** = final valuation + max(0, market effect) + research credit.
    - **Damage created** = max(0, −market effect) + rivalry taken.
    - **Net contribution** = final valuation + market effect + research credit − rivalry taken. Rank firms by net contribution, with the engine's tie-break.
