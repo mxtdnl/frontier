@@ -1079,3 +1079,16 @@ Half-greedy room, moratorium by quarter 14 (median quarter):
 - Whether to add the observed-human room to calibration as a diagnostic or as a new condition.
 
 **Tests:** not run. No code changed.
+
+**Later the same day: Sessions 17 and 18 added to docs/SESSIONS.md**
+- **Owner feedback from the live sessions:**
+  - a results panel re-ranking firms by value created against damage created
+  - clearer incidents on the projector
+  - a facilitator wire screen
+  - two new cards.
+- **The work is split into two sessions,** because one would be too large:
+  - Session 17: recalibration and the new cards
+  - Session 18: incidents, the wire screen and the NET CONTRIBUTION panel.
+- **Owner direction:** weaken PUBLISH less than S2. The proposed set is S7: PUBLISH_TRUST 0.25 × 8/N and SAFETY_DRAW_EFF 0.35. It passes C1–C5, and the observed-human room reaches the moratorium by quarter 14 in 52–65% of seeds at N = 4–20. A display-only research credit in Session 18 keeps PUBLISH prominent on the results screen.
+- **Proposed cards** for owner confirmation: `SHARE` (a public good on incident risk) and `RUSH` (private capability at a cost to public trust).
+- `tools/calibration/observed-human.json` holds the 37 anonymised live trajectories for the observed-human diagnostic.
