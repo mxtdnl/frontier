@@ -672,7 +672,7 @@ Read:
 - **Part A.** C1–C5 pass at every N over 200 seeds, and the 500-seed run agrees. The observed-human room's moratorium share by quarter 14 is reported at every N.
 - **Part B.** In the rehearsal screenshots, every incident of the reveal quarter is named on the projector with its effect and cause. Nothing private shows while disclosure is off.
 - **Part C.** `#/wire` shows every wire entry of every quarter in the rehearsal, and refuses non-facilitators.
-- **Part D.** The panel's main point can be read from its headline alone. The four live sessions' DATA lines, run through the new builder as a test fixture, reproduce the leader's fall described in Part D step 3.
+- **Part D.** The panel's main point can be read from its headline alone. An observed-human room (fixture, seed 1, N = 10) run through the new builder gives a net-contribution ranking that differs from the valuation ranking. The live exports are not in the repository, so the figures in Part D step 3 cannot be re-run here.
 - **Pull request.** States, in plain English:
   - the calibration set used, and what changed for a class like the four live rooms
   - what the projector now shows when an incident happens
