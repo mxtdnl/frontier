@@ -1061,3 +1061,21 @@ Half-greedy room, moratorium by quarter 14 (median quarter):
 **Next steps**
 - Owner: merge, then run a short live session with bot firms (runbook §8) and confirm it plays as before. Then, in a real class, note the quarter of the moratorium and how many firms raced, to compare with the runbook table.
 - Owner: decide whether M1 needs more than the runbook advice, for example a warning on `#/new` below 6 firms.
+
+## 2026-10-08 — Live-session analysis (no code or parameter change)
+
+**Done**
+- Analysed the four sessions without bot firms in the 2026-10-08 database export: ZWYF, RBZE, XLWZ and PLEA, with 7–10 firms and 10–24 quarters. Report: `reports/live-sessions-2026-10-08.md`. The export itself is not committed, because it holds join PINs and user IDs.
+
+**Findings**
+- No room reached the moratorium. The closest finished 14 points above τ.
+- The PUBLISH trust gain (+1.0 per card, not scaled by 8/N) cancelled 32–62% of the draw. No calibration policy plays PUBLISH, so C1–C5 do not measure it.
+- Human rooms drew trust like a room about 38% greedy. Replaying the observed behaviour gives a moratorium by quarter 14 in 0–13% of seeds (N = 4–50).
+- Nine pacts were proposed. None had two members in any resolved quarter.
+
+**Open issues (owner decisions)**
+- Recommended set S2: PUBLISH_TRUST 0.1 scaled by 8/N (a §6.3 step 6 spec change) and SAFETY_DRAW_EFF 0.6 → 0.4. C1–C5 still pass. The observed-human moratorium rate by quarter 14 rises to 55–69% at N = 4–20.
+- Neither lever is in the §8.3 order, so the owner must approve before a calibration session applies them.
+- Whether to add the observed-human room to calibration as a diagnostic or as a new condition.
+
+**Tests:** not run. No code changed.
