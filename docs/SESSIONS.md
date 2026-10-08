@@ -491,3 +491,267 @@ Tightening the model makes REVIEW M1 (one firm can trigger the moratorium at N �
   - how early a half-greedy room now reaches the moratorium at 12 and at 50 firms
   - what changed for an all-sustainable room
   - whether M1 changed.
+
+---
+
+# Live-session feedback (Sessions 17–18)
+
+Added on 2026-10-08 after four live sessions without bot firms. The evidence is in `reports/live-sessions-2026-10-08.md`. The owner's feedback from those sessions:
+- show greedy play against play that benefits the whole market on the results screen
+- make incidents clearer on the projector
+- give the facilitator a complete wire log
+- add two new action cards.
+
+**Order.** Run Session 17, then Session 18. Session 17 changes the engine, the parameters and the card set; Session 18's results panel counts the cards and uses the new parameters.
+
+## Session 17 — Recalibration from live play and two new cards (model: Opus 5.5)
+
+Read:
+- `reports/live-sessions-2026-10-08.md` (all of it)
+- docs/spec.md §5.2, §6.2–§6.5, §7, §8, §14.3, §14.5 and §15.4
+- docs/CALIBRATION.md (the Session 16 entry)
+- docs/REVIEW.md M1–M3.
+
+**Why.**
+- **No moratorium.** None of the four live rooms reached it. The closest finished 14 trust points above τ.
+- **Cause.** The report traces this to two parameters:
+  - PUBLISH adds +1.0 trust per card, not scaled by 8/N, and no calibration policy plays it.
+  - Safety removes up to 60% of a firm's draw, and students pair high pace with moderate safety.
+- **Effect.** Replaying the students' own decisions under the current parameters gives a moratorium by quarter 14 in 0–13% of seeds.
+
+**Owner decisions already made (2026-10-08).**
+- **PUBLISH is weakened, but less than the report's S2.** Its trust effect falls. It must still count strongly on the results recalculation, which Session 18 handles with a separate research credit.
+- **Proposed set S7:**
+  - PUBLISH_TRUST 1.0 → 0.25, and the PUBLISH term in §6.3 step 6 becomes PUBLISH_TRUST × 8/N per card: 0.25 per card at 8 firms, 0.2 at 10, 0.5 at 4.
+  - SAFETY_DRAW_EFF 0.6 → 0.35.
+  - LOBBY_TRUST stays 0.5, unscaled.
+- **S7 against the current values** (200 seeds; M1 500 seeds):
+
+| | Current | S7 |
+|---|---|---|
+| Observed-human room, moratorium by quarter 14, N = 4 / 6 / 10 / 20 / 50 | 13% / 7% / 1% / 0% / 0% | 52% / 53% / 54% / 65% / 92% |
+| Median moratorium quarter, N = 4–20 | none | 13–14 |
+| C1–C5 | pass | pass at N = 4, 6, 10, 20, 50 |
+| C1 by quarter 4 (limit 50%) | 26–36% | 39–44% |
+| M1 at N = 4 by quarter 14 | 22–31% | 29–41% |
+
+**Two new cards (proposed 2026-10-08; owner to confirm or change at the start of the session).** The costs and effects are starting values; the card dominance check and the strategy audit decide whether they stand.
+
+| Card | Cost (cash) | Effect | Constraint | Conduct ledger |
+|---|---|---|---|---|
+| `SHARE` Share safety tooling | 15 | Every firm's incident probability, yours included, ×0.75 this quarter (§6.3 step 5; stacks with PUBLISH) | Not in consecutive quarters | For the market |
+| `RUSH` Rush a release | 0 | You +4 capability this quarter (step 3, before POACH). Your trust draw d_i ×2 and your incident probability ×1.5 this quarter (steps 4 and 5) | Not in consecutive quarters | Against the market |
+
+- **Why these two.** The live sessions had cards for racing (BLITZ, POACH) and one for the market (PUBLISH). Neither new card tests what the lesson needs:
+  - `SHARE` is a public good. The firm pays the full cost, and every other firm gets the same protection for free. It tests free-riding (§1 objective 2).
+  - `RUSH` is a free private gain whose cost lands on public trust. It is the externality in its plainest form.
+- **Headlines (§15.4):**
+  - `SHARE`: "{FIRM} releases safety tooling to the industry"
+  - `RUSH`: "{FIRM} ships model ahead of evaluation schedule".
+  Both follow §15.3: no banned words before the results screen.
+- **Effect on the calibration checks.** Neither card changes C1–C5, because no bot plays them. Check them with the card dominance diagnostic and `tools/audit-strategies.ts`:
+  - `RUSH` is most at risk of dominating
+  - `SHARE` is most at risk of never being worth playing.
+- **If either fails,** ask the owner before changing the cost or effect.
+
+**Questions to ask the owner, one at a time, before the plan.** First, confirm S7 or name another set from the report or the table above. Then confirm or change `SHARE`, then `RUSH`.
+
+### Steps
+
+1. **Spec, before code.** Log each change in docs/PROGRESS.md as an owner-approved spec change.
+   - §5.2: the two new cards, and PUBLISH's new effect wording ("public trust +0.25 per card, scaled by firm count").
+   - §6.2: the new values.
+   - §6.3 step 6: the PUBLISH term scaled by 8/N, plus each new card's step in the resolution order.
+   - §6.6 and §14.5: the briefing line for each new card. The briefing still shows no parameter numbers.
+   - §8.2: the observed-human room diagnostic. If the owner sets a target for it, add it to §8.1 as C6 instead.
+   - §15.4: a wire headline per new card, in the same register.
+2. **Engine and cards:**
+   - `src/engine/types.ts` (`CARDS`), `cards.ts`, `resolve.ts`, `headlines.ts` and `params.ts` (costs and effects).
+   - `validateCard`: the cooldown and any target rule.
+   - The DATA line card field.
+   - The database rules' card enum, with rules tests for both new cards.
+   - The phone card sheet and `CARD_INFO`.
+   - The briefing.
+   - The bot policies are unchanged unless the owner asks.
+3. **Observed-human room** in `tools/calibration/scenarios.ts` and `tools/calibrate.ts`:
+   - Data: `tools/calibration/observed-human.json` holds 37 anonymised firm trajectories from the live sessions, as `pace,safety,card,auto` per quarter.
+   - For each seed, draw N trajectories with replacement using a seeded generator, and play them for 30 quarters. A trajectory shorter than 30 quarters repeats its last 5 quarters. A POACH target is a seeded random other firm.
+   - Report the share of seeds with a moratorium by quarters 12, 14 and 20, and the median moratorium quarter, at every N.
+   - Under S7 the result should match the table above within sampling noise.
+   - The new cards do not appear in the live data. Note in the report that the scenario cannot measure them.
+4. **Parameters** in `src/engine/params.ts`. Re-derive EXPO_CUTS so each pace keeps the label the spec intends (as in Sessions 2 and 16); the safety change moves d_i at every safety level above 0.
+5. **Re-run and log:**
+   - `npm run calibrate -- --seeds 200`, then 500 seeds. C1–C5 must pass at every N.
+   - Watch C1 by quarter 4: S7 measured 39–44%, against the limit of 50%.
+   - The card dominance check (§8.2) with the new cards. No card may exceed 60% of best-response rounds.
+   - `tools/audit-strategies.ts`, including strategies that use the new cards. Re-measure M1–M3.
+   - The rehearsal seed and `tests/tools/rehearsal-model.test.ts`.
+   - RUNBOOK §4 and §9.
+   - Record every attempt in docs/CALIBRATION.md with before and after tables. Note that PUBLISH_TRUST and SAFETY_DRAW_EFF are outside the §8.3 order, with the owner's approval and the reason: the §8.3 levers move bots and human rooms together, and C1 binds.
+6. **If a new card breaks C1–C5 or dominates the card choice,** stop and explain in plain English what fails and the smallest change to the card that would fix it. Do not tune the card without the owner's approval.
+
+**Tests.**
+- **Engine:** each new card's effect, cooldown and constraint; insolvent firms cannot play it; determinism.
+- **Properties:** T in [0, 100], shares sum to 1, the counterfactual uses identical incident draws.
+- **PUBLISH:** the 8/N scaling in `cardTrustDelta`.
+- **Labels:** updated EXPO_CUTS tests.
+- **Observed-human room:** determinism, a trajectory longer than 30 quarters, and the cycling of a short trajectory.
+- **Rules:** tests for the card enum.
+- **Phone:** card sheet screenshots at 360×640.
+- **Suites:** `npm run typecheck`, `npm test`, `npm run test:rules`, `lint:copy`, `lint:design`, `test:e2e`, `test:e2e:rehearsal`, `test:e2e:long` and `test:e2e:scale-run` all pass.
+
+**Acceptance.**
+- C1–C5 pass at every N over 200 seeds, and the 500-seed run agrees.
+- No card exceeds 60% in the dominance check.
+- The observed-human room's moratorium share by quarter 14 is reported at every N.
+- **Pull request.** States, in plain English:
+  - the parameter values used
+  - what changed for a class like the four live rooms
+  - what each new card does, as a participant sees it
+  - whether M1 changed.
+
+## Session 18 — Incidents, facilitator wire, net contribution (model: Opus 5.5)
+
+Run after Session 17. Read:
+- `reports/live-sessions-2026-10-08.md` §2 (F6–F8)
+- docs/spec.md §3, §5.2, §6.3, §6.5, §10, §12, §13, §14.1, §14.2, §14.4, §15 and §16.5
+- the Session 17 entry in docs/PROGRESS.md.
+
+**Why.**
+- **Incidents.** They are easy to miss. An incident appears only as one of 2–4 headlines, and the headline cap can drop it.
+- **Wire log.** The facilitator has no complete wire log. The projector `WIRE` view shows the latest 14 items.
+- **Results.** The results screen ranks firms only by their own valuation. Nothing shows what each firm's decisions did to everyone else.
+
+**Owner decisions.** Ask them one at a time, in this order, before presenting the plan.
+
+1. **Incident cause when disclosure is off.** A firm's pace and safety are private while disclosure is off (§6.5). Recommended: with disclosure on, show the firm's pace, safety and incident risk. With disclosure off, show the firm, the effect, and the general cause ("Incident risk rises with pace and falls with safety spend."). The alternative is to always show pace and safety for a firm that had an incident; this is a §6.5 change. Also ask whether the projector may show each incident's trust cost as a number, which reveals INC_TRUST × 8/N.
+2. **Research credit for PUBLISH.** Proposed: RESEARCH_CREDIT = 1.0 trust-point equivalents per PUBLISH card, × 8/N, priced like any trust point (Part C).
+   - That is 4 times PUBLISH's real trust effect after Session 17, and equal to its effect before Session 17.
+   - It is not money. It appears on the results screen only and never changes the engine.
+   - Ask the owner for the number, and whether `SHARE` also earns a research credit. Proposed: no, because its benefit is already valued in Part C.
+3. **Net contribution method.** Confirm the method in Part C, its baseline (the ALTERNATIVE policy of §10), that BLITZ counts as rivalry alongside POACH, and where each new card sits on the conduct ledger.
+
+### Part A — Incidents on the projector
+
+1. **Spec:** update §12 (`rounds/{r}/incidentFirms`), §14.1 (the incident block, the `INCID` tag and the `INCID` command), §15.4 (incident cause lines) and §16.5. The incident block appears instantly when the reveal sequence ends; there is no new motion.
+2. **Engine:** add `incidentFirms: string[]` (firm ids, creation order) to `RoundRecord` and to the public `rounds/{r}` write in the orchestrator.
+   - Do not change `roundHeadlines`. The block is built from `incidentFirms`, so it never depends on the headline cap, and the headline random draws stay unchanged.
+   - Check whether `database.rules.json` validates the `rounds` node. Add a rules test that a participant cannot write it.
+3. **Projector, reveal state.** One line per incident in an `INCIDENTS` block:
+   - ▼, the ticker and the incident's wire headline (or the first incident template when it was not headlined)
+   - the effect: "trust −1.2 · BTC revenue −15% this quarter" (the trust number only if the owner allows it)
+   - the cause, as decided in owner decision 1.
+   Requirements:
+   - With disclosure on, the cause comes from `rounds/{r}/disclosure` (pace, safety, exposure) and the incident probability formula in §6.3 step 5, including PUBLISH halving.
+   - It must fit at 1280×720 without moving the board rows. Show at most 4 lines, then "+N more · INCID for the full list".
+   - With no incidents, show nothing.
+4. **Board tag** `INCID` on the firm's row for the reveal and the following open phase, in the tag priority order after `BREACH`.
+5. **`INCID` command** (and HELP): every incident of the session by quarter, with the same three parts. Esc returns to the board.
+6. **Phones** are unchanged; the firm already receives its own incident notice. No τ, no other firm's cash, and no pace or safety while disclosure is off (unless owner decision 1 allows it) reach the projector.
+
+### Part B — Facilitator wire screen
+
+1. **Spec:** §3 (route) and §14.2. Add a facilitator-only route `#/wire`, behind the facilitator gate, linked from `#/control`. It works on a second laptop or tab while `#/control` stays open.
+2. **Content:**
+   - every wire entry of the session, grouped by quarter, newest quarter first:
+     - round headlines from `rounds/{r}/headlines`
+     - pact and disclosure events from `wire`
+     - entries before quarter 1 under `PRE`
+   - each line: quarter, time, kind and text, coloured by kind as on the ticker.
+3. **Quarter selector:**
+   - ◀ ▶ buttons and the arrow keys
+   - a quarter number field
+   - `ALL`
+   - The selector opens on the current quarter, and every earlier quarter stays available.
+4. **Below the quarter's entries:** a facilitator-only section, "NOT ON THE WIRE". It lists that quarter's events that the headline cap left out (incidents, cards played, audits, insolvencies), built from `engine.history`. It is never rendered on `#/screen` or `#/play`; add a test for that.
+5. **`COPY` button:** copies the selected quarter (or all) as plain text, for the debrief.
+6. **Scale:** with 50 firms and 30 quarters, the list scrolls inside the panel and stays responsive. Check with the `test:e2e:scale-run` data.
+
+### Part C — NET CONTRIBUTION results panel
+
+1. **Spec:**
+   - §10: the definitions below.
+   - §14.4: the new panel 5, NET CONTRIBUTION, after ATTRIBUTION. PACT RECORD and DEBRIEF become 6 and 7.
+   - §15: the panel copy. The results screen may use the §15.3 words; nothing before it may.
+   - Add RESEARCH_CREDIT to `params.ts` as a display-only value, logged in docs/CALIBRATION.md like EXPO_CUTS.
+2. **Definitions** (computed in `buildResults`, pure and deterministic, from the stored engine history, with no replays):
+   - **Trust effect of firm i in quarter t (points).** The firm's own terms of the §6.3 step 6 update:
+     − d_i × 8/N − (incident ? INC_TRUST × 8/N : 0) + PUBLISH term − LOBBY term, plus any trust term of the new cards.
+     Subtract the same quantity for the ALTERNATIVE policy (pace 2, safety 15, no card), using its expected incident loss. This gives the firm's trust effect **against the alternative**:
+     - positive for restraint and publishing
+     - negative for racing and incidents.
+   - **Value of one trust point in quarter t.** The whole market's revenue per trust point, γ × M_t / T_t, for every quarter from t to the end: × (quarters played − t + 1). Use M_t as resolved; after a moratorium it already includes the moratorium multiplier.
+   - **Market effect** of firm i = Σ_t (trust effect × value of a trust point).
+   - **Research credit** of firm i = Σ over its PUBLISH quarters of RESEARCH_CREDIT × 8/N × the value of a trust point in that quarter. It is shown separately and labelled as not money.
+   - **Moratorium cost**, if the moratorium happened. Three parts, from the stored history:
+     - the market revenue lost to the moratorium multiplier in the quarters after it
+     - the cash haircut
+     - the capability writedown.
+     Allocate it to firms with a negative cumulative market effect up to the moratorium quarter, in proportion to that negative effect. Subtract each firm's allocation from its market effect.
+   - **Rivalry taken.** Value moved from other firms by the firm's own cards:
+     - BLITZ: the firm's revenue that quarter minus its revenue without the BLITZ multiplier (shares recomputed exactly).
+     - POACH: POACH_LOSS × CAP_MULT × T_final / 100 for each completed POACH.
+     - RUSH: the capability it added, × CAP_MULT × T_final / 100 (permanent share gained against rivals). Its extra draw and incident risk are already in the market effect.
+   - **SHARE benefit.** The trust loss SHARE saved the other firms in expectation: Σ over other firms j of q_j × 0.25 × INC_TRUST × 8/N, × the value of a trust point that quarter. Here q_j is j's incident probability before the SHARE multiplier. It is added to the market effect: the firm's own trust terms cannot show it, because the benefit lands on other firms.
+   - **Value created** = final valuation + max(0, market effect) + research credit.
+   - **Damage created** = max(0, −market effect) + rivalry taken.
+   - **Net contribution** = final valuation + market effect + research credit − rivalry taken. Rank firms by net contribution, with the engine's tie-break.
+   - **Conduct ledger**, counted per firm and shown with the figures:
+     - for the market: PUBLISH cards, restraint quarters (pace ≤ 2 and safety ≥ 15), and compliant quarters as a member of a pact with 2 or more members
+     - against it: POACH and BLITZ cards, LOBBY cards, pact breaches (detected and undetected) and incidents
+     - the new cards, placed as the owner decided.
+3. **Why this method.** Before writing this session, both methods below were applied to the four live sessions.
+   - **Rejected: per-firm replays.** Re-running the game with one firm switched to the alternative policy re-ranks strongly. But once a moratorium is near it is unstable: switching one firm can move the moratorium by a quarter and swing other firms' values by thousands.
+   - **Chosen: the additive method above, without the research credit.** It gave similar rankings and stays stable.
+   - **Effect on the live sessions.** In all four, the valuation leader fell to between 5th and 9th by net contribution. In RBZE, the firms ranked 8th and 9th by valuation rose to 1st and 2nd.
+4. **Panel layout:**
+   - A slope chart from valuation rank (left) to net-contribution rank (right). Firms whose rank changes by 3 or more places are highlighted: ▲ in `--up`, ▼ in `--down`. The others are dim.
+   - Beside it, per firm, on one zero-based axis:
+     - final valuation
+     - the market effect (▲ or ▼ with a sign)
+     - research credit (with its own label, never merged into valuation)
+     - rivalry taken (with a − sign)
+     - net contribution.
+   - Under each firm, its conduct ledger as short counts, for example "PUBLISH 6 · restraint 9 · POACH 2 · BLITZ 3 · breaches 1".
+   - The negative-total and many-firms rules follow ATTRIBUTION (§14.4): 24 rows, then `OTHERS`.
+5. **Headline sentence**, written from the data and checked with `lint:copy`. For example: "Ranked by value created for the whole market, HUMN falls from 1st to 8th and ARCN rises from 9th to 2nd."
+   - Edge cases: no rank changes, ties, every net contribution below zero, and a moratorium.
+6. **Participant results card:** add the firm's net contribution, its rank by net contribution, its research credit and its conduct ledger.
+7. **Debrief:** in §15.5 prompt 3, refer to the new panel. Ask the owner for the exact wording.
+
+**Tests.**
+- **Part A:**
+  - `incidentFirms` is in creation order and empty with no incidents
+  - the incident line builder, with disclosure on and off; with disclosure off, the output contains no pace or safety
+  - the 4-line cap with `+N more`
+  - the `INCID` view
+  - layout at 1280×720 and 1920×1080 for 4, 16 and 50 firms with 1 and with 8 incidents.
+- **Part B:**
+  - wire grouping by quarter
+  - the "NOT ON THE WIRE" builder
+  - a test that the projector and phone bundles never import it
+  - an e2e check that `#/wire` refuses a non-facilitator.
+- **Part C** (engine unit tests):
+  - a firm on the ALTERNATIVE policy with no incident has a market effect of exactly 0
+  - PUBLISH raises both the market effect and the research credit
+  - BLITZ revenue taken equals the exact share difference
+  - the moratorium allocation sums to the moratorium cost
+  - determinism, ties, negative totals, and N = 2 and 50
+  - the results model and headline builder edge cases
+  - the rehearsal screenshots of all 7 results panels.
+- **Suites:** `npm run typecheck`, `npm test`, `npm run test:rules`, `lint:copy`, `lint:design`, `test:e2e` and `test:e2e:rehearsal` all pass.
+
+**Acceptance.**
+- **Part A.** In the rehearsal screenshots, every incident of the reveal quarter is named on the projector with its effect and cause. Nothing private shows while disclosure is off.
+- **Part B.** `#/wire` shows every wire entry of every quarter in the rehearsal, and refuses non-facilitators.
+- **Part C.**
+  - The panel's main point can be read from its headline alone.
+  - An observed-human room (fixture, seed 1, N = 10) run through the new builder gives a net-contribution ranking that differs from the valuation ranking.
+  - The live exports are not in the repository, so the figures in Part C step 3 cannot be re-run here.
+- **Pull request.** States, in plain English:
+  - what the projector now shows when an incident happens
+  - how to open the wire screen (exact URL and clicks)
+  - what the new results panel shows, and how the research credit is labelled
+  - what the owner should look at on the live site.
+
+**Commits.** Commit each part separately, in the order A, B, C.
