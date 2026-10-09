@@ -51,6 +51,8 @@ export const BANK: Readonly<Record<TemplateKey, ReadonlyArray<string>>> = {
   lobby: ['{FIRM} expands policy team in capital', '{FIRM} hosts Assembly members at research campus'],
   poach: ['{FIRM} hires senior researchers from {TARGET}', '{TARGET} loses research leads to {FIRM}'],
   blitz: ['{FIRM} launches global ad campaign', '{FIRM} books prime-time slots for product launch'],
+  share: ['{FIRM} releases safety tooling to the industry', '{FIRM} opens its evaluation suite to rival labs'],
+  rush: ['{FIRM} ships model ahead of evaluation schedule', '{FIRM} cuts testing window to bring launch forward'],
   'pace4-named': ['{FIRM} accelerates release schedule', '{FIRM} brings forward next model launch'],
   'pace4-anon': ['Unnamed lab accelerates release schedule, sources say', 'Unnamed lab brings forward model launch, sources say'],
   ambient: [
@@ -79,7 +81,7 @@ const KIND_OF: Record<TemplateKey, HeadlineKind> = {
   collapse: 'collapse', moratorium: 'moratorium', final: 'final',
   breach: 'breach', 'breach-waived': 'breach', 'breach-expelled': 'breach', 'audit-clean': 'audit-clean',
   insolvency: 'insolvency', incident: 'incident', rank: 'rank',
-  publish: 'publish', lobby: 'lobby', poach: 'poach', blitz: 'blitz',
+  publish: 'publish', lobby: 'lobby', poach: 'poach', blitz: 'blitz', share: 'share', rush: 'rush',
   'pace4-named': 'pace4', 'pace4-anon': 'pace4', ambient: 'ambient',
   'pact-formed': 'pact-formed', 'pact-joined': 'pact-joined', 'pact-left': 'pact-left',
   'disclosure-on': 'disclosure-on', 'disclosure-off': 'disclosure-off',
@@ -139,7 +141,14 @@ export interface HeadlineContext {
   bandAfter: number;
 }
 
-const CARD_KEY: Partial<Record<Card, TemplateKey>> = { POACH: 'poach', PUBLISH: 'publish', LOBBY: 'lobby', BLITZ: 'blitz' };
+const CARD_KEY: Partial<Record<Card, TemplateKey>> = {
+  POACH: 'poach',
+  PUBLISH: 'publish',
+  LOBBY: 'lobby',
+  BLITZ: 'blitz',
+  SHARE: 'share',
+  RUSH: 'rush',
+};
 
 /**
  * 2–4 headlines for a resolved quarter. Candidates are ranked: moratorium start,

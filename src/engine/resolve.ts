@@ -2,7 +2,17 @@
  * Game creation and quarter resolution (spec §6.3). Pure and deterministic: the only
  * randomness comes from rng.ts streams seeded by (game seed, round, stream).
  */
-import { applyPoach, cardCost, cardTrustDelta, incidentMultiplier, shareMultiplier, validateCard } from './cards';
+import {
+  applyPoach,
+  cardCost,
+  cardTrustDelta,
+  drawMultiplier,
+  incidentMultiplier,
+  rushGain,
+  shareMultiplier,
+  sharedIncidentMultiplier,
+  validateCard,
+} from './cards';
 import { dataLine } from './data';
 import { roundHeadlines, trustBand } from './headlines';
 import { disclosureSnapshot, dissolvePacts, recordViolations, runAudits } from './pacts';
@@ -154,15 +164,15 @@ export function resolveRound(
     return a;
   };
 
-  // 3. Capability, then POACH.
+  // 3. Capability and RUSH, then POACH.
   s.firms.forEach((f, i) => {
     const a = at(i);
-    f.cap += byPace(p.CAP_GAIN, a.pace) * (1 - p.SAFETY_CAP_DRAG * a.sigma);
+    f.cap += byPace(p.CAP_GAIN, a.pace) * (1 - p.SAFETY_CAP_DRAG * a.sigma) + rushGain(a.card, p);
   });
   applyPoach(s.firms, applied, p);
 
   // 4. Trust draw.
-  const expo = applied.map((a) => byPace(p.DRAW, a.pace) * (1 - p.SAFETY_DRAW_EFF * a.sigma));
+  const expo = applied.map((a) => byPace(p.DRAW, a.pace) * (1 - p.SAFETY_DRAW_EFF * a.sigma) * drawMultiplier(a.card, p));
   const draw = expo.map((d) => d * scale);
   const D = draw.reduce((x, y) => x + y, 0);
   s.firms.forEach((f, i) => {
@@ -172,8 +182,9 @@ export function resolveRound(
   // 5. Incidents. One `incident` draw per firm in creation order (common random numbers).
   const incRng = streamRng(s.seed, round, 'incident');
   const incidentDraws = s.firms.map(() => incRng());
+  const shared = sharedIncidentMultiplier(applied.map((a) => a.card), p);
   const incident = applied.map((a, i) => {
-    const q = byPace(p.INC_BASE, a.pace) * (1 - p.SAFETY_INC_EFF * a.sigma) * incidentMultiplier(a.card, p);
+    const q = byPace(p.INC_BASE, a.pace) * (1 - p.SAFETY_INC_EFF * a.sigma) * incidentMultiplier(a.card, p) * shared;
     return (incidentDraws[i] ?? 1) < q;
   });
   const incidentCount = incident.filter(Boolean).length;
@@ -186,7 +197,7 @@ export function resolveRound(
   const T0 = s.T;
   const Reff = s.collapsed ? p.R * p.MORATORIUM_R : p.R;
   const cards = applied.map((a) => a.card);
-  let T = clamp(T0 + Reff * T0 * (1 - T0 / p.TRUST_MAX) - D - I + cardTrustDelta(cards, p), 0, p.TRUST_MAX);
+  let T = clamp(T0 + Reff * T0 * (1 - T0 / p.TRUST_MAX) - D - I + cardTrustDelta(cards, N, p), 0, p.TRUST_MAX);
 
   // 7. Collapse check. Negative cash is not haircut (owner decision, Session 2).
   const wasCollapsed = s.collapsed;

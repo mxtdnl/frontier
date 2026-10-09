@@ -54,10 +54,17 @@ export interface Params {
   POACH_GAIN: number;
   POACH_LOSS: number;
   POACH_FLOOR: number;
+  /** Trust per PUBLISH card, scaled by DRAW_REF_N / N (§6.3 step 6). */
   PUBLISH_TRUST: number;
   PUBLISH_INC_MULT: number;
   LOBBY_TRUST: number;
   BLITZ_MULT: number;
+  /** Every firm's incident probability × this per SHARE card played (stacks per card). */
+  SHARE_INC_MULT: number;
+  /** RUSH capability gain (step 3, before POACH; no safety drag). */
+  RUSH_CAP_GAIN: number;
+  RUSH_DRAW_MULT: number;
+  RUSH_INC_MULT: number;
   // ── Defaults (§5.1, §6.4) ──
   DEFAULT_PACE: 1 | 2 | 3 | 4;
   DEFAULT_SAFETY: number;
@@ -113,7 +120,7 @@ export const PARAMS: Params = {
   INC_BASE: [0.02, 0.05, 0.15, 0.3],
 
   SAFETY_MAX: 30,
-  SAFETY_DRAW_EFF: 0.6,
+  SAFETY_DRAW_EFF: 0.35, // owner decision (S7): 0.6 → 0.35 (Session 17, docs/CALIBRATION.md)
   SAFETY_INC_EFF: 0.7,
   SAFETY_CAP_DRAG: 0.25,
   BUDGET_REF: 1.0,
@@ -136,19 +143,23 @@ export const PARAMS: Params = {
   BACKLASH: 10,
   INSOLVENCY: -100,
 
-  CARD_COST: { NONE: 0, POACH: 15, PUBLISH: 10, LOBBY: 10, BLITZ: 15 },
+  CARD_COST: { NONE: 0, POACH: 15, PUBLISH: 10, LOBBY: 10, BLITZ: 15, SHARE: 15, RUSH: 0 },
   POACH_GAIN: 3,
   POACH_LOSS: 3,
   POACH_FLOOR: 10,
-  PUBLISH_TRUST: 1.0,
+  PUBLISH_TRUST: 0.25, // owner decision (S7): flat 1.0 → 0.25 × 8/N (Session 17)
   PUBLISH_INC_MULT: 0.5,
   LOBBY_TRUST: 0.5,
   BLITZ_MULT: 1.2,
+  SHARE_INC_MULT: 0.75,
+  RUSH_CAP_GAIN: 4,
+  RUSH_DRAW_MULT: 2,
+  RUSH_INC_MULT: 2, // owner decision: proposed 1.5 → 2 (Session 17)
 
   DEFAULT_PACE: 2,
   DEFAULT_SAFETY: 10,
 
-  EXPO_CUTS: [0.15, 0.55, 1.21], // follow DRAW (§6.5): [1.5, 3.5, 6] → [0.1875, 0.4375, 0.75] (Session 2) → this (Session 16)
+  EXPO_CUTS: [0.19, 0.908, 1.21], // follow DRAW and SAFETY_DRAW_EFF (§6.5): [1.5, 3.5, 6] → [0.1875, 0.4375, 0.75] (Session 2) → [0.15, 0.55, 1.21] (Session 16) → this (Session 17)
 
   FINE_RATES: [0.1, 0.25, 0.4],
   FINE_MIN: 10,

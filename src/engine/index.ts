@@ -3,7 +3,7 @@ export * from './types';
 export { PARAMS, byPace, type Params, type ByPace } from './params';
 export { mulberry32, hash32, seedFor, streamRng, randInt, pick, type Rng, type Stream } from './rng';
 export { createGame, resolveRound, sanitizeDecision, isFinalRound } from './resolve';
-export { validateCard, allowedCards, cardCost } from './cards';
+export { validateCard, allowedCards, cardCost, cardTrustDelta } from './cards';
 export { emptyPactPrivate, nextPactName, breaches, auditWindow, fineFor } from './pacts';
 export {
   BANK,

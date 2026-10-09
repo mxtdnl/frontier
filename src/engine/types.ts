@@ -4,8 +4,8 @@
  */
 
 export type Pace = 1 | 2 | 3 | 4;
-export type Card = 'NONE' | 'POACH' | 'PUBLISH' | 'LOBBY' | 'BLITZ';
-export const CARDS: ReadonlyArray<Card> = ['NONE', 'POACH', 'PUBLISH', 'LOBBY', 'BLITZ'];
+export type Card = 'NONE' | 'POACH' | 'PUBLISH' | 'LOBBY' | 'BLITZ' | 'SHARE' | 'RUSH';
+export const CARDS: ReadonlyArray<Card> = ['NONE', 'POACH', 'PUBLISH', 'LOBBY', 'BLITZ', 'SHARE', 'RUSH'];
 
 /** Policies the facilitator can assign to bot firms (spec §5.4, §7). */
 export type BotPolicy = 'cautious' | 'standard' | 'greedy' | 'mimic-leader';
@@ -130,6 +130,8 @@ export type HeadlineKind =
   | 'lobby'
   | 'poach'
   | 'blitz'
+  | 'share'
+  | 'rush'
   | 'pace4'
   | 'trust-band'
   | 'ambient'

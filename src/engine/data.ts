@@ -1,4 +1,5 @@
 /** DATA lines (spec §8.4) and the public exposure label (§6.5). */
+import { drawMultiplier } from './cards';
 import { byPace, type Params } from './params';
 import type { Card, ExposureLabel, FirmRoundResult, FirmState, Pace } from './types';
 
@@ -53,8 +54,8 @@ export function dataLine(g: DataLineRound, firm: Pick<FirmState, 'ticker' | 'isB
 }
 
 /** d_i for a prospective decision, for the participant's exposure label (§6.5). */
-export function exposureOf(pace: Pace, safety: number, p: Params): number {
-  return byPace(p.DRAW, pace) * (1 - p.SAFETY_DRAW_EFF * (safety / p.SAFETY_MAX));
+export function exposureOf(pace: Pace, safety: number, p: Params, card: Card = 'NONE'): number {
+  return byPace(p.DRAW, pace) * (1 - p.SAFETY_DRAW_EFF * (safety / p.SAFETY_MAX)) * drawMultiplier(card, p);
 }
 
 /** Deterministic estimated cost: compute + safety + card (§6.5). */
