@@ -99,15 +99,18 @@ Do this the day before, then again 15 minutes before class.
 
 **Collapse.** When trust falls below the hidden line, the reveal shows the moratorium headline. Press **F9** to continue under the moratorium or **F10** to end.
 
-**When to expect the moratorium (Session 16 calibration, the same at every class size from 4 to 50 firms).**
+**When to expect the moratorium (Session 17 calibration, 200 sessions per row and class size from 4 to 50 firms).**
 
 | How the room plays | Moratorium |
 |---|---|
-| Every firm racing (pace 3 or 4, little safety) | Around quarter 5 (usually quarters 4 to 6) |
-| Half the firms racing, half restrained | Around quarter 11 (usually 9 to 13); by quarter 14 in at least 98% of sessions |
-| A third of the firms racing | Usually not within 14 quarters |
+| Every firm racing (pace 3 or 4, little safety) | Around quarter 5 (usually quarters 4 to 5) |
+| Half the firms racing, half restrained | Around quarter 10 (usually 8 to 11); by quarter 14 in every session measured |
+| A class like the four live rooms of October 2026 (racing on and off, moderate safety, many cards) | By quarter 14 in about half of sessions at 4 to 20 firms (45–57%), more often in very large rooms (64% at 30 firms, 94% at 50); median quarter 13 to 16 |
+| A third of the firms racing | Sometimes within 14 quarters (1–59% of sessions, depending on class size) |
 | Every firm restrained (pace 2, safety 15) or on the defaults | Never, even over 30 quarters |
 
+- **Safety helps less than before.** Since Session 17 a room where every firm plays Aggressive (pace 3) with the maximum safety (30) still reaches the moratorium in about 45% of sessions. Before, it never did.
+- **Cards.** PUBLISH now adds much less trust (0.25 per card at 8 firms, scaled by class size). Two cards are new: **SHARE** (costs 15; lowers every firm's incident risk that quarter) and **RUSH** (free; +4 capability, but the firm's trust draw doubles and its incident risk doubles that quarter). The briefing shows one line for each.
 - With the default hidden end (quarter 10 to 14), a half-racing room can end a quarter or two before its moratorium. If you want every session to run long enough to see it, set **End mode** to **Fixed quarter** with 14 on `#/new`.
 - Trust recovers slowly once the room eases off: about 1 to 1.5 points a quarter. A room that has fallen far rarely climbs back within a session.
 
@@ -222,7 +225,7 @@ What to check: the countdown is the same on laptop and phone; the board is reada
 ## 9. Running 40 to 50 people
 
 - **Teams of 3 to 5** (10 to 16 firms): use **team mode**. A test with 16 firms on 50 devices ran 14 quarters without errors (`reports/scale-run.md`).
-- **One person each** (up to 50 firms): use **multiplayer mode**. A test with 50 firms on 50 devices ran 14 quarters without errors. Since Session 16 a large room reaches the moratorium on the same timetable as a small class: if half the people race, expect it around quarter 11, and by quarter 14 in nearly every session (see "When to expect the moratorium" in section 4; `docs/CALIBRATION.md`, Session 16).
+- **One person each** (up to 50 firms): use **multiplayer mode**. A test with 50 firms on 50 devices ran 14 quarters without errors. A large room reaches the moratorium on the same timetable as a small class: if half the people race, expect it around quarter 10, and by quarter 14 in every session measured. A room that plays like the October 2026 live classes reaches it more often at 30–50 people (64–94% by quarter 14) than at 10 (about 50%) (see "When to expect the moratorium" in section 4; `docs/CALIBRATION.md`, Session 17).
 - **Connection limit (check before the class).** Every open browser tab holds one live connection to the database: about 50 phones plus the projector and the console. The free (Spark) plan has a limit on simultaneous connections. This was **not verified** in Session 10 because the Firebase documentation could not be reached from the build environment. The limit is believed to be 100, but that has not been checked. To check it, open https://firebase.google.com/pricing and find the Realtime Database limit on simultaneous connections for the plan your project is on (the Firebase console shows which plan the project uses). The exact console clicks were not checked in Session 10.
 - Ask participants to keep one tab open each. A second tab, or a laptop and a phone at the same time, counts twice.
 
