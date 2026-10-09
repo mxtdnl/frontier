@@ -68,7 +68,17 @@ describe('decisions', () => {
   });
 
   it('denies a card outside the enum', async () => {
-    for (const card of ['HACK', 'none', '', 3]) await assertFails(dec('uA', 'fA', { card }));
+    for (const card of ['HACK', 'none', '', 3, 'share', 'RUSHX', 'SHARE ']) await assertFails(dec('uA', 'fA', { card }));
+  });
+
+  it('allows SHARE and RUSH (Session 17) without a target', async () => {
+    for (const card of ['SHARE', 'RUSH']) await assertSucceeds(dec('uA', 'fA', { card }));
+  });
+
+  it('denies SHARE or RUSH from a member of another firm, and after the deadline', async () => {
+    for (const card of ['SHARE', 'RUSH']) await assertFails(dec('uB', 'fA', { card }));
+    await admin(g('public/deadline'), Date.now() - 10000);
+    for (const card of ['SHARE', 'RUSH']) await assertFails(dec('uA', 'fA', { card }));
   });
 
   it('denies a target that is the own firm, unknown, or a nested path', async () => {
