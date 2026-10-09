@@ -98,7 +98,7 @@ LOBBY → BRIEFING → OPEN(1) → RESOLVING(1) → REVEAL(1) → OPEN(2) → �
 |---|---|---|---|
 | Deployment pace | 4-segment selector | 1 Cautious, 2 Standard, 3 Aggressive, 4 Breakneck | Previous quarter's value; round 1 → 2 |
 | Safety spend | Slider | Integer 0–30 (% of reference budget) | Previous quarter's value; round 1 → 10 |
-| Action card | Optional picker | `NONE`, `POACH`, `PUBLISH`, `LOBBY`, `BLITZ` | `NONE` |
+| Action card | Optional picker | `NONE`, `POACH`, `PUBLISH`, `LOBBY`, `BLITZ`, `SHARE`, `RUSH` | `NONE` |
 
 Firms commit with a single button. They can change and recommit until the deadline. The board shows a ✓ beside committed firms and `AUTO` beside firms that received defaults.
 
@@ -107,11 +107,15 @@ Firms commit with a single button. They can change and recommit until the deadli
 | Card | Cost (cash) | Effect | Constraint |
 |---|---|---|---|
 | `POACH` Poach talent | 15 | You +3 capability; the target firm −3 capability (floor 10) | Requires a target firm; not the same target two rounds running |
-| `PUBLISH` Publish safety research | 10 | Public trust +1.0 at resolution; your incident probability ×0.5 this quarter | — |
+| `PUBLISH` Publish safety research | 10 | Public trust +0.25 per card at resolution, scaled by firm count (× 8/N); your incident probability ×0.5 this quarter | — |
 | `LOBBY` Lobby regulators | 10 | Exempt from pact fines detected this quarter (the violation is still recorded); public trust −0.5 | — |
 | `BLITZ` Marketing blitz | 15 | Your effective capability ×1.2 in the share calculation this quarter only | — |
+| `SHARE` Share safety tooling | 15 | Every firm's incident probability, yours included, ×0.75 this quarter. Each `SHARE` played multiplies again (two cards: ×0.75²). Stacks with `PUBLISH` | — |
+| `RUSH` Rush a release | 0 | You +4 capability (permanent, like `POACH`). Your trust draw d_i ×2 and your incident probability ×2 this quarter | — |
 
 A firm may not play the same card in consecutive quarters. Insolvent firms (§6.7) cannot play cards.
+
+Owner decisions 2026-10-08/09 (Session 17): PUBLISH's trust effect falls from a flat +1.0 to 0.25 × 8/N per card; `SHARE` and `RUSH` added. `SHARE` stacks per card. `RUSH`'s incident multiplier is ×2 (proposed ×1.5; ×3 measured alongside). The results conduct ledger (Session 18) counts `PUBLISH` and `SHARE` as for the market, `RUSH` as against it.
 
 ### 5.3 Pacts (participant side)
 
@@ -172,7 +176,7 @@ Per firm:
 | COMPUTE_COST[p] | Cash cost by pace | [12, 20, 32, 48] |
 | DRAW[p] | Base trust draw by pace | [1.0, 2.5, 5.5, 9.0] |
 | INC_BASE[p] | Incident probability by pace | [0.02, 0.05, 0.15, 0.30] |
-| SAFETY_DRAW_EFF | Max draw reduction at s = 30 | 0.60 |
+| SAFETY_DRAW_EFF | Max draw reduction at s = 30 | 0.60 (0.35 from Session 17, owner decision 2026-10-08) |
 | SAFETY_INC_EFF | Max incident reduction at s = 30 | 0.70 |
 | SAFETY_CAP_DRAG | Max capability-gain drag at s = 30 | 0.25 |
 | BUDGET_REF | Safety cost per 1% | 1.0 cash per percentage point |
@@ -198,19 +202,21 @@ Let σ_i = s_i / 30, which runs from 0 to 1. Let N be the number of firms, inclu
 2. **Validate cards.** If a card breaks a constraint (cooldown, missing target, insolvency), convert it to `NONE` and send a private notice.
 3. **Capability.**
    C_i ← C_i + CAP_GAIN[p_i] × (1 − SAFETY_CAP_DRAG × σ_i)
+   Then apply `RUSH`: +4 to the player (no safety drag).
    Then apply `POACH`: +3 to the player, −3 to the target, floored at 10.
 4. **Trust draw.**
-   d_i = DRAW[p_i] × (1 − SAFETY_DRAW_EFF × σ_i)
+   d_i = DRAW[p_i] × (1 − SAFETY_DRAW_EFF × σ_i), multiplied by 2 if the firm played `RUSH`
    Total draw D = (Σ d_i) × (8 / N)
    Note: the 8/N factor makes total pressure depend on average behaviour, not firm count, so one firm's impact is about 1/N.
    Add d_i × 8/N to cumulativeDraw_i.
 5. **Incidents.**
    For each firm, draw u_{t,i} from the seeded RNG (common random numbers, §6.8).
-   q_i = INC_BASE[p_i] × (1 − SAFETY_INC_EFF × σ_i), multiplied by 0.5 if the firm played `PUBLISH`.
+   q_i = INC_BASE[p_i] × (1 − SAFETY_INC_EFF × σ_i), multiplied by 0.5 if the firm played `PUBLISH`, by 2 if it played `RUSH`, and by 0.75^k for every firm, where k is the number of `SHARE` cards played this quarter.
    An incident occurs if u_{t,i} < q_i.
    Each incident adds INC_TRUST × 8/N to the incident trust loss I, and flags the firm for a revenue loss.
 6. **Trust update.**
-   T ← clamp(T + R_eff × T × (1 − T/100) − D − I + 1.0 × (#PUBLISH) − 0.5 × (#LOBBY), 0, 100)
+   T ← clamp(T + R_eff × T × (1 − T/100) − D − I + 0.25 × (#PUBLISH) × (8 / N) − 0.5 × (#LOBBY), 0, 100)
+   The PUBLISH term is scaled by 8/N like draw and incidents (owner decision 2026-10-08, Session 17); LOBBY is not.
    R_eff = R, or R × MORATORIUM_R if collapsed.
 7. **Collapse check.** If not yet collapsed and T < τ:
    - set collapsed = true
@@ -249,7 +255,7 @@ Participants can see:
 - headlines
 - their own cash, capability, costs and P&L
 
-They see their own **public exposure** as a qualitative label derived from d_i: LOW < 1.5 ≤ MED < 3.5 ≤ HIGH < 6 ≤ SEVERE. These cutoffs are on the starting DRAW scale; they are recalibrated whenever DRAW changes (`EXPO_CUTS` in `params.ts`, logged in `docs/CALIBRATION.md`) so that at safety 0 paces 1–4 read LOW, MED, HIGH and SEVERE, and pace 4 at safety 30 reads HIGH. They see an estimated cost for the quarter (deterministic: compute + safety + card).
+They see their own **public exposure** as a qualitative label derived from d_i (including the `RUSH` doubling when that card is selected): LOW < 1.5 ≤ MED < 3.5 ≤ HIGH < 6 ≤ SEVERE. These cutoffs are on the starting DRAW scale; they are recalibrated whenever DRAW changes (`EXPO_CUTS` in `params.ts`, logged in `docs/CALIBRATION.md`) so that at safety 0 paces 1–4 read LOW, MED, HIGH and SEVERE, and pace 4 at safety 30 reads HIGH. They see an estimated cost for the quarter (deterministic: compute + safety + card).
 
 They never see τ, endRound, other firms' cash, capability, pace or safety (unless disclosure is on, §9.3), or unaudited violations.
 
@@ -260,6 +266,7 @@ They never see τ, endRound, other firms' cash, capability, pace or safety (unle
 - Pace builds capability faster, and capability wins market share.
 - Safety spend costs money and lowers your public exposure and incident risk.
 - Valuation reflects cash plus capability, priced by the market.
+- Cards: one line each (§14.5). The `SHARE` line says it protects every firm; the `RUSH` line says it raises your exposure and incident risk.
 
 The briefing does not mention any threshold.
 
@@ -311,7 +318,8 @@ All five must hold for N ∈ {4, 6, 8, 10, 12, 16, 20, 30, 40, 50} (16–50 adde
 - Greedy share: rooms with a quarter, a third, a half and two thirds of the firms greedy (round(share × N) greedy firms, at least 1), the rest sustainable. Share of seeds with a collapse by rounds 10, 12 and 14, at every N.
 - All Aggressive with safety 0, 15 and 30. This shows that safety substitutes for restraint.
 - **Passive path**: every firm keeps defaults every round (pace 2, safety 10). Must be stable, and no collapse by round 30.
-- Card dominance check: no single card is played in > 60% of best-response rounds in a greedy best-response search.
+- Card dominance check: no single card is played in > 60% of best-response rounds in a greedy best-response search. Because no card may repeat in consecutive quarters, no card other than `NONE` can exceed 50%; the report also gives each card's share of the rounds in which it was legal (Session 17).
+- **Observed-human room** (Session 17): N trajectories drawn with replacement (seeded) from `tools/calibration/observed-human.json`, the decisions of 37 firms in four live sessions without bots (2026-10-08). Each is played for 30 quarters; a trajectory shorter than 30 repeats its last 5 quarters; a `POACH` target is a seeded random other firm. Report the share of seeds with a collapse by rounds 12, 14 and 20, and the median collapse round, at every N. The live data contains no `SHARE` or `RUSH`, so this room cannot measure them. No pass condition until the owner sets a target.
 - Leaderboard volatility: mean rank changes per round in a mixed field.
 
 ### 8.3 Process
@@ -632,6 +640,8 @@ Participants see their own firm's card: final rank, valuation actual vs counterf
 
 A terse market primer covering §6.6, the three controls, cards (one line each), how commits work, and that the timer is shown. It contains no numbers that reveal parameters.
 
+Card lines (Session 17 adds the last two): POACH "Take capability from a named rival."; PUBLISH "Release safety research."; LOBBY "Press regulators on fines."; BLITZ "Run a marketing push."; SHARE "Give every firm your safety tooling."; RUSH "Ship early. More capability, more exposure and incident risk."
+
 ---
 
 ## 15. Language and copy
@@ -677,6 +687,8 @@ The voice is that of a financial terminal and a wire service:
 - LOBBY: "{FIRM} expands policy team in capital"
 - POACH: "{FIRM} hires senior researchers from {TARGET}"
 - BLITZ: "{FIRM} launches global ad campaign"
+- SHARE: "{FIRM} releases safety tooling to the industry"
+- RUSH: "{FIRM} ships model ahead of evaluation schedule"
 - Pact formed / joined / left: "{FIRMS} sign voluntary release accord {PACT}", "{FIRM} joins {PACT}", "{FIRM} withdraws from {PACT}"
 - Audit clean: "Audit of {PACT} finds full compliance"
 - Breach: "Audit finds {FIRM} breached {PACT} terms; fine levied"
