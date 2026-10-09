@@ -5,43 +5,78 @@ Valuations are medians across seeds. "V end" is the mean of quarters 10–14 (th
 
 ## 1. Best response by field
 
-Firm 0 tries 199 scripted strategies (pace 1–4 × safety 0/5/10/15/20/30 × 8 card plans, plus switches) and the two references.
+Firm 0 tries 319 scripted strategies (pace 1–4 × safety 0/5/10/15/20/30 × 13 card plans, plus switches) and the two references.
 A strategy is **dominant** if it is the best response in every field and N. A strategy **beats both references** in a field if its V end is above both greedy and sustainable there.
 
 | N | field | best strategy | V end | collapse by 14 | draw share | greedy V end | sustainable V end | best / greedy |
 |---|---|---|---|---|---|---|---|---|
-| 4 | restrained | p2 s0 poach+blitz | 1311.4 | 0.0% | 32.3% | 983.9 | 651.4 | 1.3× |
-| 4 | greedy | p1 s0 none | -4.4 | 100.0% | 5.0% | -218.5 | -191.8 | 0.0× |
-| 4 | defaults | p2 s0 poach+blitz | 1236.3 | 0.0% | 29.4% | 909.6 | 604.3 | 1.4× |
-| 4 | mixed | p2 s0 poach+blitz | 592.7 | 0.0% | 14.8% | 73.2 | 211.4 | 8.1× |
-| 8 | restrained | p4 s0 poach+blitz | 2203.6 | 0.0% | 53.3% | 1604.4 | 649.8 | 1.4× |
-| 8 | greedy | p1 s0 none | -20.8 | 100.0% | 2.5% | -218.8 | -212.6 | 0.1× |
-| 8 | defaults | p4 s0 poach+blitz | 2058.6 | 0.0% | 50.0% | 1484.0 | 596.7 | 1.4× |
-| 8 | mixed | p4 s0 blitz → p2 s15 from q6 | 496.7 | 32.0% | 13.6% | 206.1 | 121.3 | 2.4× |
-| 12 | restrained | p4 s0 poach+blitz | 2807.6 | 0.0% | 42.1% | 1887.5 | 648.0 | 1.5× |
-| 12 | greedy | p1 s0 none | -26.6 | 100.0% | 1.7% | -219.6 | -224.9 | 0.1× |
-| 12 | defaults | p4 s0 poach+blitz | 2614.2 | 0.0% | 38.9% | 1725.6 | 590.5 | 1.5× |
-| 12 | mixed | p4 s0 publish+poach | 617.0 | 65.0% | 18.1% | 247.3 | 90.5 | 2.5× |
+| 4 | restrained | p2 s0 rush+poach | 1479.0 | 0.0% | 37.7% | 920.2 | 628.2 | 1.6× |
+| 4 | greedy | p1 s0 rush | 13.6 | 100.0% | 7.4% | -220.9 | -197.6 | -0.1× |
+| 4 | defaults | p2 s0 rush+poach | 1413.2 | 0.0% | 36.1% | 858.3 | 587.4 | 1.6× |
+| 4 | mixed | p2 s0 rush+poach | 732.7 | 3.0% | 19.6% | -12.9 | 194.4 | -56.9× |
+| 8 | restrained | p4 s0 poach+blitz | 2126.6 | 0.0% | 49.2% | 1536.1 | 626.5 | 1.4× |
+| 8 | greedy | p1 s0 rush | -7.9 | 100.0% | 3.7% | -221.4 | -222.5 | 0.0× |
+| 8 | defaults | p4 s0 poach+blitz | 2006.5 | 0.0% | 47.5% | 1432.0 | 580.8 | 1.4× |
+| 8 | mixed | p2 s0 rush+poach | 598.0 | 29.0% | 8.3% | 105.1 | 101.9 | 5.7× |
+| 12 | restrained | p4 s0 poach+blitz | 2709.0 | 0.0% | 38.2% | 1814.7 | 624.5 | 1.5× |
+| 12 | greedy | p1 s0 rush | -13.1 | 100.0% | 2.5% | -222.9 | -227.2 | 0.1× |
+| 12 | defaults | p4 s0 poach+blitz | 2552.1 | 0.0% | 36.6% | 1673.0 | 574.7 | 1.5× |
+| 12 | mixed | p2 s0 rush+poach | 475.7 | 65.0% | 5.2% | 123.4 | 63.2 | 3.9× |
 
-Distinct best responses across 12 field × N cells: 5 (p2 s0 poach+blitz, p1 s0 none, p4 s0 poach+blitz, p4 s0 blitz → p2 s15 from q6, p4 s0 publish+poach).
+Distinct best responses across 12 field × N cells: 3 (p2 s0 rush+poach, p1 s0 rush, p4 s0 poach+blitz).
 Dominant strategy (best in every cell): **none**.
 Strategies that beat both references in every cell: 0.
 
 Top five at N = 8, by field:
 
-- restrained: p4 s0 poach+blitz (2203.6, collapse 0.0%); p4 s0 publish+poach (2195.4, collapse 0.0%); p4 s5 poach+blitz (2153.9, collapse 0.0%); p4 s5 publish+poach (2105.0, collapse 0.0%); p4 s10 poach+blitz (2088.4, collapse 0.0%)
-- greedy: p1 s0 none (-20.8, collapse 100.0%); p1 s0 publish (-66.8, collapse 100.0%); p1 s5 none (-71.0, collapse 100.0%); p1 s0 lobby (-75.8, collapse 100.0%); p1 s0 poach (-80.9, collapse 100.0%)
-- defaults: p4 s0 poach+blitz (2058.6, collapse 0.0%); p4 s0 publish+poach (2049.1, collapse 0.0%); p4 s5 poach+blitz (2005.4, collapse 0.0%); p4 s5 publish+poach (1959.8, collapse 0.0%); p4 s0 publish+blitz (1950.4, collapse 0.0%)
-- mixed: p4 s0 blitz → p2 s15 from q6 (496.7, collapse 32.0%); p4 s10 publish+poach (481.3, collapse 43.0%); p4 s0 blitz → p2 s15 from q8 (480.7, collapse 64.0%); p4 s5 publish+poach (480.3, collapse 70.0%); p2 s0 poach+blitz (470.2, collapse 6.0%)
+- restrained: p4 s0 poach+blitz (2126.6, collapse 0.0%); p4 s5 poach+blitz (2053.3, collapse 0.0%); p4 s0 poach (1992.2, collapse 0.0%); p4 s0 publish+poach (1990.8, collapse 0.0%); p4 s10 poach+blitz (1973.3, collapse 0.0%)
+- greedy: p1 s0 rush (-7.9, collapse 100.0%); p1 s0 none (-24.7, collapse 100.0%); p1 s5 rush (-60.0, collapse 100.0%); p1 s0 rush+blitz (-72.6, collapse 100.0%); p1 s0 publish (-72.9, collapse 100.0%)
+- defaults: p4 s0 poach+blitz (2006.5, collapse 0.0%); p4 s5 poach+blitz (1933.1, collapse 0.0%); p4 s0 poach (1880.4, collapse 0.0%); p4 s0 publish+poach (1873.9, collapse 0.0%); p4 s10 poach+blitz (1855.8, collapse 0.0%)
+- mixed: p2 s0 rush+poach (598.0, collapse 29.0%); p2 s5 rush+poach (525.5, collapse 26.0%); p1 s0 rush+poach (524.7, collapse 9.0%); p2 s0 rush+blitz (519.2, collapse 29.0%); p2 s0 rush (510.1, collapse 29.0%)
 
 ### Card plans at fixed pace and safety (N = 8, restrained field)
 
-| pace / safety | none | publish | blitz | lobby | poach | publish+blitz | poach+blitz | publish+poach |
-|---|---|---|---|---|---|---|---|---|
-| p2 s15 | 649.8 | 640.4 | 710.9 | 563.1 | 1019.2 | 705.9 | 1128.2 | 962.6 |
-| p3 s5 | 1213.1 | 1271.1 | 1326.3 | 1102.3 | 1565.9 | 1396.6 | 1708.6 | 1585.6 |
-| p4 s0 | 1779.6 | 1938.6 | 1920.9 | 1642.7 | 2064.9 | 2087.7 | 2203.6 | 2195.4 |
-| p4 s30 | 1206.3 | 1272.0 | 1364.3 | 1085.8 | 1589.7 | 1435.5 | 1760.1 | 1608.3 |
+V end, then the moratorium share by quarter 14 in brackets.
+
+| pace / safety | none | publish | blitz | lobby | poach | publish+blitz | poach+blitz | publish+poach | share | rush | rush+poach | rush+blitz | share+publish |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| p2 s15 | 626.5 (0.0%) | 580.5 (0.0%) | 683.9 (0.0%) | 539.6 (0.0%) | 983.6 (0.0%) | 637.4 (0.0%) | 1087.6 (0.0%) | 875.2 (0.0%) | 539.7 (0.0%) | 1124.1 (0.0%) | 1440.1 (0.0%) | 1230.1 (0.0%) | 496.5 (0.0%) |
+| p3 s5 | 1163.4 (0.0%) | 1150.7 (0.0%) | 1270.6 (0.0%) | 1052.6 (0.0%) | 1501.8 (0.0%) | 1262.6 (0.0%) | 1636.8 (0.0%) | 1434.0 (0.0%) | 1089.9 (0.0%) | 1463.8 (0.0%) | 1697.3 (0.0%) | 1584.0 (0.0%) | 1062.2 (0.0%) |
+| p4 s0 | 1717.7 (0.0%) | 1760.6 (0.0%) | 1853.4 (0.0%) | 1579.2 (0.0%) | 1992.2 (0.0%) | 1894.1 (0.0%) | 2126.6 (0.0%) | 1990.8 (0.0%) | 1681.0 (0.0%) | 1703.0 (0.0%) | 1854.1 (0.0%) | 1809.9 (0.0%) | 1717.7 (0.0%) |
+| p4 s30 | 1079.7 (0.0%) | 1059.4 (0.0%) | 1223.0 (0.0%) | 958.8 (0.0%) | 1433.1 (0.0%) | 1199.0 (0.0%) | 1587.3 (0.0%) | 1351.1 (0.0%) | 1000.0 (0.0%) | 1374.3 (0.0%) | 1614.1 (0.0%) | 1514.4 (0.0%) | 993.5 (0.0%) |
+
+### Card plans at fixed pace and safety (N = 8, greedy field)
+
+V end, then the moratorium share by quarter 14 in brackets.
+
+| pace / safety | none | publish | blitz | lobby | poach | publish+blitz | poach+blitz | publish+poach | share | rush | rush+poach | rush+blitz | share+publish |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| p2 s15 | -222.5 (100.0%) | -244.3 (100.0%) | -252.3 (100.0%) | -249.3 (100.0%) | -246.5 (100.0%) | -268.1 (100.0%) | -266.6 (100.0%) | -267.6 (100.0%) | -260.8 (100.0%) | -210.2 (100.0%) | -241.3 (100.0%) | -240.2 (100.0%) | -275.8 (100.0%) |
+| p3 s5 | -182.1 (100.0%) | -193.4 (100.0%) | -198.5 (100.0%) | -198.9 (100.0%) | -199.2 (100.0%) | -214.5 (100.0%) | -212.3 (100.0%) | -216.2 (100.0%) | -204.8 (100.0%) | -187.6 (100.0%) | -206.5 (100.0%) | -203.1 (100.0%) | -225.3 (100.0%) |
+| p4 s0 | -178.0 (100.0%) | -192.7 (100.0%) | -192.2 (100.0%) | -195.8 (100.0%) | -192.3 (100.0%) | -206.7 (100.0%) | -212.4 (100.0%) | -211.0 (100.0%) | -205.9 (100.0%) | -194.2 (100.0%) | -192.9 (100.0%) | -188.7 (100.0%) | -189.2 (100.0%) |
+| p4 s30 | -449.4 (100.0%) | -459.1 (100.0%) | -460.7 (100.0%) | -458.5 (100.0%) | -458.6 (100.0%) | -456.9 (100.0%) | -461.4 (100.0%) | -452.1 (100.0%) | -450.5 (100.0%) | -436.0 (100.0%) | -443.9 (100.0%) | -438.2 (100.0%) | -464.0 (100.0%) |
+
+### Card plans at fixed pace and safety (N = 8, defaults field)
+
+V end, then the moratorium share by quarter 14 in brackets.
+
+| pace / safety | none | publish | blitz | lobby | poach | publish+blitz | poach+blitz | publish+poach | share | rush | rush+poach | rush+blitz | share+publish |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| p2 s15 | 580.8 (0.0%) | 533.6 (0.0%) | 633.0 (0.0%) | 494.8 (0.0%) | 915.3 (0.0%) | 583.8 (0.0%) | 1009.5 (0.0%) | 807.8 (0.0%) | 491.1 (0.0%) | 1052.4 (0.0%) | 1349.5 (0.0%) | 1151.6 (0.0%) | 446.5 (0.0%) |
+| p3 s5 | 1088.3 (0.0%) | 1069.1 (0.0%) | 1189.2 (0.0%) | 980.0 (0.0%) | 1406.0 (0.0%) | 1173.8 (0.0%) | 1532.6 (0.0%) | 1334.4 (0.0%) | 1019.0 (0.0%) | 1367.9 (0.0%) | 1587.1 (0.0%) | 1477.7 (0.0%) | 986.3 (0.0%) |
+| p4 s0 | 1617.6 (0.0%) | 1654.9 (0.0%) | 1750.3 (0.0%) | 1480.7 (0.0%) | 1880.4 (0.0%) | 1784.9 (0.0%) | 2006.5 (0.0%) | 1873.9 (0.0%) | 1577.8 (0.0%) | 1610.8 (0.0%) | 1754.3 (0.0%) | 1713.3 (0.0%) | 1615.2 (0.0%) |
+| p4 s30 | 983.7 (0.0%) | 970.4 (0.0%) | 1115.3 (0.0%) | 864.3 (0.0%) | 1318.0 (0.0%) | 1103.2 (0.0%) | 1468.2 (0.0%) | 1248.6 (0.0%) | 914.6 (0.0%) | 1282.8 (0.0%) | 1514.4 (0.0%) | 1418.3 (0.0%) | 896.3 (0.0%) |
+
+### Card plans at fixed pace and safety (N = 8, mixed field)
+
+V end, then the moratorium share by quarter 14 in brackets.
+
+| pace / safety | none | publish | blitz | lobby | poach | publish+blitz | poach+blitz | publish+poach | share | rush | rush+poach | rush+blitz | share+publish |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| p2 s15 | 101.9 (9.0%) | 49.2 (6.0%) | 73.6 (9.0%) | 19.5 (28.0%) | 197.8 (9.0%) | 31.4 (6.0%) | 203.3 (9.0%) | 124.6 (6.0%) | 17.3 (7.0%) | 308.4 (18.0%) | 399.5 (18.0%) | 314.9 (18.0%) | -20.6 (5.0%) |
+| p3 s5 | 127.3 (95.0%) | 127.2 (89.0%) | 119.6 (95.0%) | 20.3 (100.0%) | 174.7 (95.0%) | 127.7 (89.0%) | 182.2 (95.0%) | 167.4 (89.0%) | 100.7 (91.0%) | 64.3 (100.0%) | 60.7 (100.0%) | 54.5 (100.0%) | 78.2 (86.0%) |
+| p4 s0 | 65.1 (100.0%) | 117.1 (100.0%) | 65.9 (100.0%) | -20.2 (100.0%) | 83.8 (100.0%) | 129.0 (100.0%) | 83.7 (100.0%) | 138.9 (100.0%) | 75.0 (100.0%) | -27.6 (100.0%) | -42.9 (100.0%) | -45.0 (100.0%) | 112.7 (96.0%) |
+| p4 s30 | -46.0 (74.0%) | -25.2 (45.0%) | -55.4 (76.0%) | -100.0 (78.0%) | -8.1 (81.0%) | -18.9 (54.0%) | 26.2 (84.0%) | 10.7 (62.0%) | -25.1 (41.0%) | -92.2 (99.0%) | -65.6 (99.0%) | -77.9 (99.0%) | -17.8 (28.0%) |
 
 ## 2. Symmetric play: every firm uses the same strategy
 
@@ -49,15 +84,15 @@ Flags a strategy that avoids a moratorium in ≥ 99% of seeds over 30 quarters a
 
 | N | all-sustainable V14 | best symmetric strategy without moratorium | its V14 | its moratorium by 30 | flagged |
 |---|---|---|---|---|---|
-| 4 | 743.6 | p1 s0 publish | 1235.9 | 0.0% | yes |
-| 8 | 743.9 | p1 s0 publish | 1320.5 | 0.0% | yes |
-| 12 | 742.2 | p1 s0 publish | 1348.2 | 0.0% | yes |
+| 4 | 714.1 | p1 s0 publish | 1127.8 | 0.0% | yes |
+| 8 | 714.2 | p1 s0 publish | 1131.9 | 0.0% | yes |
+| 12 | 712.5 | p1 s0 publish | 1129.6 | 0.0% | yes |
 
 Top five symmetric strategies without a moratorium (mean firm V14):
 
-- N = 4: p1 s0 publish (1235.9); p1 s5 publish (1170.7); p1 s0 publish+blitz (1130.9); p1 s0 publish+poach (1130.5); p1 s10 publish (1112.6)
-- N = 8: p1 s0 publish (1320.5); p1 s5 publish (1250.2); p2 s0 publish (1240.0); p1 s0 publish+poach (1215.9); p1 s0 publish+blitz (1215.5)
-- N = 12: p1 s0 publish (1348.2); p2 s0 publish (1287.5); p1 s5 publish (1278.1); p1 s0 publish+poach (1250.1); p1 s0 publish+blitz (1243.2)
+- N = 4: p1 s0 publish (1127.8); p1 s0 none (1075.6); p1 s0 rush (1075.4); p1 s5 publish (1062.0); p1 s0 share+publish (1032.1)
+- N = 8: p1 s0 publish (1131.9); p1 s0 none (1077.9); p1 s0 rush (1071.7); p1 s5 publish (1066.5); p1 s0 share+publish (1032.1)
+- N = 12: p1 s0 publish (1129.6); p1 s0 none (1078.0); p1 s0 rush (1065.8); p1 s5 publish (1063.2); p1 s0 publish+poach (1030.8)
 
 ## 3. Pact breach
 
@@ -65,11 +100,11 @@ All N = 8 firms are in one pact (maximum pace 2, minimum safety 10). Firms 1–7
 
 | firm 0 strategy | V end | fines paid (mean) | collapse by 14 | V end with no pact |
 |---|---|---|---|---|
-| comply: p2 s15 none | 649.8 | 0.0 | 0.0% | 649.8 |
-| breach: p4 s0 blitz | 1503.4 | 533.3 | 0.0% | 1920.9 |
-| breach: p4 s0 lobby (waiver) | 1435.5 | 269.9 | 0.0% | 1642.7 |
-| breach: p3 s5 none | 949.5 | 333.0 | 0.0% | 1213.1 |
-| breach: p4 s30 blitz | 1104.8 | 341.5 | 0.0% | 1364.3 |
+| comply: p2 s15 none | 626.5 | 0.0 | 0.0% | 626.5 |
+| breach: p4 s0 blitz | 1447.8 | 517.0 | 0.0% | 1853.4 |
+| breach: p4 s0 lobby (waiver) | 1380.3 | 260.9 | 0.0% | 1579.2 |
+| breach: p3 s5 none | 907.6 | 321.7 | 0.0% | 1163.4 |
+| breach: p4 s30 blitz | 976.1 | 308.0 | 0.0% | 1223.0 |
 
 ## 4. Can one firm cause a moratorium on its own?
 
@@ -77,24 +112,24 @@ One firm plays each pace 3–4 strategy at safety 0 or 5 with every card plan; t
 
 | N | field | worst strategy | moratorium by 14 | by 30 | median quarter when it happens |
 |---|---|---|---|---|---|
-| 2 | restrained | p4 s0 none | 100.0% | 100.0% | 8 |
-| 2 | defaults | p4 s0 none | 100.0% | 100.0% | 7 |
-| 3 | restrained | p4 s0 lobby | 87.8% | 100.0% | 12 |
-| 3 | defaults | p4 s0 lobby | 93.0% | 100.0% | 11 |
-| 4 | restrained | p4 s0 lobby | 21.8% | 99.6% | 17 |
-| 4 | defaults | p4 s0 lobby | 31.4% | 100.0% | 16 |
-| 5 | restrained | p4 s0 lobby | 1.2% | 64.6% | 23 |
-| 5 | defaults | p4 s0 lobby | 3.4% | 96.6% | 21 |
-| 6 | restrained | p4 s0 lobby | 0.0% | 15.6% | 26 |
-| 6 | defaults | p4 s0 lobby | 0.2% | 67.6% | 25.5 |
-| 8 | restrained | p3 s0 none | 0.0% | 0.0% | – |
-| 8 | defaults | p4 s0 lobby | 0.0% | 2.4% | 28 |
+| 2 | restrained | p3 s0 rush | 100.0% | 100.0% | 6 |
+| 2 | defaults | p3 s0 rush | 100.0% | 100.0% | 6 |
+| 3 | restrained | p3 s0 rush | 100.0% | 100.0% | 9 |
+| 3 | defaults | p3 s0 rush | 100.0% | 100.0% | 9 |
+| 4 | restrained | p4 s0 rush | 100.0% | 100.0% | 9 |
+| 4 | defaults | p4 s0 rush | 100.0% | 100.0% | 9 |
+| 5 | restrained | p4 s0 rush | 80.6% | 100.0% | 13 |
+| 5 | defaults | p4 s0 rush | 90.0% | 100.0% | 12 |
+| 6 | restrained | p4 s0 rush | 20.2% | 100.0% | 16 |
+| 6 | defaults | p4 s0 rush | 32.8% | 100.0% | 15 |
+| 8 | restrained | p4 s0 rush | 0.0% | 53.6% | 24 |
+| 8 | defaults | p4 s0 rush | 0.2% | 97.0% | 23 |
 
 ## Summary
 
 - Dominant strategy: none found.
 - Strategies beating both references in every field and N: 0.
 - Symmetric strategies that beat restraint without a moratorium: N=4: p1 s0 publish; N=8: p1 s0 publish; N=12: p1 s0 publish.
-- Worst single-firm moratorium rate by quarter 14 at N = 4: 31.4%.
+- Worst single-firm moratorium rate by quarter 14 at N = 4: 100.0%.
 
-Run time 988 s.
+Run time 2399 s.
