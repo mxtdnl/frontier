@@ -19,7 +19,7 @@ import {
 import { DISCLOSURE_ON, HUMAN, REHEARSAL_QUARTERS, simulateRehearsal } from './lib/rehearsal-model';
 
 /** Fixed seed with a moratorium in quarter 10 (the unit test tests/tools/rehearsal-model.test.ts guards it). */
-export const SEED = 2;
+export const SEED = 3;
 const BOTS = 8;
 const FIRMS = BOTS + 1;
 
