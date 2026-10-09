@@ -3,13 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { PARAMS } from '../../src/engine';
 import { greedyCount, greedyShare, halfGreedy, NS, runConditions } from '../../tools/calibration/scenarios';
 
+// 100 seeds: since Session 17 about 43% of all-greedy seeds reach the moratorium by quarter 4,
+// so at 40 or 60 seeds the C1 median can land on 4.5 at N = 50 (the 200- and 500-seed runs give 5).
+const SMOKE_SEEDS = 100;
+
 describe('calibration smoke', () => {
   for (const n of [4, 12, 50]) {
-    it(`C1–C5 pass at N=${n} over 40 seeds`, () => {
-      const r = runConditions(PARAMS, n, 40);
+    it(`C1–C5 pass at N=${n} over ${SMOKE_SEEDS} seeds`, () => {
+      const r = runConditions(PARAMS, n, SMOKE_SEEDS);
       expect(r.conditions.map((c) => c.id)).toEqual(['C1', 'C2', 'C3', 'C4', 'C5']);
       for (const c of r.conditions) expect(c.pass, `${c.id} ${JSON.stringify(c.detail)}`).toBe(true);
-    });
+    }, 60_000);
   }
 });
 

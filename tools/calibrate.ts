@@ -9,7 +9,7 @@
  */
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { exposureLabel, exposureOf, PARAMS, type Card, type Pace, type Params } from '../src/engine';
+import { CARDS, exposureLabel, exposureOf, PARAMS, type Pace, type Params } from '../src/engine';
 import {
   cardDominance,
   collapseDist,
@@ -21,6 +21,8 @@ import {
   allOf,
   LONG_ROUNDS,
   NS,
+  observedHumanRates,
+  parseObserved,
   passivePath,
   quantile,
   ROUNDS,
@@ -97,10 +99,10 @@ line();
 line('### C1: greedy field');
 line();
 table(
-  ['N', 'median round', 'by round 12', 'by round 14', 'round p10 / p25 / p50 / p75 / p90', 'mean V/firm p10 / p25 / p50 / p75 / p90', 'result'],
+  ['N', 'median round', 'by round 4', 'by round 12', 'by round 14', 'round p10 / p25 / p50 / p75 / p90', 'mean V/firm p10 / p25 / p50 / p75 / p90', 'result'],
   results.map((r) => {
     const c = r.conditions[0]!;
-    return [String(r.n), fmt(c.detail.medianRound ?? NaN, 1), pct(c.detail.collapsedBy12 ?? 0), pct(c.detail.collapsedBy14 ?? 0), pcts(r.c1Rounds, 0), pcts(r.c1Values), PASS(c.pass)];
+    return [String(r.n), fmt(c.detail.medianRound ?? NaN, 1), pct(c.detail.collapsedBy4 ?? 0), pct(c.detail.collapsedBy12 ?? 0), pct(c.detail.collapsedBy14 ?? 0), pcts(r.c1Rounds, 0), pcts(r.c1Values), PASS(c.pass)];
   }),
 );
 line('### C2: sustainable field');
@@ -210,16 +212,22 @@ if (!skipDiagnostics) {
   line(`### Card dominance: myopic best response against a greedy field (${ROUNDS} quarters)`);
   line();
   line('Firm 1 plays pace 4 and 3 alternately at safety 5 and, each quarter, the legal card that maximises its own valuation at the end of that quarter. Pass: no card chosen in more than 60% of rounds.');
+  line('No card may repeat in consecutive quarters, so no card other than NONE can exceed 50% of rounds. The second table gives each card\'s share of the rounds in which it was legal.');
   line();
-  const cards = NS.map((n) => ({ n, c: cardDominance(p, seeds, n) }));
-  const CARD_LIST: Card[] = ['NONE', 'POACH', 'PUBLISH', 'LOBBY', 'BLITZ'];
+  const cards = NS.map((n) => ({ n, ...cardDominance(p, seeds, n) }));
   table(
-    ['N', ...CARD_LIST, 'max card share', 'result'],
-    cards.map(({ n, c }) => {
-      const total = CARD_LIST.reduce((a, k) => a + c[k], 0);
-      const maxCard = Math.max(...CARD_LIST.filter((k) => k !== 'NONE').map((k) => c[k])) / total;
-      return [String(n), ...CARD_LIST.map((k) => pct(c[k] / total)), pct(maxCard), maxCard <= 0.6 ? 'PASS' : 'FAIL'];
+    ['N', ...CARDS, 'max card share', 'result'],
+    cards.map(({ n, counts: c }) => {
+      const total = CARDS.reduce((a, k) => a + c[k], 0);
+      const maxCard = Math.max(...CARDS.filter((k) => k !== 'NONE').map((k) => c[k])) / total;
+      return [String(n), ...CARDS.map((k) => pct(c[k] / total)), pct(maxCard), maxCard <= 0.6 ? 'PASS' : 'FAIL'];
     }),
+  );
+  line('Chosen when legal:');
+  line();
+  table(
+    ['N', ...CARDS.filter((k) => k !== 'NONE')],
+    cards.map(({ n, counts: c, legal }) => [String(n), ...CARDS.filter((k) => k !== 'NONE').map((k) => pct(legal[k] ? c[k] / legal[k] : 0))]),
   );
 
   line(`### Leaderboard volatility: mixed field (cautious, standard, greedy, mimic-leader), disclosure on`);
@@ -239,7 +247,25 @@ if (!skipDiagnostics) {
       ...[0, 10, 15, 30].map((s) => `${fmt(exposureOf(pace, s, p), 2)} ${exposureLabel(exposureOf(pace, s, p), p)}`),
     ]),
   );
-  diagnostics = { half, shares, passive: passive.map(({ n, d }) => ({ n, rate: d.collapseRateBy30 })), cards, vol };
+  line(`### Observed-human room (${LONG_ROUNDS} quarters)`);
+  line();
+  line('N firm trajectories drawn with replacement (seeded) from `tools/calibration/observed-human.json`: 37 firms from four live sessions without bots (2026-10-08). A trajectory shorter than 30 quarters repeats its last 5 quarters; a POACH target is a seeded random other firm. The live data contains no SHARE or RUSH, so this room cannot measure those cards.');
+  line();
+  const trajectories = parseObserved(JSON.parse(readFileSync('tools/calibration/observed-human.json', 'utf8')));
+  const observed = NS.map((n) => ({ n, r: observedHumanRates(p, seeds, n, trajectories) }));
+  table(
+    ['N', 'by 12', 'by 14', 'by 20', 'median round', 'round p10 / p25 / p50 / p75 / p90'],
+    observed.map(({ n, r }) => [String(n), pct(r.by12), pct(r.by14), pct(r.by20), fmt(r.medianRound, 1), pcts(r.rounds, 0)]),
+  );
+
+  diagnostics = {
+    half,
+    shares,
+    passive: passive.map(({ n, d }) => ({ n, rate: d.collapseRateBy30 })),
+    cards,
+    vol,
+    observed: observed.map(({ n, r }) => ({ n, by12: r.by12, by14: r.by14, by20: r.by20, medianRound: r.medianRound })),
+  };
 }
 
 line('## Parameters used');
