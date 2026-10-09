@@ -313,3 +313,132 @@ The flatter step from pace 3 to pace 4 means two boundaries cannot both stay whe
 | 4 | SEVERE up to safety 16, then HIGH | SEVERE up to safety 6, then HIGH |
 
 This step does not affect C1–C5.
+
+---
+
+## 2026-10-09 — Session 17 (recalibration from live play; SHARE and RUSH)
+
+**Owner decisions (2026-10-08 and 2026-10-09).**
+- **Set S7** from `reports/live-sessions-2026-10-08.md` and docs/SESSIONS.md:
+  - PUBLISH_TRUST 1.0 per card, unscaled → **0.25 per card × 8/N** (spec §6.3 step 6; an engine change, approved as a spec change)
+  - SAFETY_DRAW_EFF 0.6 → **0.35**
+  - LOBBY_TRUST stays 0.5 per card, unscaled.
+- **Outside the §8.3 order, with the owner's approval.** Neither lever is in the §8.3 list (R, DRAW, INC_TRUST, COMPUTE_COST, CAP_GAIN, γ). The reason: those levers move the greedy bot and human rooms together, and C1 binds. The all-greedy median is already quarter 5, the lower limit. PUBLISH (which no bot plays) and SAFETY_DRAW_EFF (which barely affects the greedy bot at safety 5) separate human rooms from the bots.
+- **New cards.**
+  - `SHARE`: cost 15; every firm's incident probability ×0.75 per SHARE played (stacks per card).
+  - `RUSH`: cost 0; +4 capability (permanent, applied before POACH); own draw d_i ×2 and own incident probability **×2** this quarter.
+  - The owner raised RUSH's incident multiplier from the proposed ×1.5 to ×2, and asked for ×3 to be measured alongside.
+- **No target for the observed-human room.** It is a §8.2 diagnostic, not a condition C6.
+
+**New in the tools** (`tools/calibration/scenarios.ts`, `tools/calibrate.ts`):
+- **Observed-human room.** N trajectories drawn with replacement from `tools/calibration/observed-human.json` (37 live firms), seeded per (seed, N). Each plays 30 quarters; a trajectory shorter than 30 repeats its last 5 quarters; a POACH target is a seeded random other firm, excluding the firm's previous target so that the repeat rule does not drop the card.
+- **Harness check.** On the Session 16 engine and values, the room gives 13.0% / 5.5% / 0% / 0% / 0% by quarter 14 at N = 4 / 6 / 10 / 20 / 50. The live-session report measured 13% / 7% / 1% / 0% / 0%.
+- **C1 by quarter 4** is now reported. C1's median stays at 5 only while this is below 50%.
+- **Card dominance.** The check also reports each card's share of the quarters in which it was legal. No card may repeat, so no card other than NONE can exceed 50% of all quarters, and the 60% limit cannot fail for a single card.
+- **Strategy audit.** `tools/audit-strategies.ts` gains five card plans (share, rush, rush+poach, rush+blitz, share+publish), card-plan tables for all four fields, and a `--params` override.
+
+### Step 0: Session 16 values (before), 200 seeds
+
+Measured with the Session 17 tools on the Session 16 engine and parameters. "C1" is the median quarter, then the share by quarter 4; "obs. human" is the observed-human room's share by quarter 14.
+
+| N | C1 | C2 | C3 | C4 | C5 | obs. human | result |
+|---|---|---|---|---|---|---|---|
+| 4 | 5 / 35.5% | 0% / 392% | 595% | 0% | 98.0% / 11 | 13.0% | PPPPP |
+| 6 | 5 / 33.5% | 0% / 393% | 434% | 0% | 100% / 11 | 5.5% | PPPPP |
+| 8 | 5 / 30.5% | 0% / 392% | 394% | 0% | 100% / 11 | 2.5% | PPPPP |
+| 10 | 5 / 26.5% | 0% / 391% | 379% | 0% | 100% / 11 | 0% | PPPPP |
+| 12 | 5 / 23.0% | 0% / 390% | 372% | 0% | 100% / 10 | 0.5% | PPPPP |
+| 16 | 5 / 25.0% | 0% / 390% | 361% | 0% | 100% / 11 | 0% | PPPPP |
+| 20 | 5 / 26.0% | 0% / 390% | 358% | 0% | 100% / 11 | 0% | PPPPP |
+| 30 | 5 / 27.0% | 0% / 389% | 352% | 0% | 100% / 11 | 0% | PPPPP |
+| 40 | 5 / 27.5% | 0% / 390% | 350% | 0% | 100% / 11 | 0% | PPPPP |
+| 50 | 5 / 27.0% | 0% / 389% | 348% | 0% | 100% / 11 | 0% | PPPPP |
+
+### Step 1: S7, kept (PUBLISH_TRUST 0.25 × 8/N, SAFETY_DRAW_EFF 0.35), 200 seeds
+
+| N | C1 | C2 | C3 | C4 | C5 | obs. human | result |
+|---|---|---|---|---|---|---|---|
+| 4 | 5 / 43.5% | 0% / 378% | 657% | 1.0% | 100% / 10 | 47.0% | PPPPP |
+| 6 | 5 / 40.5% | 0% / 379% | 453% | 0% | 100% / 10 | 52.5% | PPPPP |
+| 8 | 5 / 40.5% | 0% / 378% | 404% | 0% | 100% / 10 | 45.5% | PPPPP |
+| 10 | 5 / 38.5% | 0% / 376% | 387% | 0% | 100% / 10 | 50.0% | PPPPP |
+| 12 | 5 / 38.0% | 0% / 376% | 377% | 0% | 100% / 10 | 48.5% | PPPPP |
+| 16 | 5 / 40.5% | 0% / 376% | 366% | 0% | 100% / 10 | 57.0% | PPPPP |
+| 20 | 5 / 40.5% | 0% / 376% | 363% | 0% | 100% / 10 | 55.5% | PPPPP |
+| 30 | 5 / 41.0% | 0% / 376% | 356% | 0% | 100% / 10 | 63.5% | PPPPP |
+| 40 | 5 / 41.5% | 0% / 376% | 354% | 0% | 100% / 10 | 83.5% | PPPPP |
+| 50 | 5 / 43.0% | 0% / 376% | 352% | 0% | 100% / 10 | 93.5% | PPPPP |
+
+**Observed-human room in full** (200 seeds; `reports/calibration.md`):
+
+| N | by 12 | by 14 | by 20 | median quarter |
+|---|---|---|---|---|
+| 4 | 34.5% | 47.0% | 59.5% | 16 |
+| 6 | 38.0% | 52.5% | 62.5% | 14 |
+| 8 | 35.5% | 45.5% | 59.5% | 16 |
+| 10 | 40.5% | 50.0% | 58.5% | 14.5 |
+| 12 | 35.5% | 48.5% | 61.0% | 15 |
+| 16 | 39.5% | 57.0% | 68.5% | 13 |
+| 20 | 44.0% | 55.5% | 62.0% | 13 |
+| 30 | 53.5% | 63.5% | 70.0% | 12 |
+| 40 | 73.5% | 83.5% | 89.0% | 11 |
+| 50 | 85.0% | 93.5% | 95.5% | 10 |
+
+- **Against the session table** (52% / 53% / 54% / 65% / 92% at N = 4 / 6 / 10 / 20 / 50): this run gives 47% / 52.5% / 50% / 55.5% / 93.5%. The gap at N = 20 is about 3 standard errors at 200 seeds. At 1,000 seeds the room gives 48.0% (N = 4), 52.9% (N = 10) and 61.9% (N = 20), so the difference is sampling noise. The 500-seed run gives 48.6% / 50.6% / 52.6% / 59.8% / 93.4%.
+- **The room cannot measure SHARE or RUSH.** They do not appear in the live data. It also does not react to the new PUBLISH value: the live classes might play PUBLISH less now that it adds less trust.
+
+**Diagnostics after the change** (200 seeds):
+- **C1 margin.** C1 by quarter 4 rises from 23–35.5% to 38–43.5% (limit 50%). At 500 seeds it is 43–48.6%; 48.6% at N = 4 is the closest to the limit.
+- **C5.** The median quarter moves from 10–11 to 10 at every N; by quarter 11 rises from 67–81% to 82.5–98.5%.
+- **C2.** The all-sustainable mean firm value at quarter 14 falls from about 740 to about 710 (−4%). The gain over C1 falls from 389–393% to 376–379%. There is still no moratorium by quarter 30.
+- **A third of the room greedy, moratorium by quarter 14:** before 0–25%, after 1–58.5% (58.5% at N = 8, 30.5% at N = 20, 16.5% at N = 50).
+- **All Aggressive (pace 3):**
+  - safety 15: the median moratorium quarter moves from 8 to 7
+  - safety 30: before 0% by quarter 30, after 43–48% at every N. The §8.2 diagnostic "safety substitutes for restraint" now holds only partly. The report predicted 16–21% at SAFETY_DRAW_EFF 0.4 and 60–69% at 0.3; 0.35 lies between.
+- **Passive path:** stable at every N; lowest p10 trust 69.85 at N = 4 (was 70.02).
+- **Card dominance** (myopic best response, greedy field), share of all quarters:
+  - RUSH is chosen in 9.9–21.1%, SHARE in 0.3–0.5%, BLITZ in 0–7.1%, PUBLISH in 0–1.5%; NONE in 71.5–87.0%.
+  - Maximum card share 21.1% (N = 50). Pass at every N (limit 60%).
+  - Share of the quarters in which the card was legal: RUSH 24.0% (N = 4) rising to 64.5% (N = 50); SHARE 0.5–0.9%.
+  - Before (Session 16 values): NONE 91.6–92.4%, maximum card 7.0% (BLITZ).
+
+### Step 2: RUSH_INC_MULT 3, measured and not kept, 200 seeds
+
+- C1–C5 are unchanged by construction: no bot plays RUSH. The tables match step 1 exactly.
+- **Card dominance:** RUSH 7.8–20.3% of all quarters (×2: 9.9–21.1%); 17.7% (N = 4) to 61.3% (N = 50) of the quarters in which it was legal (×2: 24.0–64.5%).
+- The owner chose ×2. ×3 lowers RUSH's best-response share by only 1–6 points: an incident costs the firm only INC_REV_LOSS (15%) of that quarter's revenue, while the +4 capability is permanent.
+- The strategy-audit comparison of ×2 and ×3 is below.
+
+### Step 3: EXPO_CUTS [0.15, 0.55, 1.21] → [0.19, 0.908, 1.21] (display only)
+
+The exposure label (§6.5) is a threshold on d_i, so the cutoffs follow SAFETY_DRAW_EFF as well as DRAW.
+- **Without a change:** under the Session 16 cutoffs, pace 2 would read MED and pace 3 HIGH at every safety level, because safety now lowers d_i less.
+- **Reference points kept:** at safety 0, paces 1–4 read LOW, MED, HIGH and SEVERE; pace 4 at safety 30 reads HIGH (d_i 0.91 ≥ 0.908).
+- Pace 1 and pace 2 match the spec's original label at every safety from 0 to 30.
+- RUSH doubles d_i, so the ticket shows it: pace 3 at safety 13 reads HIGH, and SEVERE with RUSH.
+
+Label by safety level (0–30):
+
+| pace | spec starting scale | Session 16 | Session 17 |
+|---|---|---|---|
+| 1 | LOW throughout | LOW throughout | LOW throughout |
+| 2 | MED up to 20, then LOW | MED up to 20, then LOW | MED up to 20, then LOW |
+| 3 | HIGH up to 18, then MED | HIGH up to 27, then MED | HIGH up to 20, then MED |
+| 4 | SEVERE up to 16, then HIGH | SEVERE up to 6, then HIGH | SEVERE up to 11, then HIGH |
+
+- **Pace 3 and pace 4 cannot both match the spec.** Pace 3 reading MED from safety 19 would need a cutoff of 0.934–0.948. That is above pace 4's d_i at safety 30 (0.91), which would then read MED. The reference point wins, and pace 3 reads HIGH up to safety 20.
+- This step does not affect C1–C5.
+
+### Step 4: kept values at 500 seeds (`reports/calibration-500.md`)
+
+- **C1–C5 pass at every N.**
+  - C1: median quarter 5 everywhere; by quarter 4, 43.2–48.6%.
+  - C4: at most 1.2% (N = 4).
+  - C5: 99.8–100% by quarter 14; median quarter 10.
+- **Observed-human room, by quarter 14:** 48.6% (N = 4), 50.6% (6), 45.8% (8), 52.6% (10), 49.0% (12), 58.0% (16), 59.8% (20), 71.6% (30), 86.2% (40), 93.4% (50).
+- **Card dominance:** maximum card share 21.0% (RUSH, N = 50); pass.
+
+### Test change: calibration smoke seeds 40 → 100
+
+- **The failure.** With about 43% of all-greedy seeds reaching the moratorium by quarter 4, a 40-seed sample at N = 50 gives a C1 median of 4.5. Seeds 1–40 and 1–60 both do this.
+- **The fix.** Seeds 1–80 and 1–100 give 5, as do the 200- and 500-seed runs. `tests/engine/calibration.test.ts` now runs 100 seeds, with a 60-second limit per test. This makes the test stricter, not weaker.
