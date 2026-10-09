@@ -32,6 +32,8 @@ export const CARD_INFO: ReadonlyArray<{ id: Card; name: string; cost: number; ef
   { id: 'PUBLISH', name: 'Publish safety research', cost: PARAMS.CARD_COST.PUBLISH, effect: 'Raises public trust. Lowers your incident risk this quarter.' },
   { id: 'LOBBY', name: 'Lobby regulators', cost: PARAMS.CARD_COST.LOBBY, effect: 'Exempt from pact fines detected this quarter. Lowers public trust.' },
   { id: 'BLITZ', name: 'Marketing blitz', cost: PARAMS.CARD_COST.BLITZ, effect: 'Raises your effective capability this quarter only.' },
+  { id: 'SHARE', name: 'Share safety tooling', cost: PARAMS.CARD_COST.SHARE, effect: 'Lowers every firm’s incident risk this quarter, yours included.' },
+  { id: 'RUSH', name: 'Rush a release', cost: PARAMS.CARD_COST.RUSH, effect: 'Raises your capability. Raises your public exposure and incident risk this quarter.' },
 ];
 
 export interface Draft {
@@ -78,7 +80,7 @@ export interface DeskFigures {
 export function deskFigures(d: Draft): DeskFigures {
   return {
     cost: estimatedCost(d.pace, d.safety, d.card, PARAMS),
-    exposure: exposureLabel(exposureOf(d.pace, d.safety, PARAMS), PARAMS),
+    exposure: exposureLabel(exposureOf(d.pace, d.safety, PARAMS, d.card), PARAMS),
   };
 }
 
@@ -120,7 +122,15 @@ export function bookRows(history: Record<string, FirmRoundResult>): BookRow[] {
     .sort((a, b) => a.round - b.round);
 }
 
-const CARD_NAME: Record<Card, string> = { NONE: 'No card', POACH: 'POACH', PUBLISH: 'PUBLISH', LOBBY: 'LOBBY', BLITZ: 'BLITZ' };
+const CARD_NAME: Record<Card, string> = {
+  NONE: 'No card',
+  POACH: 'POACH',
+  PUBLISH: 'PUBLISH',
+  LOBBY: 'LOBBY',
+  BLITZ: 'BLITZ',
+  SHARE: 'SHARE',
+  RUSH: 'RUSH',
+};
 
 /** Why a requested card was dropped (spec §6.3 step 2). The card did not run and cost nothing. */
 export function cardNoticeText(n: NoticeEntry): string {

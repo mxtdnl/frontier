@@ -115,6 +115,8 @@ export const BRIEFING_LINES = {
     ['PUBLISH', 'Release safety research.'],
     ['LOBBY', 'Press regulators on fines.'],
     ['BLITZ', 'Run a marketing push.'],
+    ['SHARE', 'Give every firm your safety tooling.'],
+    ['RUSH', 'Ship early. More capability, more exposure and incident risk.'],
   ],
   commits: [
     'Commit once per quarter. Change and recommit until the timer closes.',
@@ -139,6 +141,8 @@ export const CARDS = [
   { id: 'PUBLISH', name: 'Publish safety research', cost: 10, effect: 'Raises public trust. Lowers your incident risk this quarter.' },
   { id: 'LOBBY', name: 'Lobby regulators', cost: 10, effect: 'Exempt from pact fines this quarter. Lowers public trust.' },
   { id: 'BLITZ', name: 'Marketing blitz', cost: 15, effect: 'Capability counts for more in share this quarter.' },
+  { id: 'SHARE', name: 'Share safety tooling', cost: 15, effect: 'Lowers every firm’s incident risk this quarter, yours included.' },
+  { id: 'RUSH', name: 'Rush a release', cost: 0, effect: 'Raises your capability. Raises your public exposure and incident risk this quarter.' },
 ] as const;
 
 /** Illustrative compute cost per pace for the estimate line. Not an engine value. */
