@@ -484,8 +484,32 @@ async function participantScenario(
   await A.getByRole('radio', { name: /Aggressive/ }).click();
   for (let i = 0; i < 3; i++) await A.getByRole('button', { name: 'Safety spend: increase' }).click();
   await A.getByRole('button', { name: /^Card:/ }).click();
+  // Session 17: SHARE and RUSH in the card sheet at 360×640, and RUSH doubles the exposure shown on the ticket.
+  {
+    const sheet = A.locator('[aria-label="Card"] dialog.sheet');
+    const sheetText = (await sheet.textContent()) ?? '';
+    check(/Share safety tooling[\s\S]*Lowers every firm’s incident risk/.test(sheetText), 'the card sheet lists SHARE with its effect');
+    check(/Rush a release[\s\S]*Raises your public exposure and incident risk/.test(sheetText), 'the card sheet lists RUSH with its effect');
+    const base = A.viewportSize() ?? { width: 390, height: 844 };
+    await A.setViewportSize({ width: 360, height: 640 });
+    await A.waitForTimeout(150);
+    await shot(A, 'play-card-sheet');
+    const rush = A.getByRole('radio', { name: /RUSH/ });
+    await rush.scrollIntoViewIfNeeded();
+    const rb = await rush.boundingBox();
+    check(rb !== null && rb.y >= 0 && rb.y + rb.height <= 640 && rb.height >= 44, 'at 360×640 the RUSH option scrolls into view inside the sheet with a 44 px target');
+    await shot(A, 'play-card-sheet-end');
+    const done = await A.getByRole('button', { name: 'Done' }).boundingBox();
+    check(done !== null && done.y + done.height <= 640, 'at 360×640 the Done button stays in view');
+    await rush.click();
+    await A.getByRole('button', { name: 'Done' }).click();
+    check(/SEVERE/.test(await A.locator('[aria-label="Estimate"]').innerText()), 'RUSH at Aggressive pace and safety 13 shows SEVERE exposure');
+    await A.setViewportSize(base);
+    await A.getByRole('button', { name: /^Card:/ }).click();
+  }
   await A.getByRole('radio', { name: /PUBLISH/ }).click();
   await A.getByRole('button', { name: 'Done' }).click();
+  check(/HIGH/.test(await A.locator('[aria-label="Estimate"]').innerText()), 'without RUSH the same decision shows HIGH exposure');
   const cost1 = fmt(estimatedCost(3, 13, 'PUBLISH', PARAMS));
   check(/Estimated cost this quarter\s*\n?\s*/.test(await A.locator('[aria-label="Estimate"]').innerText()) && (await A.locator('[aria-label="Estimate"]').innerText()).includes(cost1), `the estimated cost is ${cost1}`);
   check(/LOW|MED|HIGH|SEVERE/.test(await A.locator('[aria-label="Estimate"]').innerText()), 'the public exposure label is shown');
