@@ -14,9 +14,9 @@ Severity scale:
 |---|---|---|---|
 | H1 | High | Firms left with no members, and extra firms, cannot be removed | **Fixed** (REMOVE and LOCK JOINS on the console) |
 | H2 | High | A firm's 4-digit PIN could be guessed in seconds while joining was open | **Fixed** (per-firm join throttle, owner's choice; new rules to paste) |
-| M1 | Medium | One firm alone can trigger the moratorium with 4 or fewer firms | Open: runbook advice added. Re-measured in Session 16: similar by quarter 14, much more likely in long sessions |
-| M2 | Medium | POACH dominates the card choice, unlike the §8.2 diagnostic suggests | Open (unchanged in Session 16) |
-| M3 | Medium | Pact sanctions do not deter a breach | Open (unchanged in Session 16) |
+| M1 | Medium | One firm alone can trigger the moratorium with 4 or fewer firms | Open: runbook advice added. Re-measured in Session 16 and Session 17: with RUSH much more likely at 4–5 firms; at 6 firms 1–2% by quarter 14 |
+| M2 | Medium | POACH dominates the card choice, unlike the §8.2 diagnostic suggests | Open. Since Session 17 RUSH, alone or with POACH, is the strongest card plan for a restrained firm |
+| M3 | Medium | Pact sanctions do not deter a breach | Open (unchanged in Sessions 16 and 17) |
 | M4 | Medium | Tickers are not unique in the rules | Open |
 | L1–L10 | Low | See section 4 | Open |
 
@@ -173,6 +173,23 @@ So the statement "no single firm can trigger a moratorium at N = 4" does not hol
 - C4 (one greedy bot) still passes at every N: at most 0.4% at 500 seeds.
 - The runbook advice (at least 6 firms) stands, and now gives these figures. Options 1–3 above are unchanged.
 
+**Session 17 re-measure (2026-10-10).** Parameters S7 (PUBLISH_TRUST 0.25 × 8/N, SAFETY_DRAW_EFF 0.35) and the new RUSH card (draw ×1.5, incident ×1.5 in the firm's RUSH quarters; `docs/CALIBRATION.md`, Session 17). Worst single firm, 500 seeds, other firms restrained or keeping the defaults (`reports/strategy-audit.md`, section 4):
+
+| N | by quarter 14 (Session 16) | by quarter 30 (Session 16) | median quarter |
+|---|---|---|---|
+| 2 | 100% (100%) | 100% (100%) | 8 |
+| 3 | 100% (88–93%) | 100% (100%) | 9 |
+| 4 | **80–91%** (22–31%) | 100% (99.6–100%) | 12–13 |
+| 5 | 20–30% (1–3%) | 99.6–100% (65–97%) | 16–17 |
+| 6 | 1.2–2.4% (0–0.2%) | 74–99% (16–68%) | 20–23 |
+| 8 | 0% (0%) | 2.4–40% (0–2.4%) | 23.5–27 |
+
+- **The worst strategy is now pace 4, safety 0, RUSH every other quarter** (pace 3 at N = 2) in every row. Without RUSH (pace 4, safety 0, LOBBY every other quarter) the S7 values give 41% at N = 4 and 0.4% at N = 6 by quarter 14.
+- **RUSH at draw ×2 and incident ×2** gave 100% at N = 4 and 20–33% at N = 6. The owner chose ×1.5 for both to limit this (option B, 2026-10-10).
+- **At 6 or more firms** one reckless firm rarely triggers the moratorium within 14 quarters (at most 2.4%). In a long session it usually does at 6 firms and sometimes at 8.
+- **At 4 or 5 firms** it now usually does within 14 quarters. The runbook's at-least-6-firms advice is now essential, not a precaution.
+- C4 (one greedy bot, which never plays RUSH) still passes at every N: at most 1.2% at 500 seeds.
+
 ### M2 (Medium): POACH dominates the card choice
 
 **What happens.**
@@ -195,6 +212,22 @@ So the statement "no single firm can trigger a moratorium at N = 4" does not hol
 - pace 2, safety 15: 650 with no card, 1,019 with POACH (+57%), 1,128 with POACH and BLITZ (+74%)
 - every best response in a restrained or defaults field still includes POACH.
 
+**Session 17 re-measure.** RUSH (free, +4 capability) is now stronger than POACH for a restrained firm. In a restrained field at N = 8, the valuation at the end of the session:
+
+| Pace 2, safety 15, card plan | V end | against no card |
+|---|---|---|
+| no card | 627 | — |
+| POACH every other quarter | 984 | +57% |
+| POACH and BLITZ alternating | 1,088 | +74% |
+| RUSH every other quarter | 1,133 | +81% |
+| RUSH and POACH alternating | 1,452 | +132% |
+| SHARE every other quarter | 540 | −14% |
+
+- Every best response in the audit includes RUSH or POACH. Pace 2, safety 0, RUSH and POACH alternating is the best response in 5 of 12 field and N cells. In two more (N = 12, restrained and defaults fields) the best response is the same alternation at pace 4.
+- **New flag.** One strategy beats both references in every field and N: pace 2, safety 0, RUSH and POACH alternating. No strategy did in Session 16; in Session 9 one did (pace 3, safety 0, POACH and BLITZ). It is not dominant: it is the best response in 5 of 12 cells.
+- **SHARE behaves as intended for a public good.** It is never a best response and loses the firm value (−14% at pace 2, safety 15), while it lowers every firm's incident risk.
+- The myopic card-dominance check passes: RUSH is chosen in at most 21.4% of all quarters.
+
 ### M3 (Medium): pact sanctions do not deter a breach
 
 **What happens.**
@@ -210,9 +243,12 @@ So the statement "no single firm can trigger a moratorium at N = 4" does not hol
 
 **Session 16 re-measure.** Unchanged in substance. Breach at pace 4, safety 0 with BLITZ ends at 1,503 against 650 for complying, after 533 in fines on average. Alternating LOBBY halves the fines (270). See `reports/strategy-audit.md`, section 3.
 
+**Session 17 re-measure.** Unchanged in substance. Breach at pace 4, safety 0 with BLITZ ends at 1,448 against 627 for complying, after 517 in fines on average. Alternating LOBBY halves the fines (261). The live sessions of 2026-10-08 never formed a two-member pact, so they cannot inform this finding.
+
 **Also from the Session 16 audit:**
 - No strategy now beats both references in every field and N. In Session 9 one did: pace 3, safety 0, POACH and BLITZ.
 - The symmetric check still flags pace 1, safety 0, PUBLISH every other quarter. Mean firm value at quarter 14 is 1,236–1,348, against 742–744 for an all-sustainable field, with no moratorium (L9).
+- Session 17: the same strategy is still flagged (1,128–1,132 against 713–714). Pace 1, safety 0, RUSH every other quarter is second (1,109–1,112), also with no moratorium by quarter 30.
 
 
 ---

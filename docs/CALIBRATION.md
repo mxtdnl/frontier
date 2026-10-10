@@ -474,3 +474,14 @@ The worst strategy is pace 4 (pace 3 at N ≤ 3), safety 0, RUSH every other qua
 - **Card dominance, 200 seeds:** RUSH is chosen in 13.7–21.4% of all quarters (×2: 9.9–21.1%) and in 35.6–65.4% of the quarters in which it was legal (×2: 24.0–64.5%). The maximum card share is 21.4%: pass. At 500 seeds, 13.8–21.4%: pass.
   - RUSH is chosen more often at ×1.5 because its own incident risk is lower.
 - **Exposure label:** pace 3 at safety 13 with RUSH reads SEVERE (d_i 1.53); without RUSH it reads HIGH.
+
+### Step 6: strategy audit on the kept values (`reports/strategy-audit.md`, 100 seeds; section 4 at 500)
+
+- **No dominant strategy** (no single strategy is the best response in every field and N).
+- **One strategy beats both references in every cell:** pace 2, safety 0, RUSH and POACH alternating. None did in Session 16. It is the best response in 5 of 12 cells. Details in REVIEW M2.
+- **RUSH's value to a restrained firm** (pace 2, safety 15, N = 8, restrained field): +81% with RUSH every other quarter, +132% alternating RUSH and POACH, against +57% for POACH every other quarter.
+- **SHARE is never a best response.** It costs a pace 2, safety 15 firm 14% of its value. This is the free-rider pressure the card is meant to show.
+- **Single-firm moratorium (M1), by quarter 14:**
+  - 80–91% at N = 4, 20–30% at N = 5, 1.2–2.4% at N = 6, 0% at N = 8
+  - by quarter 30: 74–99% at N = 6, 2.4–40% at N = 8.
+- **Pact breach (M3)** and the symmetric flag (L9, pace 1, safety 0, PUBLISH) are unchanged in substance.
