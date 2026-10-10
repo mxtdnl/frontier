@@ -170,7 +170,7 @@ describe('step 6: trust update', () => {
     const r = resolveRound(g, ds, NO_INC);
     const D = Object.values(r.outputs.firms).reduce((x, f) => x + f.draw, 0);
     const T0 = p.T0;
-    const expected = T0 + p.R * T0 * (1 - T0 / 100) - D + p.PUBLISH_TRUST - p.LOBBY_TRUST;
+    const expected = T0 + p.R * T0 * (1 - T0 / 100) - D + p.PUBLISH_TRUST * (p.DRAW_REF_N / 4) - p.LOBBY_TRUST;
     expect(r.outputs.T).toBeCloseTo(Math.max(0, Math.min(100, expected)), 10);
   });
 

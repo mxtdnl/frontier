@@ -1092,3 +1092,94 @@ Half-greedy room, moratorium by quarter 14 (median quarter):
 - **Owner direction:** weaken PUBLISH less than S2. The proposed set is S7: PUBLISH_TRUST 0.25 × 8/N and SAFETY_DRAW_EFF 0.35. It passes C1–C5, and the observed-human room reaches the moratorium by quarter 14 in 52–65% of seeds at N = 4–20. A display-only research credit in Session 18 keeps PUBLISH prominent on the results screen.
 - **Proposed cards** for owner confirmation: `SHARE` (a public good on incident risk) and `RUSH` (private capability at a cost to public trust).
 - `tools/calibration/observed-human.json` holds the 37 anonymised live trajectories for the observed-human diagnostic.
+
+## 2026-10-10 — Session 17: recalibration from live play and two new cards
+
+**Owner decisions (2026-10-08 to 2026-10-10), all written into `docs/spec.md` as approved spec changes**
+- **Set S7 confirmed.** PUBLISH_TRUST falls from a flat 1.0 to 0.25 × 8/N per card (§6.3 step 6 now scales the PUBLISH term by 8/N); SAFETY_DRAW_EFF 0.6 → 0.35. LOBBY stays 0.5, unscaled.
+- **SHARE confirmed as proposed:** cost 15; every firm's incident probability ×0.75 per card. Several SHARE cards stack (0.75 per card).
+- **RUSH:** cost 0; +4 capability (permanent, applied before POACH). Own trust draw and own incident probability ×1.5 in that quarter.
+  - The incident multiplier was first raised from ×1.5 to ×2, with ×3 measured alongside.
+  - The strategy audit then showed that at ×2 one firm alone could trigger the moratorium in 20–33% of sessions at 6 firms. The owner chose draw ×1.5 and incident ×1.5 (option B).
+- **The observed-human room is a §8.2 diagnostic.** No target was set, so there is no C6.
+
+**Spec changes** (§5.1, §5.2, §6.2, §6.3 steps 3–6, §6.5, §6.6, §8.2, §14.5, §15.4)
+- the two cards, their effects, headlines and briefing lines
+- PUBLISH's new wording
+- SAFETY_DRAW_EFF 0.35
+- the exposure label includes RUSH's multiplier
+- the observed-human diagnostic
+- the note that no card except NONE can exceed 50% of quarters in the dominance check.
+
+**Done**
+- **Engine:**
+  - `CARDS` and the `Card` type gain SHARE and RUSH.
+  - `cards.ts`: `rushGain`, `drawMultiplier`, `sharedIncidentMultiplier`; `cardTrustDelta` takes N.
+  - `resolve.ts` applies them in steps 3–6.
+  - `exposureOf` takes the card.
+  - Headlines: two templates per card.
+  - New values in `params.ts`.
+  - The existing no-repeat and insolvency rules cover both cards; neither takes a target.
+- **Exposure cutoffs:** EXPO_CUTS [0.15, 0.55, 1.21] → [0.19, 0.908, 1.21] (`docs/CALIBRATION.md`, step 3).
+- **Rules:** the card list in `database.rules.json` gains SHARE and RUSH, with three new rules tests.
+- **Phone:** both cards in the card sheet (`CARD_INFO`), the mock fixtures and the briefing. The decision ticket's exposure meter includes RUSH.
+- **Calibration tools:**
+  - the observed-human room (`observedRoom`, `observedHumanRates`, `parseObserved`, `observedAt`)
+  - C1 by quarter 4
+  - each card's share of the quarters in which it was legal
+  - five new card plans and a `--params` override in `tools/audit-strategies.ts`.
+- **Reports:** `reports/calibration.md` (200 seeds), `reports/calibration-500.md`, `reports/strategy-audit.md` and `reports/scale-run.md` re-run.
+- **Rehearsal:** the fixed seed changes from 2 to 3. Seed 2's moratorium moved to quarter 9, inside the disclosure quarters (4–9); seed 3's stays in quarter 10.
+- **Documents:** `docs/CALIBRATION.md` (every attempt, before and after tables), `docs/REVIEW.md` (M1–M3 re-measured), `docs/RUNBOOK.md` §4 and §9.
+
+**Results**
+
+A room like the four live classes (observed-human room), moratorium by quarter 14:
+
+| Firms | 4 | 6 | 10 | 20 | 50 |
+|---|---|---|---|---|---|
+| Before (200 seeds) | 13.0% | 5.5% | 0% | 0% | 0% |
+| After (200 seeds) | 47.0% | 52.5% | 50.0% | 55.5% | 93.5% |
+| After (500 seeds) | 48.6% | 50.6% | 52.6% | 59.8% | 93.4% |
+
+- **Median moratorium quarter:** 13–16 at 4–20 firms.
+- **C1–C5:** pass at every N at 200 and 500 seeds.
+  - C1 by quarter 4: 38–43.5% (200 seeds) and 43–48.6% (500 seeds), against the 50% limit. The narrowest margin is 48.6% at N = 4.
+- **All-sustainable room:** mean firm value at quarter 14 falls from about 740 to about 710; still no moratorium by quarter 30.
+- **Card dominance:** passes. RUSH is chosen in at most 21.4% of all quarters; SHARE in under 1%.
+- **Strategy audit:**
+  - no dominant strategy
+  - one strategy now beats both references everywhere (pace 2, safety 0, RUSH and POACH alternating; REVIEW M2)
+  - RUSH is worth +81% to a restrained firm
+  - SHARE is never a best response.
+- **M1, one firm alone, by quarter 14:** 80–91% at 4 firms (was 22–31%), 20–30% at 5 (was 1–3%), 1.2–2.4% at 6 (was 0–0.2%), 0% at 8.
+
+**Tests**
+- `npm run typecheck` passes.
+- `npm test`: 569 passed (was 539). New: `tests/engine/cards.test.ts` (18), `tests/tools/observed-human.test.ts` (10) and two exposure label tests.
+- `npm run test:rules`: 163 passed (was 161).
+- `lint:copy` and `lint:design` pass; `npm run build` succeeds.
+- **End-to-end, all on the final values:** `test:e2e` 310 checks (6 new: SHARE and RUSH in the card sheet at 360×640, 44 px targets, Done in view, RUSH's exposure on the ticket); `test:e2e:rehearsal` 152; `test:e2e:long` 133; `test:e2e:scale-run` 226. All pass.
+- **Screenshots:** `shots/e2e-play-card-sheet-360x640.png` and `shots/e2e-play-card-sheet-end-360x640.png`.
+- **Failures during the session:**
+  - **Calibration smoke test.** At 40 seeds, C1's median at N = 50 is 4.5: about 43% of all-greedy seeds now reach the moratorium by quarter 4. The test now runs 100 seeds, which give 5, as do 200 and 500. This is stricter, not looser.
+  - **Two property tests** exceeded the 5-second limit twice in full runs while calibration jobs shared the CPU. They take about 2.5 s alone, unchanged from before the session, and pass in every run without that load.
+  - **Two strategy-audit runs** were stopped at the 30-minute background limit and re-run with a longer limit. No results were lost.
+
+**Spec deviations**
+- **Exposure cutoffs (§6.5).** Pace 3 reads HIGH up to safety 20 (spec 18), pace 4 SEVERE up to safety 11 (spec 16). Pace 3 cannot read MED from safety 19 while pace 4 at safety 30 reads HIGH (`docs/CALIBRATION.md`, step 3).
+- **PUBLISH_TRUST and SAFETY_DRAW_EFF** are outside the §8.3 lever order, with the owner's approval. The §8.3 levers move bots and human rooms together, and C1 binds.
+- **Observed-human room, POACH targets.** A POACH target is a random other firm, excluding the firm's previous target, so that the engine does not drop the card. The session text says "a seeded random other firm".
+
+**Open issues**
+- **M1.** At 4–5 firms, one firm using RUSH now usually triggers the moratorium within 14 quarters. The runbook now says 6 firms is the minimum, and recommends a fixed 14-quarter end below 8 firms. A warning on `#/new` below 6 firms would need a session.
+- **M2.** RUSH and POACH are the strongest cards; pace 2, safety 0, RUSH and POACH alternating beats both references in every field.
+- **C1 margin.** At 500 seeds, 48.6% of all-greedy seeds at N = 4 reach the moratorium by quarter 4 (limit 50%). Any later change that raises pressure is likely to push C1's median to 4.
+- **Safety offsets aggressive pace less.** A room all at pace 3 with safety 30 now reaches the moratorium in 43–48% of seeds (was 0%).
+- **The observed-human room cannot measure SHARE or RUSH,** and it does not react to the weaker PUBLISH. Live classes may play differently now.
+- **Live database rules.** The new rules must be pasted into the Firebase console. Until then the live site refuses SHARE and RUSH.
+
+**Next steps**
+- Owner: paste `database.rules.json` into the Firebase console (pull request steps), merge, then run a short rehearsal with bot firms.
+- Owner: in the next live class, use at least 6 firms (bots if needed) and a fixed 14-quarter end. Note the moratorium quarter and how often RUSH and SHARE are played.
+- Session 18: incidents, facilitator wire and the NET CONTRIBUTION panel. It counts SHARE as for the market and RUSH as against it.

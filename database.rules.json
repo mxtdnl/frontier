@@ -148,7 +148,7 @@
                 ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 30 && newData.val() % 1 === 0"
               },
               "card": {
-                ".validate": "newData.isString() && newData.val().matches(/^(NONE|POACH|PUBLISH|LOBBY|BLITZ)$/)"
+                ".validate": "newData.isString() && newData.val().matches(/^(NONE|POACH|PUBLISH|LOBBY|BLITZ|SHARE|RUSH)$/)"
               },
               "target": {
                 ".validate": "newData.isString() && newData.val() !== $f && newData.val().matches(/^[^.#$\\[\\]\\/]{1,64}$/) && root.child('games').child($g).child('firms').child(newData.val()).exists()"

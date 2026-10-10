@@ -13,6 +13,20 @@ describe('public exposure label', () => {
     expect(exposureLabel(exposureOf(2, 30, p), p)).toBe('LOW');
   });
 
+  it('moves at the Session 17 boundaries (docs/CALIBRATION.md)', () => {
+    const at = (pace: 1 | 2 | 3 | 4, s: number) => exposureLabel(exposureOf(pace, s, p), p);
+    for (let s = 0; s <= 30; s++) expect(at(1, s)).toBe('LOW');
+    expect([at(2, 20), at(2, 21)]).toEqual(['MED', 'LOW']);
+    expect([at(3, 20), at(3, 21)]).toEqual(['HIGH', 'MED']);
+    expect([at(4, 11), at(4, 12)]).toEqual(['SEVERE', 'HIGH']);
+  });
+
+  it('includes the RUSH multiplier on d_i', () => {
+    expect(exposureOf(2, 0, p, 'RUSH')).toBeCloseTo(p.RUSH_DRAW_MULT * exposureOf(2, 0, p), 12);
+    expect(exposureLabel(exposureOf(3, 0, p, 'RUSH'), p)).toBe('SEVERE');
+    expect(exposureOf(3, 10, p, 'SHARE')).toBe(exposureOf(3, 10, p));
+  });
+
   it('cutoffs are boundaries: LOW < a ≤ MED < b ≤ HIGH < c ≤ SEVERE', () => {
     const [a, b, c] = p.EXPO_CUTS;
     expect(exposureLabel(a - 1e-9, p)).toBe('LOW');

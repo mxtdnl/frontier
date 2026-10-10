@@ -17,6 +17,8 @@ export const BRIEFING_LINES = {
     ['PUBLISH', 'Release safety research.'],
     ['LOBBY', 'Press regulators on fines.'],
     ['BLITZ', 'Run a marketing push.'],
+    ['SHARE', 'Give every firm your safety tooling.'],
+    ['RUSH', 'Ship early. More capability, more exposure and incident risk.'],
   ],
   commits: [
     'Commit once per quarter. Change and recommit until the timer closes.',

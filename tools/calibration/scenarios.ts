@@ -4,7 +4,10 @@
  */
 import {
   allowedCards,
+  CARDS,
   createGame,
+  hash32,
+  mulberry32,
   resolveRound,
   type Card,
   type Decision,
@@ -30,7 +33,12 @@ export interface RunResult {
   dataLines: string[];
 }
 
-type FirmSetup = { kind: 'bot'; policy: Policy } | { kind: 'fixed'; d: Decision } | { kind: 'defaults' };
+/** `script` decides each quarter from the state before resolution (round index 0 = quarter 1). */
+type FirmSetup =
+  | { kind: 'bot'; policy: Policy }
+  | { kind: 'fixed'; d: Decision }
+  | { kind: 'defaults' }
+  | { kind: 'script'; at: (r: number, s: EngineState, firmId: string) => Decision };
 
 export function simulate(
   p: Params,
@@ -57,6 +65,9 @@ export function simulate(
   });
   const out: RunResult = { collapseRound: null, trust: [], values: [], outputs: [], dataLines: [] };
   for (let r = 0; r < rounds; r++) {
+    setups.forEach((s, i) => {
+      if (s.kind === 'script') decisions[`f${i}`] = s.at(r, state, `f${i}`);
+    });
     const res = resolveRound(state, decisions, p);
     state = trim(res.state);
     out.trust.push(state.T);
@@ -190,7 +201,7 @@ export function runConditions(p: Params, n: number, seeds: number, keepAll = fal
         id: 'C1',
         n,
         pass: c1Median >= 5 && c1Median <= 9 && c1By12 >= 0.9,
-        detail: { medianRound: c1Median, collapsedBy12: c1By12, collapsedBy14: frac(c1Rounds, (r) => r <= ROUNDS) },
+        detail: { medianRound: c1Median, collapsedBy4: frac(c1Rounds, (r) => r <= 4), collapsedBy12: c1By12, collapsedBy14: frac(c1Rounds, (r) => r <= ROUNDS) },
       },
       {
         id: 'C2',
@@ -287,9 +298,12 @@ export function passivePath(p: Params, seeds: number, n: number): PassivePath {
  * greedy field. Each quarter it picks the legal card that maximises its own valuation
  * at the end of that quarter (a myopic best response, evaluated with the same draws).
  * POACH targets the most valuable other firm that was not its previous target.
+ * `counts` is how often each card was chosen; `legal` how often it was allowed.
  */
-export function cardDominance(p: Params, seeds: number, n: number): Record<Card, number> {
-  const counts: Record<Card, number> = { NONE: 0, POACH: 0, PUBLISH: 0, LOBBY: 0, BLITZ: 0 };
+export function cardDominance(p: Params, seeds: number, n: number): { counts: Record<Card, number>; legal: Record<Card, number> } {
+  const zero = (): Record<Card, number> => Object.fromEntries(CARDS.map((c) => [c, 0])) as Record<Card, number>;
+  const counts = zero();
+  const legal = zero();
   for (let seed = 1; seed <= seeds; seed++) {
     const firms: FirmInit[] = Array.from({ length: n }, (_, i) => ({
       id: `f${i}`,
@@ -308,6 +322,7 @@ export function cardDominance(p: Params, seeds: number, n: number): Record<Card,
           .sort((a, b) => b.valuation - a.valuation)[0]?.id ?? null;
       let best: { card: Card; v: number; state: EngineState } | null = null;
       for (const card of allowedCards(focal)) {
+        legal[card]++;
         const res = resolveRound(s, { f0: { pace, safety: p.BOT_GREEDY_SAFETY, card, target: card === 'POACH' ? target : null } }, p);
         const v = res.state.firms[0]?.valuation ?? -Infinity;
         if (!best || v > best.v) best = { card, v, state: res.state };
@@ -317,7 +332,87 @@ export function cardDominance(p: Params, seeds: number, n: number): Record<Card,
       s = trim(best.state);
     }
   }
-  return counts;
+  return { counts, legal };
+}
+
+// ── Observed-human room (§8.2, Session 17) ──
+
+/** One firm's applied decisions per quarter from a live session. */
+export interface ObservedQuarter {
+  pace: Pace;
+  safety: number;
+  card: Card;
+  auto: boolean;
+}
+export type Trajectory = ReadonlyArray<ObservedQuarter>;
+
+/** Quarters a short trajectory repeats from its end. */
+export const OBSERVED_CYCLE = 5;
+
+/** Parses `tools/calibration/observed-human.json` ("pace,safety,card,auto" per quarter). */
+export function parseObserved(json: { sessions: ReadonlyArray<{ trajectories: ReadonlyArray<ReadonlyArray<string>> }> }): Trajectory[] {
+  return json.sessions.flatMap((session) =>
+    session.trajectories.map((t) =>
+      t.map((q) => {
+        const [pace, safety, card, auto] = q.split(',');
+        const pc = Number(pace);
+        if (![1, 2, 3, 4].includes(pc) || !CARDS.includes(card as Card)) throw new Error(`observed-human: bad quarter "${q}"`);
+        return { pace: pc as Pace, safety: Number(safety), card: card as Card, auto: auto === '1' };
+      }),
+    ),
+  );
+}
+
+/**
+ * The decision for round index r (0 = quarter 1). Beyond its length, a trajectory
+ * repeats its last OBSERVED_CYCLE quarters (all of it if shorter than that).
+ */
+export function observedAt(t: Trajectory, r: number): ObservedQuarter {
+  if (t.length === 0) throw new Error('observed-human: empty trajectory');
+  if (r < t.length) return t[r] as ObservedQuarter;
+  const cycle = Math.min(OBSERVED_CYCLE, t.length);
+  return t[t.length - cycle + ((r - t.length) % cycle)] as ObservedQuarter;
+}
+
+/**
+ * N trajectories drawn with replacement by a generator seeded from (seed, N). A POACH
+ * target is a seeded random other firm, excluding the firm's previous target so the
+ * card is not dropped by the repeat rule; the other cards are validated by the engine.
+ */
+export function observedRoom(trajectories: ReadonlyArray<Trajectory>, seed: number, n: number): FirmSetup[] {
+  const rng = mulberry32(hash32(`${seed >>> 0}|observed-human|${n}`));
+  const drawn = Array.from({ length: n }, () => trajectories[Math.floor(rng() * trajectories.length)] as Trajectory);
+  const targetRng = mulberry32(hash32(`${seed >>> 0}|observed-human-target|${n}`));
+  return drawn.map((t) => ({
+    kind: 'script',
+    at: (r, s, firmId) => {
+      const q = observedAt(t, r);
+      if (q.card !== 'POACH') return { pace: q.pace, safety: q.safety, card: q.card, target: null };
+      const me = s.firms.find((f) => f.id === firmId);
+      const others = s.firms.filter((f) => f.id !== firmId && f.id !== me?.lastPoachTarget);
+      const u = targetRng();
+      const target = others[Math.floor(u * others.length)]?.id ?? null;
+      return { pace: q.pace, safety: q.safety, card: q.card, target };
+    },
+  }));
+}
+
+export interface ObservedRates {
+  by12: number;
+  by14: number;
+  by20: number;
+  /** Median moratorium round over seeds; Infinity when fewer than half have one. */
+  medianRound: number;
+  rounds: number[];
+}
+
+export function observedHumanRates(p: Params, seeds: number, n: number, trajectories: ReadonlyArray<Trajectory>): ObservedRates {
+  const rounds: number[] = [];
+  for (let seed = 1; seed <= seeds; seed++) {
+    rounds.push(simulate(p, seed, observedRoom(trajectories, seed, n), LONG_ROUNDS).collapseRound ?? NEVER);
+  }
+  const by = (q: number): number => rounds.filter((r) => r <= q).length / seeds;
+  return { by12: by(12), by14: by(14), by20: by(20), medianRound: median(rounds), rounds };
 }
 
 /** Leaderboard volatility (§8.2): mixed field with disclosure on, rounds 2–14. */
