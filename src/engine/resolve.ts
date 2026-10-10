@@ -183,10 +183,8 @@ export function resolveRound(
   const incRng = streamRng(s.seed, round, 'incident');
   const incidentDraws = s.firms.map(() => incRng());
   const shared = sharedIncidentMultiplier(applied.map((a) => a.card), p);
-  const incident = applied.map((a, i) => {
-    const q = byPace(p.INC_BASE, a.pace) * (1 - p.SAFETY_INC_EFF * a.sigma) * incidentMultiplier(a.card, p) * shared;
-    return (incidentDraws[i] ?? 1) < q;
-  });
+  const risk = applied.map((a) => byPace(p.INC_BASE, a.pace) * (1 - p.SAFETY_INC_EFF * a.sigma) * incidentMultiplier(a.card, p) * shared);
+  const incident = risk.map((q, i) => (incidentDraws[i] ?? 1) < q);
   const incidentCount = incident.filter(Boolean).length;
   const I = incidentCount * p.INC_TRUST * scale;
   s.firms.forEach((f, i) => {
@@ -346,7 +344,10 @@ export function resolveRound(
     };
   });
   const disclosure = s.disclosure
-    ? disclosureSnapshot(s.firms, new Map(s.firms.map((f, i) => [f.id, { pace: at(i).pace, safety: at(i).safety, expo: expo[i] ?? 0 }])))
+    ? disclosureSnapshot(s.firms, new Map(
+        s.firms.map((f, i) => [f.id, { pace: at(i).pace, safety: at(i).safety, expo: expo[i] ?? 0, risk: incident[i] ? (risk[i] ?? 0) : null }]),
+      ),
+    )
     : null;
 
   const record: RoundRecord = {
@@ -361,6 +362,7 @@ export function resolveRound(
     disclosure,
     firms: firmResults,
     incidentDraws,
+    incidentFirms: s.firms.filter((_, i) => incident[i]).map((f) => f.id),
   };
   s.history.push(record);
   s.round = round;

@@ -139,12 +139,12 @@ export function dissolvePacts(pacts: Pact[], round: number, p: Params): Pact[] {
 /** §9.3: published per firm while disclosure is on. */
 export function disclosureSnapshot(
   firms: ReadonlyArray<FirmState>,
-  applied: ReadonlyMap<string, { pace: Pace; safety: number; expo: number }>,
+  applied: ReadonlyMap<string, { pace: Pace; safety: number; expo: number; risk: number | null }>,
 ): Record<string, DisclosureEntry> {
   const out: Record<string, DisclosureEntry> = {};
   for (const f of firms) {
     const d = applied.get(f.id);
-    if (d) out[f.id] = { pace: d.pace, safety: d.safety, expo: d.expo };
+    if (d) out[f.id] = { pace: d.pace, safety: d.safety, expo: d.expo, risk: d.risk };
   }
   return out;
 }

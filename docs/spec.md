@@ -373,7 +373,7 @@ Fines leave the economy. `LOBBY` in the quarter of detection waives the fine but
 ### 9.3 Disclosure toggle
 
 - The facilitator toggles it with F7 at any phase.
-- While it is on, each resolution publishes `{pace, safety, d_i}` per firm for that round, and the board gains `PACE`, `SAFE` and `EXPO` columns.
+- While it is on, each resolution publishes `{pace, safety, d_i}` per firm for that round, and the board gains `PACE`, `SAFE` and `EXPO` columns. For a firm that had an incident it also publishes `risk`, the firm's incident probability q_i that quarter with every card multiplier applied (§6.3 step 5), for the incident cause line (§14.1; owner decision 2026-10-10, Session 18).
 - While it is off, those columns are absent and the data is written only to the facilitator-only path.
 - Toggling produces a wire headline: "Assembly passes frontier disclosure rule" / "Disclosure rule suspended".
 - The toggle state is always visible in the board status line.
@@ -431,7 +431,8 @@ The facilitator's client runs resolution. There are no Cloud Functions, so the p
   members/{uid}:         {firmId, label, joinedAt}
   presence/{uid}:        {online, lastSeen}
   decisions/{round}/{firmId}: {pace, safety, card, target|null, by: uid, at: serverTs}
-  rounds/{round}:        {T, dT, M, incidents, headlines[], audits[], disclosure{firmId:{pace,safety,expo}}|null,
+  rounds/{round}:        {T, dT, M, incidents, incidentFirms[] (firm ids, creation order; Session 18), headlines[], audits[],
+                          disclosure{firmId:{pace,safety,expo,risk|null}}|null (risk only for an incident firm; Session 18),
                           results{firmId:{share, profit, valuation, rank}}}
   pacts/{pactId}:        {name, proposer, terms{maxPace, minSafety}, members{firmId: joinedRound}, createdRound, status}
   pactsPrivate/{pactId}: {violations{round:{firmId:true}}, sanctions{firmId:count}, lastAuditRound}
@@ -490,7 +491,7 @@ The layout is built on a monospace character grid (§16.2). Regions:
 ├ BOARD (left ~62%) ─────────────────────────────────┬ TRUST (right ~38%) ───────────────────────────────┤
 │ VALUE SHARE [HUMN 30% │ BTC 22% │ …]  2 below zero │ PUBLIC TRUST                                      │
 │ # MOVE FIRM SHARE PROFIT VALUE CHANGE ✓ bar trend  │ Total market revenue tracks public trust.         │
-│ rows… (BREACH / AUTO / INSOLV / BOT tags)          │                                                   │
+│ rows… (BREACH / INCID / INSOLV / AUTO / BOT tags)  │ INCIDENTS block in place of the chart after reveal │
 │ [PACE SAFETY EXPOSURE columns if disclosure on]    │ 61.8  ▼6.3 since last quarter   (large numerals)  │
 │ key strip: only the tags on screen                 │ line chart + change strip │ MKT │ INCID │ PACTS │ DISCLOSURE │
 ├ WIRE  Q3 Y2 ▼ incident headline · Q3 Y2 headline … (scrolling; static list if reduced motion) ───────────────┤
@@ -539,6 +540,7 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
   - `FIRM <TICKER>`: a public firm profile with share and valuation history
   - `FIRMS`: small multiples of every firm's valuation (Session 13)
   - `RANKS`: rank by quarter for every firm (Session 13)
+  - `INCID`: every incident of the session by quarter, newest first, each with its headline, effect and cause; the list scrolls inside the panel (Session 18)
   - `HELP`: lists every command above and every key
 - Esc returns to the board.
 - F-keys mirror these.
@@ -556,7 +558,7 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
   - Each reveal returns to page 1.
   - Above the page, separated by a rule, pinned rows show firms that are not on the current page: the leader, then the firm with the largest rank change of 3 places or more. Pinned rows use the two-line slots the page leaves free: 2 as standard, 1 under the summit banner, none in lit-room mode. Pinned rows keep their real rank number.
 
-**Board tags** stay on one line, in priority order: `BREACH`, `INSOLV`, `AUTO`, `BOT`, then pact tags. Tags that do not fit the column show as a dim `+N` (most often in lit-room mode with disclosure on), so a row never grows past its height (Session 10).
+**Board tags** stay on one line, in priority order: `BREACH`, `INCID`, `INSOLV`, `AUTO`, `BOT`, then pact tags. `INCID` (Session 18) marks a firm that had an incident in the latest resolved quarter, during that quarter's reveal and the following open phase. Tags that do not fit the column show as a dim `+N` (most often in lit-room mode with disclosure on), so a row never grows past its height (Session 10).
 
 **Lobby state.**
 - A large join code.
@@ -572,6 +574,13 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
 **`RANKS` view** (Session 13). Rank by valuation for each resolved quarter as connected lines, rank 1 at the top. The rank for a quarter is the engine's rank (valuation, then the engine's own tie-break); where two firms would still tie the ticker decides, so the chart is deterministic. Two firms are highlighted automatically: the current leader in `--signal` and the firm with the largest fall from its best rank in `--down` (ties: the larger fall, then the ticker); both are drawn thicker with a square at each quarter. Every other firm is a thin `--rule` line. Labels sit at the line ends: the highlighted firms always (`HUMN 1st`, `BTC ▼3`), the others where they do not overlap. A headline sentence above the chart, e.g. "HUMN rose to 1st. BTC fell from 1st to 2nd." ("holds 1st" when the leader was already 1st; "No firm is below its best rank." when nothing fell). Rank axis labels: every rank up to 16 firms, then 1 and every 5th. One resolved quarter shows "1 quarter resolved" instead of lines.
 
 **Reveal state.** One orchestrated motion moment, described in §16.5.
+
+**Incidents** (Session 18; owner decisions 2026-10-10). When the reveal sequence ends, an `INCIDENTS` block appears instantly in the PUBLIC TRUST panel, in place of the trust chart, for the rest of the reveal; the chart returns when the next quarter opens. The board rows never move. The block is built from `rounds/{r}/incidentFirms`, so it never depends on the headline cap. Each incident, in firm creation order:
+- ▼, the ticker and the incident's wire headline (the first incident template when the cap left the incident out);
+- the effect: "trust −1.2 · BTC revenue −15% this quarter" (the trust cost per incident is INC_TRUST × 8/N, shown as a number);
+- the cause: with disclosure on at that resolution, "pace 4 · safety 5% · incident risk 27%" from `rounds/{r}/disclosure` (the risk is the stored q_i, with PUBLISH, RUSH and SHARE applied); with disclosure off, no pace, safety or risk, and the general cause "Incident risk rises with pace and falls with safety spend." once at the foot of the block.
+
+At most 4 incidents (3 in lit-room mode with disclosure on), then "+N more · INCID for the full list". With no incidents the block is absent. It fits at 1280×720 and 1920×1080 for 4 to 50 firms.
 
 ### 14.2 Facilitator console (`#/control`)
 
@@ -683,6 +692,7 @@ The voice is that of a financial terminal and a wire service:
 - Rank change: "{FIRM} overtakes {FIRM2} on valuation"
 - Pace 4: "{FIRM} accelerates release schedule" (only when disclosure is on; otherwise "Unnamed lab accelerates release schedule, sources say")
 - Incident: "Service outage traced to {FIRM} model", "{FIRM} model linked to fraud wave", "Data leak hits {FIRM} enterprise clients"
+- Incident cause lines (projector block and `INCID`, Session 18): with disclosure on, "pace {P} · safety {S}% · incident risk {Q}%"; with disclosure off, "Incident risk rises with pace and falls with safety spend."
 - PUBLISH: "{FIRM} publishes evaluation results"
 - LOBBY: "{FIRM} expands policy team in capital"
 - POACH: "{FIRM} hires senior researchers from {TARGET}"
@@ -801,6 +811,8 @@ Allowed exception: a flat 45° hatch (1 px lines in a token colour, no gradient 
 **Ticker:** constant slow scroll.
 
 **Reduced motion:** all of the above becomes instant, and the ticker becomes a static list of the latest 3 headlines.
+
+**Incident block:** appears instantly when the reveal sequence ends (§14.1), with no motion of its own; with reduced motion it appears at once (Session 18).
 
 **Board pages:** when the board is paged (§14.1) the page changes every 8 s as an instant cut, with no transition. This is the only automatic change outside the reveal and the ticker (Session 10).
 

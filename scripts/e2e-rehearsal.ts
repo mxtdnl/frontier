@@ -12,6 +12,7 @@ import { buildResults, dataLinesOf } from '../src/engine';
 import { engineStateOf, fromEngine, fromResults } from '../src/firebase/schema';
 import { ownResultSentence, panelHeadline } from '../src/screens/Results/headlines';
 import { fmt } from '../src/ui/format';
+import { incidentCap } from '../src/ui/incidents';
 import { adminSet } from './emulator-rules';
 import {
   BASE, OUT, adminGet, check, checkResultsPanel, h, runWithStack, screenText, shot, signUp, snapProjector, waitText, watchPage,
@@ -100,6 +101,7 @@ await runWithStack(async (browser) => {
     let pactId = '';
     const committed = new RegExp(`${FIRMS}/${FIRMS} COMMITTED`);
     const events: string[] = [];
+    const incidentShots = new Set<boolean>();
     for (let r = 1; r <= REHEARSAL_QUARTERS; r++) {
       await waitText(fac, new RegExp(`${label(r)}[\\s\\S]*OPEN`), `quarter ${r} is open`, 15_000, '.scr');
       check(!(await fac.content()).includes(String(engine0.tau)), `tau is not on the projector in quarter ${r}`);
@@ -151,6 +153,28 @@ await runWithStack(async (browser) => {
       await waitText(fac, /REVEAL/, `quarter ${r} resolves`, 20_000, '.scr');
       const round = await adminGet<{ T: number; audits?: unknown[]; disclosure?: unknown } | null>(`games/${g}/rounds/${r}`);
       check(round !== null && typeof round.T === 'number', `quarter ${r} results are written`);
+
+      // Session 18: every incident of the quarter is named on the projector with its effect and cause.
+      const hit = Object.values((await adminGet<Record<string, string> | string[] | null>(`games/${g}/rounds/${r}/incidentFirms`)) ?? {});
+      if (hit.length > 0) {
+        await fac.waitForTimeout(1700);
+        const firmsNode = await adminGet<Record<string, { ticker: string }>>(`games/${g}/firms`);
+        const block = fac.locator('[data-incident-block]');
+        const text = (await block.count()) ? await block.innerText() : '';
+        const disclosed = round?.disclosure != null;
+        const cap = incidentCap(false, disclosed);
+        for (const id of hit.slice(0, cap)) {
+          const t = firmsNode[id]?.ticker ?? '?';
+          check(new RegExp(`▼ ${t}\\b`).test(text) && text.includes(`trust −`) && text.includes(`${t} revenue −15% this quarter`), `quarter ${r}: the incident of ${t} is named with its effect`);
+        }
+        if (hit.length > cap) check(text.includes(`+${hit.length - cap} more`), `quarter ${r}: the block counts the incidents it does not list`);
+        if (disclosed) check(/pace \d · safety \d+% · incident risk \d+%/.test(text), `quarter ${r}: the cause names pace, safety and risk while disclosure is on`);
+        else check(text.includes('Incident risk rises with pace and falls with safety spend.') && !/pace \d|safety \d|risk \d/.test(text), `quarter ${r}: the cause is general and private values stay hidden while disclosure is off`);
+        if (!incidentShots.has(disclosed)) {
+          incidentShots.add(disclosed);
+          await snapProjector(fac, `rehearsal-incidents-${disclosed ? 'on' : 'off'}`);
+        }
+      }
 
       if (r === DISCLOSURE_ON.from + 1 || r === DISCLOSURE_ON.to) {
         await fac.waitForTimeout(1700);

@@ -72,7 +72,7 @@ describe('card notices', () => {
 
 describe('participant wire', () => {
   const round = (headlines: string[]): RoundNode => ({
-    T: 0, dT: 0, M: 0, incidents: 0, headlines: headlines.map((text) => ({ kind: 'ambient' as const, text })), audits: [], disclosure: null, results: {},
+    T: 0, dT: 0, M: 0, incidents: 0, incidentFirms: [], headlines: headlines.map((text) => ({ kind: 'ambient' as const, text })), audits: [], disclosure: null, results: {},
   });
   const live = (text: string, r: number, seq: number, at: number): WireNode => ({ at, round: r, seq, kind: 'pact-joined', text, pact: null, firm: null, joined: null });
 

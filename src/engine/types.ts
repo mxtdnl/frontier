@@ -115,6 +115,11 @@ export interface DisclosureEntry {
   safety: number;
   /** d_i for the round. */
   expo: number;
+  /**
+   * The firm's incident probability q_i this quarter (§6.3 step 5, cards included), stored only for a firm that had
+   * an incident (Session 18, owner decision 2026-10-10); null otherwise. Feeds the projector's incident cause line.
+   */
+  risk: number | null;
 }
 
 export type HeadlineKind =
@@ -215,6 +220,8 @@ export interface RoundRecord {
   firms: Record<string, FirmRoundResult>;
   /** Incident draws u_{t,i} by firm creation order. */
   incidentDraws: number[];
+  /** Firms that had an incident this quarter, in creation order (§12, Session 18). */
+  incidentFirms: string[];
 }
 
 export interface EngineState {
@@ -260,6 +267,7 @@ export interface RoundOutputs {
   firms: Record<string, FirmRoundResult>;
   notices: Notice[];
   incidentDraws: number[];
+  incidentFirms: string[];
   /** True when this round is the hidden end round or the hard maximum. */
   finalRound: boolean;
 }

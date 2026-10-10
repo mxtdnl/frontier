@@ -170,6 +170,8 @@ export interface RoundNode {
   dT: number;
   M: number;
   incidents: number;
+  /** Firms that had an incident, in creation order (§12, Session 18). Public: the headlines already name them. */
+  incidentFirms: string[];
   headlines: Headline[];
   audits: AuditResult[];
   disclosure: Record<string, DisclosureEntry> | null;
@@ -423,7 +425,7 @@ export const fromAudit = (v: Raw): AuditResult => {
 
 const fromDisclosureEntry = (v: Raw): DisclosureEntry => {
   const o = obj(v);
-  return { pace: num(o.pace, 2) as Pace, safety: num(o.safety), expo: num(o.expo) };
+  return { pace: num(o.pace, 2) as Pace, safety: num(o.safety), expo: num(o.expo), risk: numOrNull(o.risk) };
 };
 
 const fromDisclosure = (v: Raw): Record<string, DisclosureEntry> | null =>
@@ -436,6 +438,7 @@ export function fromRound(v: Raw): RoundNode | null {
     dT: num(v.dT),
     M: num(v.M),
     incidents: num(v.incidents),
+    incidentFirms: arr(v.incidentFirms, (x) => str(x)),
     headlines: arr(v.headlines, fromHeadline),
     audits: arr(v.audits, fromAudit),
     disclosure: fromDisclosure(v.disclosure),
@@ -531,6 +534,7 @@ function fromRoundRecord(v: Raw): RoundRecord {
     disclosure: fromDisclosure(o.disclosure),
     firms: rec(o.firms, fromFirmRoundResult),
     incidentDraws: arr(o.incidentDraws, (x) => num(x)),
+    incidentFirms: arr(o.incidentFirms, (x) => str(x)),
   };
 }
 

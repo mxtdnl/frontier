@@ -15,7 +15,7 @@ describe('parseCommand', () => {
     expect(parseCommand('firm firms')).toEqual({ kind: 'firm', ticker: 'FIRMS' });
   });
   it('lists every command in HELP', () => {
-    expect(COMMAND_HELP.map((c) => c.mnemonic)).toEqual(['BOARD', 'TRST', 'PACT', 'WIRE', 'FIRM <TICKER>', 'FIRMS', 'RANKS', 'HELP']);
+    expect(COMMAND_HELP.map((c) => c.mnemonic)).toEqual(['BOARD', 'TRST', 'PACT', 'WIRE', 'FIRM <TICKER>', 'FIRMS', 'RANKS', 'INCID', 'HELP']);
   });
   it('treats empty input as the board', () => {
     expect(parseCommand('   ')).toEqual({ kind: 'board' });

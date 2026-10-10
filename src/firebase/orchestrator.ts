@@ -540,6 +540,7 @@ async function runResolution(ctx: Ctx, round: number): Promise<ActionResult> {
       dT: out.dT,
       M: out.M,
       incidents: out.incidents,
+      incidentFirms: out.incidentFirms,
       headlines: out.headlines,
       audits: out.audits,
       disclosure: out.disclosure,

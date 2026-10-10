@@ -202,11 +202,21 @@ describe('checked members and the quarter record (§9.2, §14.4)', () => {
 describe('disclosure snapshot', () => {
   it('publishes pace, safety and d_i only while disclosure is on', () => {
     const on = resolveRound(game(3, { settings: { disclosure: true } }), { f0: dec(3, 5) }, NO_INC).outputs;
-    expect(on.disclosure?.f0).toEqual({ pace: 3, safety: 5, expo: on.firms.f0!.expo });
+    expect(on.disclosure?.f0).toEqual({ pace: 3, safety: 5, expo: on.firms.f0!.expo, risk: null });
     expect(Object.keys(on.disclosure ?? {})).toHaveLength(3);
     const off = resolveRound(game(3), { f0: dec(3, 5) }, NO_INC).outputs;
     expect(off.disclosure).toBeNull();
     expect(off.firms.f0).toMatchObject({ pace: 3, safety: 5 });
+  });
+
+  it('stores the incident risk for incident firms only, cards included (Session 18)', () => {
+    // f0 and f1 always have an incident (q ≥ any draw), f2 never does.
+    const p = { ...PARAMS, INC_BASE: [0, 0, 1, 2] as const };
+    const r = resolveRound(game(3, { settings: { disclosure: true } }), { f0: dec(4, 0, 'RUSH'), f1: dec(3, 0, 'PUBLISH'), f2: dec(1, 30) }, p).outputs;
+    expect(r.incidentFirms).toEqual(['f0', 'f1']);
+    expect(r.disclosure?.f0?.risk).toBeCloseTo(2 * PARAMS.RUSH_INC_MULT, 12);
+    expect(r.disclosure?.f1?.risk).toBeCloseTo(1 * PARAMS.PUBLISH_INC_MULT, 12);
+    expect(r.disclosure?.f2?.risk).toBeNull();
   });
 });
 

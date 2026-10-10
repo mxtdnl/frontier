@@ -22,7 +22,7 @@ const fp = (over: Partial<FirmPublicNode>): FirmPublicNode => ({
   share: 0.5, profit: 0, valuation: INITIAL_VALUATION, rank: 1, rankDelta: 0, submittedRound: 0, auto: false, insolvent: false, breachUntilRound: 0, ...over,
 });
 const round = (T: number, results: RoundNode['results'], headlines: RoundNode['headlines'] = []): RoundNode => ({
-  T, dT: 0, M: 100, incidents: 1, headlines, audits: [], disclosure: null, results,
+  T, dT: 0, M: 100, incidents: 1, incidentFirms: [], headlines, audits: [], disclosure: null, results,
 });
 const pub = (over: Partial<PublicNode> = {}): PublicNode => ({
   phase: 'open', round: 2, deadline: 1, paused: false, disclosure: false, T: 70, M: 500, collapsed: false, collapseRound: null,
@@ -88,10 +88,10 @@ describe('boardRows', () => {
       p1: { id: 'p1', name: 'PACT-A', proposer: 'a', terms: { maxPace: 2, minSafety: null }, members: { a: 1 }, createdRound: 1, status: 'active' },
       p2: { id: 'p2', name: 'PACT-B', proposer: 'a', terms: { maxPace: 2, minSafety: null }, members: { a: 1 }, createdRound: 1, status: 'dissolved' },
     };
-    d.rounds['2'] = { ...(d.rounds['2'] as RoundNode), disclosure: { a: { pace: 3, safety: 4, expo: 1.5 } } };
+    d.rounds['2'] = { ...(d.rounds['2'] as RoundNode), disclosure: { a: { pace: 3, safety: 4, expo: 1.5, risk: null } } };
     const a = boardRows(d).find((r) => r.ticker === 'AAA');
     expect(a?.pacts).toEqual(['PACT-A']);
-    expect(a?.disclosed).toEqual({ pace: 3, safety: 4, expo: 1.5 });
+    expect(a?.disclosed).toEqual({ pace: 3, safety: 4, expo: 1.5, risk: null });
     expect(boardRows(data({ pub: pub({ disclosure: false }) }))[0]?.disclosed).toBeNull();
   });
 });

@@ -352,3 +352,21 @@ describe('pacts', () => {
     await assertSucceeds(as('fac').ref(g('pacts/p1/status')).set('dissolved'));
   });
 });
+
+describe('rounds (Session 18: incidentFirms and the disclosed incident risk)', () => {
+  it('denies a participant writing a round record or any field of it', async () => {
+    await assertFails(as('uA').ref(g(`rounds/${ROUND}`)).set({ T: 70, dT: 0, M: 1, incidents: 0, incidentFirms: [] }));
+    await assertFails(as('uA').ref(g(`rounds/${ROUND}/incidentFirms`)).set(['fB']));
+    await assertFails(as('uA').ref(g(`rounds/${ROUND}/disclosure/fB/risk`)).set(0.9));
+    await assertFails(as('uX').ref(g(`rounds/${ROUND}/incidentFirms/0`)).set('fA'));
+  });
+
+  it('lets a participant read the incident firms', async () => {
+    await admin(g(`rounds/${ROUND}`), { T: 70, dT: -2, M: 390, incidents: 1, incidentFirms: ['fB'] });
+    await assertSucceeds(as('uA').ref(g(`rounds/${ROUND}/incidentFirms`)).get());
+  });
+
+  it('lets the facilitator write them', async () => {
+    await assertSucceeds(as('fac').ref(g(`rounds/${ROUND}/incidentFirms`)).set(['fA', 'fB']));
+  });
+});

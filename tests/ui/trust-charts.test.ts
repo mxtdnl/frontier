@@ -20,7 +20,7 @@ const firm = (ticker: string, createdAt: number): FirmNode => ({ name: `${ticker
 const fp = (over: Partial<FirmPublicNode>): FirmPublicNode => ({
   share: 0.5, profit: 0, valuation: INITIAL_VALUATION, rank: 1, rankDelta: 0, submittedRound: 0, auto: false, insolvent: false, breachUntilRound: 0, ...over,
 });
-const round = (T: number, results: RoundNode['results']): RoundNode => ({ T, dT: 0, M: 100, incidents: 1, headlines: [], audits: [], disclosure: null, results });
+const round = (T: number, results: RoundNode['results']): RoundNode => ({ T, dT: 0, M: 100, incidents: 1, incidentFirms: [], headlines: [], audits: [], disclosure: null, results });
 const pub: PublicNode = {
   phase: 'reveal', round: 3, deadline: 1, paused: false, disclosure: false, T: 31, M: 500, collapsed: true, collapseRound: 3,
   joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0, resumePhase: null, pausedRemainingMs: null,

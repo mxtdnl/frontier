@@ -57,7 +57,7 @@ describe('pendingWire', () => {
   it('does not report an expulsion as a departure', () => {
     const joined = pendingWire({ ...base, pacts: { p1: pact({ members: { a: 1, b: 2 } }) } });
     const rounds = {
-      '2': { T: 0, dT: 0, M: 0, incidents: 0, headlines: [], disclosure: null, results: {}, audits: [{ pactId: 'p1', kind: 'auto', rounds: [2], breaches: [{ firmId: 'b', rounds: [2], count: 3, fine: 10, waived: false, expelled: true }] }] } satisfies RoundNode,
+      '2': { T: 0, dT: 0, M: 0, incidents: 0, incidentFirms: [], headlines: [], disclosure: null, results: {}, audits: [{ pactId: 'p1', kind: 'auto', rounds: [2], breaches: [{ firmId: 'b', rounds: [2], count: 3, fine: 10, waived: false, expelled: true }] }] } satisfies RoundNode,
     };
     expect(pendingWire({ ...base, rounds, wire: joined, pacts: { p1: pact({ members: { a: 1 } }) } })).toEqual({});
   });
@@ -72,7 +72,7 @@ describe('disclosure headline', () => {
 });
 
 describe('mergeWire', () => {
-  const round = (headlines: string[]): RoundNode => ({ T: 0, dT: 0, M: 0, incidents: 0, headlines: headlines.map((text) => ({ kind: 'ambient' as const, text })), audits: [], disclosure: null, results: {} });
+  const round = (headlines: string[]): RoundNode => ({ T: 0, dT: 0, M: 0, incidents: 0, incidentFirms: [], headlines: headlines.map((text) => ({ kind: 'ambient' as const, text })), audits: [], disclosure: null, results: {} });
   const live = (text: string, r: number, seq: number, at: number): WireNode => ({ at, round: r, seq, kind: 'disclosure-on', text, pact: null, firm: null, joined: null });
 
   it('puts the newest first, live events ahead of the resolved headlines of the same position', () => {

@@ -315,6 +315,7 @@
   color: var(--dim);
 }
 .tag-breach,
+.tag-incid,
 .tag-insolv {
   color: var(--down);
 }
@@ -1684,4 +1685,27 @@ legend {
 }
 .ctl-group .btn {
   padding: 0 1ch;
+}
+
+/* ---------- Incident block (spec §14.1, Session 18): takes the trust chart's place after the reveal ---------- */
+.incid-block {
+  flex: 1 1 0;
+  min-height: 0;
+  margin-top: 1lh;
+  overflow: hidden;
+}
+.incid-head {
+  font-weight: 600;
+}
+.incid-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.incid-line.is-sub {
+  padding-left: 2ch;
+}
+/* INCID view: every incident of the session; the list scrolls inside the panel. */
+.panel-body.incid-scroll {
+  overflow-y: auto;
 }
