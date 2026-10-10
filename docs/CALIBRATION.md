@@ -406,8 +406,8 @@ Measured with the Session 17 tools on the Session 16 engine and parameters. "C1"
 
 - C1–C5 are unchanged by construction: no bot plays RUSH. The tables match step 1 exactly.
 - **Card dominance:** RUSH 7.8–20.3% of all quarters (×2: 9.9–21.1%); 17.7% (N = 4) to 61.3% (N = 50) of the quarters in which it was legal (×2: 24.0–64.5%).
-- The owner chose ×2. ×3 lowers RUSH's best-response share by only 1–6 points: an incident costs the firm only INC_REV_LOSS (15%) of that quarter's revenue, while the +4 capability is permanent.
-- The strategy-audit comparison of ×2 and ×3 is below.
+- The owner chose ×2 at this point. ×3 lowers RUSH's best-response share by only 1–6 points: an incident costs the firm only INC_REV_LOSS (15%) of that quarter's revenue, while the +4 capability is permanent.
+- Superseded by step 5: the strategy audit showed that both ×2 and ×3 let one firm trigger the moratorium alone far more often (REVIEW M1).
 
 ### Step 3: EXPO_CUTS [0.15, 0.55, 1.21] → [0.19, 0.908, 1.21] (display only)
 
@@ -442,3 +442,35 @@ Label by safety level (0–30):
 
 - **The failure.** With about 43% of all-greedy seeds reaching the moratorium by quarter 4, a 40-seed sample at N = 50 gives a C1 median of 4.5. Seeds 1–40 and 1–60 both do this.
 - **The fix.** Seeds 1–80 and 1–100 give 5, as do the 200- and 500-seed runs. `tests/engine/calibration.test.ts` now runs 100 seeds, with a 60-second limit per test. This makes the test stricter, not weaker.
+
+### Step 5: RUSH draw ×2 → ×1.5 and incident ×2 → ×1.5 (owner decision 2026-10-10)
+
+**Why.** The strategy audit (`tools/audit-strategies.ts`, section 4, 500 seeds) found one firm alone triggering the moratorium far more often with RUSH. The worst single-firm strategy, the other firms restrained or on the defaults, gave these shares by quarter 14 / by quarter 30:
+
+| N | Session 16 values | RUSH draw ×2, incident ×2 | RUSH draw ×2, incident ×3 |
+|---|---|---|---|
+| 4 | 22–31% / 99.6–100% | 100% / 100% | 100% / 100% |
+| 5 | 1–3% / 65–97% | 81–90% / 100% | 98–99% / 100% |
+| 6 | 0–0.2% / 16–68% | 20–33% / 100% | 48–64% / 100% |
+| 8 | 0% / 0–2.4% | 0–0.2% / 54–97% | 0–1% / 91–100% |
+
+The worst strategy is pace 4 (pace 3 at N ≤ 3), safety 0, RUSH every other quarter, in every cell.
+
+**Variants measured** (500 seeds; one firm at pace 4, safety 0, RUSH every other quarter; the worse of the restrained and defaults fields; by quarter 14 / by quarter 30; the last column is a pace 2, safety 15 firm's V end with RUSH every other quarter against no card, N = 8 restrained field, 100 seeds):
+
+| RUSH variant | N = 4 | N = 5 | N = 6 | N = 8 | gain of RUSH for a restrained firm |
+|---|---|---|---|---|---|
+| draw ×2, incident ×2 (step 1) | 100% / 100% | 90.0% / 100% | 32.8% / 100% | 0.2% / 97.0% | +79% |
+| draw ×1.5, incident ×2 | 97.0% / 100% | 44.2% / 100% | 5.8% / 99.6% | 0% / 57.6% | +81% |
+| **draw ×1.5, incident ×1.5 (kept)** | **90.6% / 100%** | **30.0% / 100%** | **2.4% / 99.0%** | **0% / 39.8%** | **+81%** |
+| draw ×1.25, incident ×1.5 | 65.2% / 100% | 13.0% / 99.4% | 1.0% / 87.0% | 0% / 14.6% | +81% |
+| draw ×2, incident ×2, cost 15 | 100% / 100% | 90.0% / 100% | 32.8% / 100% | 0.2% / 97.0% | +65% |
+| draw ×2, incident ×2, capability +3 | 100% / 100% | 90.0% / 100% | 32.8% / 100% | 0.2% / 97.2% | +58% |
+| no RUSH (pace 4, safety 0, LOBBY every other quarter; S7 values) | 41.0% / 100% | 5.2% / 99.4% | 0.4% / 84.6% | 0% / 11.2% | — |
+
+- **The single-firm risk comes only from RUSH's public costs** (the extra draw and the extra incidents). Its cost and its capability gain change the attractiveness of the card, not the single-firm risk.
+- **The owner chose draw ×1.5 and incident ×1.5** (option B), over keeping ×2 with an 8-firm minimum (A) and draw ×1.25 (C). This reverses the earlier rise of the incident multiplier from ×1.5 to ×2.
+- **C1–C5 and every diagnostic before the card check are unchanged:** no bot plays RUSH. Identical tables in `reports/calibration.md`.
+- **Card dominance, 200 seeds:** RUSH is chosen in 13.7–21.4% of all quarters (×2: 9.9–21.1%) and in 35.6–65.4% of the quarters in which it was legal (×2: 24.0–64.5%). The maximum card share is 21.4%: pass. At 500 seeds, 13.8–21.4%: pass.
+  - RUSH is chosen more often at ×1.5 because its own incident risk is lower.
+- **Exposure label:** pace 3 at safety 13 with RUSH reads SEVERE (d_i 1.53); without RUSH it reads HIGH.
