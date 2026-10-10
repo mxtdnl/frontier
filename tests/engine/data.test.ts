@@ -21,8 +21,8 @@ describe('public exposure label', () => {
     expect([at(4, 11), at(4, 12)]).toEqual(['SEVERE', 'HIGH']);
   });
 
-  it('includes the RUSH doubling of d_i', () => {
-    expect(exposureOf(2, 0, p, 'RUSH')).toBeCloseTo(2 * exposureOf(2, 0, p), 12);
+  it('includes the RUSH multiplier on d_i', () => {
+    expect(exposureOf(2, 0, p, 'RUSH')).toBeCloseTo(p.RUSH_DRAW_MULT * exposureOf(2, 0, p), 12);
     expect(exposureLabel(exposureOf(3, 0, p, 'RUSH'), p)).toBe('SEVERE');
     expect(exposureOf(3, 10, p, 'SHARE')).toBe(exposureOf(3, 10, p));
   });

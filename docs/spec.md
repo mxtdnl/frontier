@@ -111,11 +111,11 @@ Firms commit with a single button. They can change and recommit until the deadli
 | `LOBBY` Lobby regulators | 10 | Exempt from pact fines detected this quarter (the violation is still recorded); public trust −0.5 | — |
 | `BLITZ` Marketing blitz | 15 | Your effective capability ×1.2 in the share calculation this quarter only | — |
 | `SHARE` Share safety tooling | 15 | Every firm's incident probability, yours included, ×0.75 this quarter. Each `SHARE` played multiplies again (two cards: ×0.75²). Stacks with `PUBLISH` | — |
-| `RUSH` Rush a release | 0 | You +4 capability (permanent, like `POACH`). Your trust draw d_i ×2 and your incident probability ×2 this quarter | — |
+| `RUSH` Rush a release | 0 | You +4 capability (permanent, like `POACH`). Your trust draw d_i ×1.5 and your incident probability ×1.5 this quarter | — |
 
 A firm may not play the same card in consecutive quarters. Insolvent firms (§6.7) cannot play cards.
 
-Owner decisions 2026-10-08/09 (Session 17): PUBLISH's trust effect falls from a flat +1.0 to 0.25 × 8/N per card; `SHARE` and `RUSH` added. `SHARE` stacks per card. `RUSH`'s incident multiplier is ×2 (proposed ×1.5; ×3 measured alongside). The results conduct ledger (Session 18) counts `PUBLISH` and `SHARE` as for the market, `RUSH` as against it.
+Owner decisions 2026-10-08/09 (Session 17): PUBLISH's trust effect falls from a flat +1.0 to 0.25 × 8/N per card; `SHARE` and `RUSH` added. `SHARE` stacks per card. `RUSH`'s multipliers were proposed as draw ×2 and incident ×1.5; the owner first raised the incident multiplier to ×2 (×3 measured alongside), then set both to ×1.5 (2026-10-10) because at ×2 one firm alone could trigger the moratorium in 20–33% of sessions at 6 firms (REVIEW M1). The results conduct ledger (Session 18) counts `PUBLISH` and `SHARE` as for the market, `RUSH` as against it.
 
 ### 5.3 Pacts (participant side)
 
@@ -205,13 +205,13 @@ Let σ_i = s_i / 30, which runs from 0 to 1. Let N be the number of firms, inclu
    Then apply `RUSH`: +4 to the player (no safety drag).
    Then apply `POACH`: +3 to the player, −3 to the target, floored at 10.
 4. **Trust draw.**
-   d_i = DRAW[p_i] × (1 − SAFETY_DRAW_EFF × σ_i), multiplied by 2 if the firm played `RUSH`
+   d_i = DRAW[p_i] × (1 − SAFETY_DRAW_EFF × σ_i), multiplied by 1.5 if the firm played `RUSH`
    Total draw D = (Σ d_i) × (8 / N)
    Note: the 8/N factor makes total pressure depend on average behaviour, not firm count, so one firm's impact is about 1/N.
    Add d_i × 8/N to cumulativeDraw_i.
 5. **Incidents.**
    For each firm, draw u_{t,i} from the seeded RNG (common random numbers, §6.8).
-   q_i = INC_BASE[p_i] × (1 − SAFETY_INC_EFF × σ_i), multiplied by 0.5 if the firm played `PUBLISH`, by 2 if it played `RUSH`, and by 0.75^k for every firm, where k is the number of `SHARE` cards played this quarter.
+   q_i = INC_BASE[p_i] × (1 − SAFETY_INC_EFF × σ_i), multiplied by 0.5 if the firm played `PUBLISH`, by 1.5 if it played `RUSH`, and by 0.75^k for every firm, where k is the number of `SHARE` cards played this quarter.
    An incident occurs if u_{t,i} < q_i.
    Each incident adds INC_TRUST × 8/N to the incident trust loss I, and flags the firm for a revenue loss.
 6. **Trust update.**
@@ -255,7 +255,7 @@ Participants can see:
 - headlines
 - their own cash, capability, costs and P&L
 
-They see their own **public exposure** as a qualitative label derived from d_i (including the `RUSH` doubling when that card is selected): LOW < 1.5 ≤ MED < 3.5 ≤ HIGH < 6 ≤ SEVERE. These cutoffs are on the starting DRAW scale; they are recalibrated whenever DRAW changes (`EXPO_CUTS` in `params.ts`, logged in `docs/CALIBRATION.md`) so that at safety 0 paces 1–4 read LOW, MED, HIGH and SEVERE, and pace 4 at safety 30 reads HIGH. They see an estimated cost for the quarter (deterministic: compute + safety + card).
+They see their own **public exposure** as a qualitative label derived from d_i (including the `RUSH` multiplier when that card is selected): LOW < 1.5 ≤ MED < 3.5 ≤ HIGH < 6 ≤ SEVERE. These cutoffs are on the starting DRAW scale; they are recalibrated whenever DRAW changes (`EXPO_CUTS` in `params.ts`, logged in `docs/CALIBRATION.md`) so that at safety 0 paces 1–4 read LOW, MED, HIGH and SEVERE, and pace 4 at safety 30 reads HIGH. They see an estimated cost for the quarter (deterministic: compute + safety + card).
 
 They never see τ, endRound, other firms' cash, capability, pace or safety (unless disclosure is on, §9.3), or unaudited violations.
 

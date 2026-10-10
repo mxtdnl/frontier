@@ -110,7 +110,7 @@ Do this the day before, then again 15 minutes before class.
 | Every firm restrained (pace 2, safety 15) or on the defaults | Never, even over 30 quarters |
 
 - **Safety helps less than before.** Since Session 17 a room where every firm plays Aggressive (pace 3) with the maximum safety (30) still reaches the moratorium in about 45% of sessions. Before, it never did.
-- **Cards.** PUBLISH now adds much less trust (0.25 per card at 8 firms, scaled by class size). Two cards are new: **SHARE** (costs 15; lowers every firm's incident risk that quarter) and **RUSH** (free; +4 capability, but the firm's trust draw doubles and its incident risk doubles that quarter). The briefing shows one line for each.
+- **Cards.** PUBLISH now adds much less trust (0.25 per card at 8 firms, scaled by class size). Two cards are new: **SHARE** (costs 15; lowers every firm's incident risk that quarter) and **RUSH** (free; +4 capability, but that quarter the firm's trust draw and its incident risk are each 1.5 times as high). The briefing shows one line for each.
 - With the default hidden end (quarter 10 to 14), a half-racing room can end a quarter or two before its moratorium. If you want every session to run long enough to see it, set **End mode** to **Fixed quarter** with 14 on `#/new`.
 - Trust recovers slowly once the room eases off: about 1 to 1.5 points a quarter. A room that has fallen far rarely climbs back within a session.
 

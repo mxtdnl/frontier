@@ -153,8 +153,10 @@ export const PARAMS: Params = {
   BLITZ_MULT: 1.2,
   SHARE_INC_MULT: 0.75,
   RUSH_CAP_GAIN: 4,
-  RUSH_DRAW_MULT: 2,
-  RUSH_INC_MULT: 2, // owner decision: proposed 1.5 → 2 (Session 17)
+  // Owner decisions (Session 17): proposed draw ×2, incident ×1.5; incident raised to ×2; then both set to ×1.5 to
+  // limit one firm's power to trigger the moratorium (REVIEW M1, docs/CALIBRATION.md).
+  RUSH_DRAW_MULT: 1.5,
+  RUSH_INC_MULT: 1.5,
 
   DEFAULT_PACE: 2,
   DEFAULT_SAFETY: 10,

@@ -36,7 +36,7 @@ describe('RUSH', () => {
     expect(r.outputs.firms.f1?.cap).toBeCloseTo(Math.max(p.POACH_FLOOR, p.POACH_FLOOR + p.RUSH_CAP_GAIN - p.POACH_LOSS), 12);
   });
 
-  it('doubles the firm’s own draw d_i, its 8/N draw and its cumulative draw', () => {
+  it('multiplies the firm’s own draw d_i, its 8/N draw and its cumulative draw by RUSH_DRAW_MULT', () => {
     const g = game(5);
     const r = resolveRound(g, { f0: dec(3, 12, 'RUSH'), f1: dec(3, 12) });
     const a = r.outputs.firms.f0!;
