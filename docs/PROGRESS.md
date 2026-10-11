@@ -1183,3 +1183,68 @@ A room like the four live classes (observed-human room), moratorium by quarter 1
 - Owner: paste `database.rules.json` into the Firebase console (pull request steps), merge, then run a short rehearsal with bot firms.
 - Owner: in the next live class, use at least 6 firms (bots if needed) and a fixed 14-quarter end. Note the moratorium quarter and how often RUSH and SHARE are played.
 - Session 18: incidents, facilitator wire and the NET CONTRIBUTION panel. It counts SHARE as for the market and RUSH as against it.
+
+## 2026-10-11 — Session 18: incidents on the projector, facilitator wire screen, NET CONTRIBUTION
+
+**Owner decisions (2026-10-10), written into `docs/spec.md`**
+- **Incident cause (1a):** follows disclosure. With disclosure on, the firm's pace, safety and incident risk; with disclosure off, only "Incident risk rises with pace and falls with safety spend." No §6.5 change.
+- **Trust cost per incident (1b):** shown as a number (INC_TRUST × 8/N).
+- **Incident risk source (asked during Part A):** the resolution stores the engine's own q_i for each incident firm in the disclosure snapshot (`risk`), only while disclosure is on. Nothing public records which card a firm played, so the projector could not compute the risk with PUBLISH, RUSH and SHARE applied.
+- **Research credit (2a, 2b):** RESEARCH_CREDIT 1.0 per PUBLISH card, × 8/N, display only. SHARE earns no credit.
+- **Method (3a):** Part C as written: the ALTERNATIVE baseline; BLITZ, POACH and RUSH count as rivalry; SHARE for the market, RUSH against it on the ledger.
+- **Incidents in the method (3b):** the ALTERNATIVE's incident uses the firm's own stored incident draw (common random numbers). Part C as written used an expected loss for the ALTERNATIVE, which could not give the required "exactly 0" for a firm on the ALTERNATIVE policy.
+- **Debrief prompt 3:** "Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay?"
+
+**Errors in my questions to the owner (corrected here)**
+- Question 1b gave "trust −3.2 with 10 firms" as the example. That used INC_TRUST 4.0. The current value is 1.5 (Session 16), so the projector shows −1.2 at 10 firms and −1.5 at 8. The decision itself (show the number) does not depend on the size.
+- Question 3b said the contradiction gave an ALTERNATIVE firm "+0.13 trust points per quarter at 8 firms". With INC_TRUST 1.5 it is +0.049 (0.0325 × 1.5). The contradiction was real; only the size was wrong.
+
+**Done**
+- **Part A, incidents** (commit `projector: name every incident…`):
+  - engine: `RoundRecord.incidentFirms` (creation order); the disclosure snapshot carries `risk` for incident firms
+  - orchestrator: `rounds/{r}/incidentFirms`
+  - projector: an INCIDENTS block in the PUBLIC TRUST panel, in place of the trust chart, from the end of the reveal sequence to the next quarter; the `INCID` board tag after `BREACH`; the `INCID` command and view (in HELP)
+  - rules: no change needed (`rounds` was already facilitator-only); three new rules tests.
+- **Part B, wire screen** (commit `control: add the facilitator wire screen #/wire`):
+  - `#/wire/:gameId` behind the facilitator gate, linked as WIRE LOG from the console header (new tab)
+  - every wire entry by quarter, PRE first quarter, quarter selector (◄ ►, arrow keys, number field, ALL), COPY
+  - NOT ON THE WIRE (facilitator only) from `engine.history`, for resolved quarters
+  - `rounds/{r}/resolvedAt` (server time) so headlines carry a time.
+- **Part C, NET CONTRIBUTION** (commit `results: add the NET CONTRIBUTION panel`):
+  - `src/engine/contribution.ts` (pure, no replay), called from `buildResults`; `results.contribution`
+  - RESEARCH_CREDIT in `params.ts`, logged in `docs/CALIBRATION.md`
+  - results panel 5 of 7 (slope chart, per-firm waterfall on one zero-based axis, ledger, OTHERS above 24 firms, headline); PACT RECORD and DEBRIEF are now 6 and 7
+  - participant card: net contribution and its parts, rank by net contribution, research credit ("not money"), ledger.
+- **Documents:** `docs/spec.md` (§3, §5.2, §6.2, §9.3, §10, §12, §14.1, §14.2, §14.4, §15.3, §15.4, §15.5, §16.5), `docs/RUNBOOK.md` (incidents, WIRE LOG, panel 5, seven panels), `docs/CALIBRATION.md`.
+
+**Tests**
+- `npm run typecheck` passes. `lint:copy` and `lint:design` pass. `npm run build` succeeds.
+- `npm test`: 643 passed (was 569). New: `tests/engine/contribution.test.ts` (17), `tests/ui/incidents.test.ts` (17), `tests/ui/wire-log.test.ts` (13), `tests/ui/contribution-panel.test.ts` (16), plus engine, schema and import-graph tests.
+- `npm run test:rules`: 166 passed (was 163).
+- `test:e2e`: 324 checks pass (was 310); new: `#/wire` refuses a signed-out visitor and an account off the allowlist, opens from the console link, lists every entry; panel 5 draws a slope and a ledger for each firm.
+- `test:e2e:rehearsal`: 204 checks pass (was 152). Every incident of every reveal quarter is named with its effect and cause; with disclosure off no pace, safety or risk shows; `#/wire` lists all 59 entries of the 14 quarters; panel 5's headline: "Ranked by value created for the whole market, BTAG falls from 1st to 9th and BTAE rises from 9th to 1st. The moratorium cost 433, charged to the 7 firms that drew trust down before it."
+- New scripts: `npm run test:e2e:incidents` (4, 16 and 50 firms × 1 and 8 incidents × disclosure on/off × standard/lit-room, at 1280×720 and 1920×1080; board rows never move) and `npm run test:e2e:wire` (50 firms × 30 quarters: ALL renders 92 entries and 30 NOT ON THE WIRE sections in about 0.2 s; scrolls inside its panel; COPY).
+- `test:e2e:incidents`, `test:e2e:wire`, `test:e2e:scale`, `test:e2e:long` and `test:e2e:scale-run`: running at the time of this commit; results follow in the next commit.
+- **Observed-human room (fixture, seed 1, N = 10):** the net-contribution ranking differs from the valuation ranking (unit test).
+- **Failures during the session (fixed):**
+  - The incident block did not appear in one rehearsal quarter: the reveal's end was signalled by an animation frame, which a background tab does not run. A timer now also ends it after the sequence's 1.2 s limit.
+  - Two of my own e2e checks were wrong (rounds read back as an array with an empty slot 0; a NOT ON THE WIRE section for the discarded open quarter). Both fixed.
+- **Intermittent failures seen while other jobs loaded the machine** (not reproduced in the final sequential runs): a participant commit refused with PERMISSION_DENIED right after Pause/Resume in `test:e2e` §6 and in rehearsal quarter 8; a page navigation during a phone screenshot in `test:e2e`. The Pause/Resume check waits for the text "Pause", which may match before the resume is written. I did not change it.
+
+**Spec deviations**
+- **◄ ► instead of ◀ ▶** on the wire screen: `lint:copy` treats ◀ ▶ as emoji.
+- **`rounds/{r}/resolvedAt`** is new (§12): the wire screen needs a time for headlines and none was stored. Rounds resolved before this session show `--:--:--`.
+- **Incident block placement:** it replaces the trust chart in the PUBLIC TRUST panel during the reveal. It cannot sit under the board without moving the board rows.
+- **Lit-room mode with disclosure on lists 3 incidents** (three lines each), not 4, so the block fits the 32-row grid.
+- **"4 firms with 8 incidents"** is impossible; the layout run uses 4 incidents at 4 firms.
+- **NET CONTRIBUTION above 24 firms** lists the 12 firms whose rank changed most. ATTRIBUTION uses the 12 largest damage shares; the panel's point is the re-ranking. The slope chart always shows every firm. The OTHERS row shows sums without bars, as ATTRIBUTION does.
+- **Moratorium cost, my reading of Part C** (stated in the plan): the revenue lost includes the moratorium quarter itself; the cash haircut is on positive cash at the end of the quarter before; the capability writedown is at final trust. If no firm's effect is negative by the moratorium quarter, the cost is not allocated and the headline says so.
+
+**Open issues**
+- The live exports are not in the repository, so the Part C step 3 figures (the four live sessions) cannot be re-run here.
+- Results written before this session have no `contribution`; panel 5 then says "Net contribution was not computed for this session."
+- `database.rules.json` did not change in this session. If the Session 17 rules (SHARE and RUSH) have not yet been pasted into the Firebase console, that is still needed.
+
+**Next steps**
+- Owner: merge, then run a short rehearsal with bot firms on the live site and look at the incidents block, the WIRE LOG tab and results panel 5.
+- In the next live class, note whether the room reads the NET CONTRIBUTION headline as intended.
