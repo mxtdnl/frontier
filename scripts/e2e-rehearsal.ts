@@ -4,7 +4,7 @@
  * A facilitator (projector and console, real browser) runs 14 quarters with 8 bot clients
  * (`tools/bots.ts`, policy mixed) and one scripted human. It covers a summit, a pact, two manual
  * audits, a disclosure toggle, a forced collapse (fixed seed, checked against the engine-only
- * replica in scripts/lib/rehearsal-model.ts), the counterfactual and all six results panels.
+ * replica in scripts/lib/rehearsal-model.ts), the counterfactual and all seven results panels.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createWriteStream, mkdirSync } from 'node:fs';
@@ -241,14 +241,22 @@ await runWithStack(async (browser) => {
       };
       await headlineIs(1);
       await snapProjector(fac, 'rehearsal-results-1');
-      const panels: Array<[number, RegExp]> = [[2, /TRUST TRACE/], [3, /COUNTERFACTUAL[\s\S]*INDUSTRY VALUE[\s\S]*ALTERNATIVE[\s\S]*VALUE LOST/], [4, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE/], [5, /PACT RECORD[\s\S]*UNDETECTED/], [6, /DEBRIEF/]];
+      const panels: Array<[number, RegExp]> = [[2, /TRUST TRACE/], [3, /COUNTERFACTUAL[\s\S]*INDUSTRY VALUE[\s\S]*ALTERNATIVE[\s\S]*VALUE LOST/], [4, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE/], [5, /NET CONTRIBUTION[\s\S]*research credit, not money/], [6, /PACT RECORD[\s\S]*UNDETECTED/], [7, /DEBRIEF/]];
       for (const [n, re] of panels) {
         await key('F9');
-        await waitText(fac, new RegExp(`${n}/6`), `F9 steps to results panel ${n}`, 15_000, '.scr');
+        await waitText(fac, new RegExp(`${n}/7`), `F9 steps to results panel ${n}`, 15_000, '.scr');
         await waitText(fac, re, `panel ${n} shows its content`, 5_000, '.scr');
         if (n === 2) check(/moratorium from Q\d Y\d/.test(await screenText(fac)) && /MORATORIUM Q\d Y\d/.test(await screenText(fac)) && !/τ|tau/i.test(await screenText(fac)), 'the trust trace labels the moratorium and shows no tau line');
         if (n === 3) check((await screenText(fac)).replace(/\s+/g, ' ').includes(`INDUSTRY VALUE ${fmt(res.industry.actual, 0)}`), 'panel 3 shows the stored actual industry value');
         if (n === 5) {
+          // NET CONTRIBUTION (Session 18): a slope per firm, figures and a ledger per firm, and a re-ranking.
+          const c = stored?.contribution;
+          check(c != null && Object.keys(c.firms).length === FIRMS, 'the results hold a net contribution for every firm');
+          check((await fac.locator('.scr [data-chart="slope"] g[data-firm]').count()) === FIRMS, `the slope chart draws all ${FIRMS} firms`);
+          check((await fac.locator('.scr .nc-firm[data-firm] [data-ledger]').count()) === FIRMS, 'every firm row carries its conduct ledger');
+          check(c?.moratorium?.round === model.collapseRound, 'the moratorium cost is computed for the forced moratorium');
+        }
+        if (n === 6) {
           // The pact quarter strip (§14.4): one row per bound firm, one cell per quarter, the breach cells counted in the table.
           const strip = await fac.evaluate(() => {
             const rows = [...document.querySelectorAll<HTMLElement>('[data-pact-strip] .ps-row[data-firm]')];

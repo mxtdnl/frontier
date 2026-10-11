@@ -31,6 +31,7 @@ import {
 import * as api from './api';
 import {
   AUTO_RESOLVE_DELAY_MS,
+  RESULT_PANEL_COUNT,
   adjustTimer,
   claimRetry,
   enterSummit,
@@ -329,7 +330,7 @@ export async function ensureResults(ctx: Ctx): Promise<ActionResult | null> {
 export async function stepResults(ctx: Ctx, delta: 1 | -1): Promise<ActionResult> {
   const t = await transition(ctx, stepResultsStep(delta));
   if (!t.ok) return t;
-  return ok(`Results panel ${t.after.revealStep + 1} of 6.`);
+  return ok(`Results panel ${t.after.revealStep + 1} of ${RESULT_PANEL_COUNT}.`);
 }
 
 /** Deletes the session record and frees its join code. The caller collects the double confirmation. */

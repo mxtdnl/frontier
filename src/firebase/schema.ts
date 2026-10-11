@@ -8,6 +8,7 @@
 import { PARAMS } from '../engine/params';
 import type { Params } from '../engine/params';
 import type { FinalResults } from '../engine/results';
+import type { ConductLedger, Contribution, FirmContribution } from '../engine/contribution';
 import type {
   AuditBreach,
   AuditResult,
@@ -660,7 +661,55 @@ export function fromResults(v: Raw): ResultsNode | null {
         quarters: rec(o.quarters, (q) => str(q)),
       };
     }),
+    contribution: fromContribution(v.contribution),
     dataLines: arr(v.dataLines, (x) => str(x)),
   };
 }
 
+const ledgerOf = (l: Record<string, unknown>): ConductLedger => ({
+  publish: num(l.publish),
+  share: num(l.share),
+  restraint: num(l.restraint),
+  compliant: num(l.compliant),
+  poach: num(l.poach),
+  blitz: num(l.blitz),
+  lobby: num(l.lobby),
+  rush: num(l.rush),
+  breaches: num(l.breaches),
+  incidents: num(l.incidents),
+});
+
+/** NET CONTRIBUTION (§10, Session 18); null in results written before it existed. */
+export function fromContribution(v: Raw): Contribution | null {
+  if (!isObj(v) || !isObj(v.firms)) return null;
+  const m = isObj(v.moratorium) ? v.moratorium : null;
+  return {
+    firms: rec(v.firms, (x, k): FirmContribution => {
+      const o = obj(x);
+      const rv = obj(o.rivalry);
+      const l = obj(o.ledger);
+      return {
+        firmId: k,
+        ticker: str(o.ticker),
+        valuation: num(o.valuation),
+        valuationRank: num(o.valuationRank),
+        trustPoints: num(o.trustPoints),
+        marketEffect: num(o.marketEffect),
+        shareBenefit: num(o.shareBenefit),
+        moratoriumShare: num(o.moratoriumShare),
+        researchCredit: num(o.researchCredit),
+        rivalry: { blitz: num(rv.blitz), poach: num(rv.poach), rush: num(rv.rush) },
+        rivalryTaken: num(o.rivalryTaken),
+        valueCreated: num(o.valueCreated),
+        damageCreated: num(o.damageCreated),
+        netContribution: num(o.netContribution),
+        rank: num(o.rank),
+        ledger: ledgerOf(l),
+      };
+    }),
+    moratorium: m
+      ? { round: num(m.round), revenue: num(m.revenue), cash: num(m.cash), capability: num(m.capability), total: num(m.total), allocated: num(m.allocated) }
+      : null,
+    researchCreditPerCard: num(v.researchCreditPerCard),
+  };
+}

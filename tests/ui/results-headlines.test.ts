@@ -4,6 +4,7 @@ import { findViolations } from '../../scripts/lib/copy-rules';
 import {
   DEBRIEF_HEADLINE,
   attributionHeadline,
+  contributionHeadline,
   counterfactualHeadline,
   finalBoardHeadline,
   ownResultSentence,
@@ -56,6 +57,7 @@ function results(firms: FirmSpec[], opts: { trust?: number[]; start?: number; co
     counterfactual: { rounds: trust.length, industryTotal: alternative, perFirm: alternative / firms.length, byFirm: {}, trust, collapseRound: null },
     attribution,
     pacts: opts.pacts ?? [],
+    contribution: null,
     dataLines: [],
   };
 }
@@ -254,18 +256,19 @@ describe('panel order and copy', () => {
   );
 
   it('one headline per panel, debrief fixed', () => {
-    expect([0, 1, 2, 3, 4].map((i) => panelHeadline(r, i))).toEqual([
+    expect([0, 1, 2, 3, 4, 5].map((i) => panelHeadline(r, i))).toEqual([
       finalBoardHeadline(r),
       trustHeadline(r),
       counterfactualHeadline(r),
       attributionHeadline(r),
+      contributionHeadline(r),
       pactHeadline(r),
     ]);
-    expect(panelHeadline(r, 5)).toBe(DEBRIEF_HEADLINE);
+    expect(panelHeadline(r, 6)).toBe(DEBRIEF_HEADLINE);
   });
 
   it('every headline passes the copy rules, including the stricter projector rules', () => {
-    const all = [0, 1, 2, 3, 4, 5].map((i) => panelHeadline(r, i));
+    const all = [0, 1, 2, 3, 4, 5, 6].map((i) => panelHeadline(r, i));
     all.push(ownResultSentence({ rank: 2, valuation: 87.5, peakValuation: 100 }, 9));
     for (const line of all) {
       expect(findViolations(line, { allowNonTelegraphing: false }), line).toEqual([]);

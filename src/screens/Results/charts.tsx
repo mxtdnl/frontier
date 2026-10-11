@@ -222,3 +222,88 @@ export function Butterfly({ rows, anyPositive, others = null }: ButterflyProps) 
     </div>
   );
 }
+
+interface SlopeProps {
+  rows: ReadonlyArray<{ firmId: string; ticker: string; valuationRank: number; rank: number; move: number; highlight: 'up' | 'down' | null }>;
+}
+
+/**
+ * NET CONTRIBUTION slope chart (§14.4 panel 5, Session 18): rank by final valuation on the left, rank by net
+ * contribution on the right. Firms that moved 3 places or more are drawn thick, ▲ in up and ▼ in down; the rest dim.
+ */
+export function Slope({ rows }: SlopeProps) {
+  const [ref, { w: W, h: H, fs }] = useChartSize<HTMLDivElement>();
+  const cw = fs * CH;
+  const lh = fs * 1.35;
+  const n = Math.max(1, rows.length);
+  const top = lh * 1.6;
+  const bottom = H - lh * 0.6;
+  const rowH = (bottom - top) / n;
+  const y = (rank: number): number => top + rowH * (rank - 0.5);
+  const xL = cw * 11;
+  const xR = W - cw * 15;
+  // Labels never overlap: each side places the leader first, then the largest moves, then the rest by rank, and skips
+  // a label that would come within a line of one already placed.
+  const place = (rankOf: (r: SlopeProps['rows'][number]) => number): Set<string> => {
+    const order = [...rows].sort(
+      (a, b) =>
+        (rankOf(a) === 1 ? 0 : 1) - (rankOf(b) === 1 ? 0 : 1) ||
+        (b.highlight ? 1 : 0) - (a.highlight ? 1 : 0) ||
+        Math.abs(b.move) - Math.abs(a.move) ||
+        rankOf(a) - rankOf(b),
+    );
+    const taken: number[] = [];
+    const out = new Set<string>();
+    for (const r of order) {
+      const yy = y(rankOf(r));
+      if (taken.every((t) => Math.abs(t - yy) >= lh * 0.95)) {
+        taken.push(yy);
+        out.add(r.firmId);
+      }
+    }
+    return out;
+  };
+  const left = place((r) => r.valuationRank);
+  const right = place((r) => r.rank);
+  const ordered = [...rows].sort((a, b) => (a.highlight ? 1 : 0) - (b.highlight ? 1 : 0));
+  return (
+    <div ref={ref} className="lchart" style={{ flex: '1 1 0', minHeight: '8lh' }}>
+      <svg
+        className="lc"
+        width={W}
+        height={H}
+        viewBox={`0 0 ${W} ${H}`}
+        role="img"
+        data-chart="slope"
+        aria-label={`Rank by final valuation against rank by net contribution for ${rows.length} firms`}
+        focusable="false"
+      >
+        <text x={xL} y={lh / 2} textAnchor="middle" dominantBaseline="central">VALUATION</text>
+        <text x={xR} y={lh / 2} textAnchor="middle" dominantBaseline="central">NET</text>
+        <line className="lc-grid" x1={xL} x2={xL} y1={top - lh * 0.3} y2={bottom} />
+        <line className="lc-grid" x1={xR} x2={xR} y1={top - lh * 0.3} y2={bottom} />
+        {ordered.map((r) => {
+          const cls = r.highlight === 'up' ? 'sl-up' : r.highlight === 'down' ? 'sl-down' : 'sl-dim';
+          const tone = r.highlight === 'up' ? 'lc-t-up' : r.highlight === 'down' ? 'lc-t-down' : 'lc-t-dim';
+          const sign = r.highlight === 'up' ? `▲${r.move}` : r.highlight === 'down' ? `▼${-r.move}` : '';
+          return (
+            <g key={r.firmId} data-firm={r.ticker} data-move={r.move} data-highlight={r.highlight ?? ''}>
+              <line className={`sl-line ${cls}`} x1={xL} x2={xR} y1={y(r.valuationRank)} y2={y(r.rank)} />
+              <rect className={r.highlight === 'up' ? 'lc-f-up' : r.highlight === 'down' ? 'lc-f-down' : 'lc-f-dim'} x={xR - 3} y={y(r.rank) - 3} width={6} height={6} />
+              {left.has(r.firmId) ? (
+                <text className={r.highlight ? 'lc-strong lc-name' : tone} x={xL - cw} y={y(r.valuationRank)} textAnchor="end" dominantBaseline="central" data-label="valuation">
+                  {`${r.valuationRank} ${r.ticker}`}
+                </text>
+              ) : null}
+              {right.has(r.firmId) ? (
+                <text className={r.highlight ? `${tone} lc-name` : tone} x={xR + cw} y={y(r.rank)} dominantBaseline="central" data-label="net">
+                  {`${r.rank} ${r.ticker}${sign ? ` ${sign}` : ''}`}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}

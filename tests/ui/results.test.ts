@@ -6,7 +6,7 @@ import { PARAMS, buildResults, nextPactName, resolveRound, type EngineState, typ
 import { fromResults } from '../../src/firebase/schema';
 import { fmt, fmtShare, quarterLabel } from '../../src/ui/format';
 import { OwnResultsCard } from '../../src/screens/Results/OwnResultsCard';
-import { Attribution, Counterfactual, Debrief, FinalBoard, PactRecord, TrustTrace, noPactLines } from '../../src/screens/Results/Results';
+import { Attribution, Counterfactual, Debrief, FinalBoard, NetContribution, PactRecord, TrustTrace, noPactLines } from '../../src/screens/Results/Results';
 import { DEBRIEF_HEADLINE, ownResultSentence, panelHeadline } from '../../src/screens/Results/headlines';
 import { attributionRows, attributionView, counterfactualTrustSeries, finalBoardRows, headlineFigures, pactLines, pactStripRows, rankedFirms, trustSeries } from '../../src/screens/Results/model';
 import type { FinalResults } from '../../src/engine';
@@ -245,7 +245,7 @@ describe('results panels', () => {
 
   it('every panel opens with its headline (§14.4)', () => {
     const r = read(false);
-    const panels = [FinalBoard, TrustTrace, Counterfactual, Attribution, PactRecord];
+    const panels = [FinalBoard, TrustTrace, Counterfactual, Attribution, NetContribution, PactRecord];
     panels.forEach((el, i) => {
       const out = html(createElement(el, { r }));
       const m = /<p class="res-headline" data-headline="">([^<]*)<\/p>/.exec(out);

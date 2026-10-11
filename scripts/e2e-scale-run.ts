@@ -210,12 +210,12 @@ async function runPlan(browser: Browser, plan: Plan, email: string, seed: number
     await key('F9');
     await waitText(fac, /ENDED/, `${tag}: the session ends after quarter ${QUARTERS}`, 20_000, '.scr');
 
-    // Results: F9 on the ended projector opens them; then F9 steps through the six panels.
+    // Results: F9 on the ended projector opens them; then F9 steps through the seven panels.
     await key('F9');
     await fac.waitForURL(/#\/results\//);
     const seq: string[] = [];
-    for (let step = 0; step < 6; step++) {
-      const want = `${step + 1}/6`;
+    for (let step = 0; step < 7; step++) {
+      const want = `${step + 1}/7`;
       const ok = await fac
         .waitForFunction((w) => document.querySelector('[data-results-pos]')?.textContent === w, want, { timeout: 20_000 })
         .then(() => true, () => false);

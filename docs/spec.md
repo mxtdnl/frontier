@@ -116,7 +116,7 @@ Firms commit with a single button. They can change and recommit until the deadli
 
 A firm may not play the same card in consecutive quarters. Insolvent firms (§6.7) cannot play cards.
 
-Owner decisions 2026-10-08/09 (Session 17): PUBLISH's trust effect falls from a flat +1.0 to 0.25 × 8/N per card; `SHARE` and `RUSH` added. `SHARE` stacks per card. `RUSH`'s multipliers were proposed as draw ×2 and incident ×1.5; the owner first raised the incident multiplier to ×2 (×3 measured alongside), then set both to ×1.5 (2026-10-10) because at ×2 one firm alone could trigger the moratorium in 20–33% of sessions at 6 firms (REVIEW M1). The results conduct ledger (Session 18) counts `PUBLISH` and `SHARE` as for the market, `RUSH` as against it.
+Owner decisions 2026-10-08/09 (Session 17): PUBLISH's trust effect falls from a flat +1.0 to 0.25 × 8/N per card; `SHARE` and `RUSH` added. `SHARE` stacks per card. `RUSH`'s multipliers were proposed as draw ×2 and incident ×1.5; the owner first raised the incident multiplier to ×2 (×3 measured alongside), then set both to ×1.5 (2026-10-10) because at ×2 one firm alone could trigger the moratorium in 20–33% of sessions at 6 firms (REVIEW M1). The results conduct ledger (Session 18, §10) counts `PUBLISH` and `SHARE` as for the market, `POACH`, `BLITZ`, `LOBBY` and `RUSH` as against it; BLITZ, POACH and RUSH also count as rivalry taken.
 
 ### 5.3 Pacts (participant side)
 
@@ -193,6 +193,7 @@ Per firm:
 | MORATORIUM_M | Market multiplier after collapse | 0.15 |
 | MORATORIUM_R | Regeneration multiplier after collapse | 0.25 |
 | BACKLASH | One-off trust drop at collapse | 10 |
+| RESEARCH_CREDIT | Display only (results §10): trust-point equivalents per PUBLISH card, × 8/N; never used by the resolution | 1.0 (Session 18, owner decision 2026-10-10) |
 | INSOLVENCY | Cash level that triggers insolvency | −100 |
 
 ### 6.3 Resolution order (one quarter)
@@ -400,6 +401,17 @@ Fines leave the economy. `LOBBY` in the quarter of detection waives the fine but
 - Value share keeps counting negative valuations as 0. When no firm finishes above zero, the value side of the attribution chart shows the single line "No firm finished with positive value" instead of 0.0% bars.
 
 **Attribution.** For each firm: share of cumulative draw (Σ over rounds of d_i × 8/N, divided by the total) against share of final industry valuation. Plot as a ranked pair of bars per firm.
+
+**Net contribution** (Session 18; owner decisions 2026-10-10). What each firm's decisions did to the whole market, computed in `buildResults` from the stored engine history with no replay (pure, deterministic). The baseline is the ALTERNATIVE policy (pace 2, safety 15, no card). Per-firm replays were rejected: near a moratorium, switching one firm can move it by a quarter and swing other firms' values by thousands.
+- **Trust effect of firm i in quarter t** (trust points): the firm's own terms of the §6.3 step 6 update, −d_i × 8/N − (incident ? INC_TRUST × 8/N : 0) + (PUBLISH ? PUBLISH_TRUST × 8/N : 0) − (LOBBY ? LOBBY_TRUST : 0) (RUSH acts through d_i), minus the same terms for the ALTERNATIVE in the firm's place. The ALTERNATIVE's incident uses the firm's own stored incident draw u_{t,i} and the quarter's SHARE multiplier from other firms' cards (common random numbers, as in the counterfactual), so an incident counts against a firm only when the ALTERNATIVE would have avoided it, and a firm that played the ALTERNATIVE has a trust effect of exactly 0 (owner decision 2026-10-10; the expected-loss wording first proposed could not give exactly 0).
+- **Value of one trust point in quarter t:** γ × M_t / T_t × (quarters played − t + 1), with M_t as resolved (after a moratorium it carries the moratorium multiplier); 0 when T_t = 0.
+- **SHARE benefit:** for each SHARE card, Σ over other firms j of q_j × (1 − SHARE_INC_MULT) × INC_TRUST × 8/N × the value of a trust point, where q_j is j's incident probability before any SHARE multiplier. It is part of the market effect.
+- **Moratorium cost**, if the moratorium happened: the market revenue lost to the moratorium multiplier in every quarter whose market carries it (Σ M_t / MORATORIUM_M − M_t, the moratorium quarter included), plus the positive cash removed by the haircut (cash at the end of the quarter before, × (1 − COLLAPSE_CASH_HAIRCUT)), plus the capability written down at final trust (CAP_MULT × Σ C × T_final/100 × (1 − COLLAPSE_CAP_WRITEDOWN)). It is allocated to the firms whose market effect up to and including the moratorium quarter is negative, in proportion to that negative effect; if no firm's is, it is not allocated (the headline says so).
+- **Market effect** of firm i = Σ_t trust effect × value of a trust point + SHARE benefit − its moratorium allocation.
+- **Research credit** of firm i = Σ over its PUBLISH quarters of RESEARCH_CREDIT × 8/N × the value of a trust point (RESEARCH_CREDIT 1.0, display only, never money; SHARE earns none).
+- **Rivalry taken:** BLITZ, the firm's revenue that quarter minus its revenue without the BLITZ multiplier (shares recomputed exactly); POACH, POACH_LOSS × CAP_MULT × T_final/100 per completed POACH; RUSH, RUSH_CAP_GAIN × CAP_MULT × T_final/100 per card.
+- **Value created** = final valuation + max(0, market effect) + research credit. **Damage created** = max(0, −market effect) + rivalry taken. **Net contribution** = final valuation + market effect + research credit − rivalry taken. Firms are ranked by net contribution; ties by final cash, then creation order (the engine's tie-break).
+- **Conduct ledger**, per firm. For the market: PUBLISH and SHARE cards, restraint quarters (pace ≤ 2 and safety ≥ 15), and quarters that kept the terms as a checked member of a pact with 2 or more checked members. Against it: POACH, BLITZ, LOBBY and RUSH cards, pact breaches (detected and undetected) and incidents.
 
 ---
 
@@ -633,7 +645,7 @@ Scale rules (Session 10):
 
 ### 14.4 Results (`#/results`)
 
-On the projector the facilitator steps through panels with F9:
+On the projector the facilitator steps through seven panels with F9 (NET CONTRIBUTION added as panel 5 in Session 18):
 
 1. **FINAL BOARD**: ranked by final valuation. A dumbbell per firm from peak (hollow square) to final (solid square) on one axis that includes zero; final value and drop from peak on the right; final values below zero in `--down` with a − sign.
 2. **TRUST TRACE**: full history as a `LineChart`. The collapse quarter is a labelled vertical marker. The τ line, with a hatched band below it, appears only if the "Reveal threshold" setting is on.
@@ -648,10 +660,15 @@ Series are labelled on the chart; no abbreviations (SUST, ACT, DEPL) or prose le
 - Scrolling: mouse wheel or trackpad, or the arrow keys, Page Up, Page Down, Home and End on the results page. Each panel opens at the top.
 - ATTRIBUTION: up to 24 firms, one row per firm. Above 24, the 12 firms with the largest share of damage, then one `OTHERS` row with the combined shares of the rest; the heading states how many firms it combines. The `OTHERS` row shows its two shares as figures without bars, below a rule, so the axis serves the listed firms.
 - PACT RECORD: member lists follow the long-list rule (§14.1).
-5. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).
-6. **DEBRIEF**: the five prompts in §15.5.
+5. **NET CONTRIBUTION** (Session 18): value created for the whole market (§10).
+   - The headline, written from the data: "Ranked by value created for the whole market, HUMN falls from 1st to 8th and ARCN rises from 9th to 2nd." (the valuation leader's move, then the largest rise; "HUMN holds 1st and …" when the leader keeps 1st; "every firm keeps its place." when no rank changes). A second sentence when every net contribution is below zero, and one for the moratorium cost and how many firms it is charged to.
+   - Left: a slope chart from rank by valuation to rank by net contribution. Firms that move 3 places or more are drawn thick, ▲ in `--up` or ▼ in `--down`, with the move beside the label; the rest are dim. Labels never overlap: the leader, then the largest moves, then the rest where they fit.
+   - Right, per firm in rank of net contribution: on one zero-based axis, a bar from 0 to the final valuation, then the market effect (▲ in `--up` or ▼ in `--down`), the research credit (an amber outline, labelled "research credit, not money", never merged into valuation), the rivalry taken (a red outline, shown with a − sign), and a square at the net contribution; the same figures as numbers; under each firm its conduct ledger, e.g. "▲ PUBLISH 6 · restraint 9  ▼ POACH 2 · BLITZ 3 · breaches 1".
+   - Many firms, as ATTRIBUTION: up to 24 firms every firm; above, the 12 firms whose rank changed most, then one `OTHERS` row with the sums of the rest as figures without bars (the axis serves the listed firms). The slope chart always shows every firm. The list scrolls like FINAL BOARD.
+6. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).
+7. **DEBRIEF**: the five prompts in §15.5.
 
-Participants see their own firm's card: final rank, valuation actual vs counterfactual, cumulative exposure share, and undetected violations of their own.
+Participants see their own firm's card: final rank, valuation actual vs counterfactual, cumulative exposure share, undetected violations of their own, and (Session 18) their net contribution with its parts, their rank by net contribution, their research credit (labelled "not money") and their conduct ledger.
 
 ### 14.5 Briefing (projector, one screen)
 
@@ -677,6 +694,9 @@ The voice is that of a financial terminal and a wire service:
 "unlock", "empower", "seamless", "revolutionary", "harness", "elevate", "supercharge", "game-changer", "dive in", "journey", "welcome to the future", "in today's fast-paced", "let's", "awesome", "great job", "oops", "not just X but Y". Also: sparkles or brain imagery, and gradient text.
 
 ### 15.3 Banned before the results screen (non-telegraphing)
+
+The results screen, including the NET CONTRIBUTION panel and its copy (Session 18), may use these words; nothing before it may.
+
 
 "commons", "tragedy", "sustainable", "sustainability", "cooperate", "cooperation", "collective", "shared resource", "tipping point", "threshold", "collapse" (the word may appear only in the moratorium event headline), "game", "player", "score", "win", "level". Use "firm", "board", "valuation", "quarter" and "market" instead.
 
@@ -718,11 +738,11 @@ The voice is that of a financial terminal and a wire service:
 
 Calibration builds will extend the bank to at least 40 templates in the same register.
 
-### 15.5 Debrief prompts (results panel 6)
+### 15.5 Debrief prompts (results panel 7)
 
 1. When did your firm first notice trust falling, and what did you change?
 2. Which pacts held and which broke? Was the difference monitoring, sanctions or trust?
-3. Compare your share of the damage with your share of the value. Is that outcome fair, and who should pay?
+3. Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay? (Owner wording 2026-10-10, Session 18.)
 4. Would disclosure from quarter 1 have changed your decisions? Why?
 5. Where does this pattern appear in the real AI industry, and which of Ostrom's design principles would you add to the market?
 
