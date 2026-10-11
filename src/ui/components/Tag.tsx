@@ -1,4 +1,4 @@
-export type TagKind = 'BOT' | 'AUTO' | 'BREACH' | 'INSOLV';
+export type TagKind = 'BOT' | 'AUTO' | 'BREACH' | 'INCID' | 'INSOLV';
 
 interface Props {
   kind?: TagKind;

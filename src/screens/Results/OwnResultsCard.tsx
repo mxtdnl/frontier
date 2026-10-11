@@ -3,6 +3,7 @@ import type { ResultsNode } from '../../firebase/schema';
 import { Delta, HBar, Panel } from '../../ui/components';
 import { fmt, fmtShare } from '../../ui/format';
 import { ownResultSentence } from './headlines';
+import { ledgerLine } from './model';
 
 interface Props {
   ticker: string;
@@ -33,6 +34,7 @@ export function OwnResultsCard({ ticker, firmId, results, unavailable, rank, val
     );
   }
   const gap = own.counterfactual - own.valuation;
+  const mine = results.contribution?.firms[firmId] ?? null;
   const firms = Object.keys(results.final).length;
   return (
     <div className="stack">
@@ -71,6 +73,24 @@ export function OwnResultsCard({ ticker, firmId, results, unavailable, rank, val
         />
         <p className="dim">Damage is your share of all exposure drawn from trust. Value is your share of the industry's final value; a firm below zero holds none.</p>
       </Panel>
+      {mine ? (
+        <Panel title="YOUR NET CONTRIBUTION" right={`RANK ${mine.rank} OF ${firms}`} bodyClassName="pad">
+          <dl className="kv">
+            <dt>Valuation</dt><dd>{fmt(own.valuation)}</dd>
+            <dt>Market effect</dt><dd><Delta value={mine.marketEffect} /></dd>
+            <dt>Research credit (not money)</dt><dd>{fmt(mine.researchCredit)}</dd>
+            <dt>Rivalry taken</dt><dd>{fmt(-mine.rivalryTaken)}</dd>
+            <dt>Net contribution</dt><dd>{fmt(mine.netContribution)}</dd>
+            <dt>Rank by valuation</dt><dd>{own.rank}</dd>
+            <dt>Rank by net contribution</dt><dd>{mine.rank}</dd>
+          </dl>
+          <p style={{ marginTop: '1lh' }} data-ledger="">{ledgerLine(mine.ledger)}</p>
+          <p className="dim" style={{ marginTop: '1lh' }}>
+            Net contribution is your valuation plus what your decisions did to every firm's revenue through trust, against pace 2 and safety 15 with no
+            cards, plus the research credit for PUBLISH, minus value taken from rivals with POACH, BLITZ and RUSH. ▲ counts are for the market, ▼ against it.
+          </p>
+        </Panel>
+      ) : null}
       <Panel title="YOUR PACT RECORD" bodyClassName="pad">
         <dl className="kv">
           <dt>Detected</dt><dd>{own.detected}</dd>

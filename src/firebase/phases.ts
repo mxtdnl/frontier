@@ -147,7 +147,7 @@ export const toggleDisclosureStep: Step = (p) => {
 };
 
 /** Number of results panels (spec §14.4). `revealStep` is the zero-based index of the panel on screen. */
-export const RESULT_PANEL_COUNT = 6;
+export const RESULT_PANEL_COUNT = 7;
 
 /** F9 steps the results forward and Esc steps back, once the session has ended. */
 export const stepResultsStep =

@@ -33,7 +33,7 @@ Do this the day before, then again 15 minutes before class.
 - [ ] Second device for the console: your own laptop or phone, signed in with the same account.
 - [ ] Phone on the room Wi-Fi opens the site and reaches the landing page.
 - [ ] Decide the settings (section 3) and write the end rule down. The app never shows participants how many quarters there are.
-- [ ] Keep the debrief prompts (section 7) ready. They appear on results panel 6.
+- [ ] Keep the debrief prompts (section 7) ready. They appear on results panel 7.
 - [ ] Browser: use a private window or a different browser for any device that will play as a firm. A browser signed in as the facilitator cannot also be a participant.
 
 ## 3. Create a session
@@ -130,7 +130,9 @@ Do this the day before, then again 15 minutes before class.
 | F10 | Shift+E | End the session (press twice within 3 s) |
 | Esc | | Back to the board |
 
-Type in the command line at the top of the projector, then press Enter: `BOARD`, `TRST`, `PACT`, `WIRE`, `FIRM <TICKER>`, `FIRMS`, `RANKS`, `HELP`. F1, F5, F11 and F12 do nothing in the app, so the browser keeps them.
+Type in the command line at the top of the projector, then press Enter: `BOARD`, `TRST`, `PACT`, `WIRE`, `FIRM <TICKER>`, `FIRMS`, `RANKS`, `INCID`, `HELP`. F1, F5, F11 and F12 do nothing in the app, so the browser keeps them.
+
+**Incidents** (Session 18). When the reveal ends, the right-hand panel lists the quarter's incidents in place of the trust chart: each firm hit, its headline, the effect ("trust −1.2 · BTC revenue −15% this quarter") and the cause. With disclosure on, the cause names the firm's pace, safety and incident risk; with disclosure off, it says only "Incident risk rises with pace and falls with safety spend." The firm's row carries a red **INCID** tag until the next quarter resolves. More than 4 incidents: "+N more"; type `INCID` for every incident of the session.
 
 If a key press shows "Working on the last key. Press again in a moment.", the previous action is still finishing. Wait a second and press again.
 
@@ -147,6 +149,7 @@ If a key press shows "Working on the last key. Press again in a moment.", the pr
 - **LOCK JOINS / REOPEN JOINS** (DANGER panel, lobby only): closes or reopens joining before the briefing.
 - **Pacts panel:** unaudited counts, an **AUDIT** button per pact, audit outcomes.
 - **Export:** **DOWNLOAD HISTORY (.json)** and **DOWNLOAD DATA LINES (.txt)**. Download both before you delete the session.
+- **WIRE LOG** (link at the top of the console, opens a new tab; Session 18): every headline and pact or disclosure event of the session, by quarter. Use **◄ ►** or the arrow keys to change quarter, type a quarter number and press **GO**, or press **ALL**. Under each resolved quarter, **NOT ON THE WIRE** lists what the headlines left out (incidents, cards, audits, firms entering administration); it is for you only and never appears on the projector or phones. **COPY** puts the selected quarter (or all) on the clipboard as plain text for the debrief. The address is `#/wire/<session id>`, the same id as `#/control/…`.
 - **DELETE SESSION:** press it, type the four-letter code, then press **CONFIRM DELETE**. It cannot be undone.
 
 ## 5. If something goes wrong
@@ -192,16 +195,18 @@ With about 20 firms or more, two panels hold a list that scrolls inside the pane
 - **COUNTERFACTUAL**: the per-firm comparison on the right.
 - Scroll with the mouse wheel or trackpad, or with **↓ ↑**, **Page Down**, **Page Up**, **Home** and **End**. F9 and Esc still move between panels.
 - **ATTRIBUTION**: above 24 firms, the 12 firms with the largest share of the damage, then one **OTHERS** line that adds up the rest.
+- **NET CONTRIBUTION**: above 24 firms, the 12 firms whose rank changed most, then one **OTHERS** line that adds up the rest; the slope chart on the left always shows every firm.
 
 1. **FINAL BOARD.** Who finished first? Each firm has a line from its peak (hollow square) to its final valuation (solid square); red squares finished below zero. Ask which teams peaked early.
 2. **TRUST TRACE.** Point at the labelled MORATORIUM line if there was one, and at the red squares (quarters that lost 5 or more trust). If you want the hidden threshold shown (a dashed red line with a hatched band below it), it must have been switched on at creation.
 3. **COUNTERFACTUAL.** Three figures: the industry's actual value, the ALTERNATIVE (every firm at pace 2, safety 15) and the VALUE LOST between them. If the industry finished below zero, no percentage is shown. The hatched area on the chart is the trust lost. Ask whether any single firm could have prevented it.
 4. **ATTRIBUTION.** Each firm's share of the damage (red, to the left) against its share of the value (amber, to the right). If no firm finished above zero, the right side says so. This is the fairness conversation.
-5. **PACT RECORD.** Violations that no audit caught are now shown. Under the table, each pact has a row of quarter cells per firm: a solid red cell is a breach an audit found, a red outline is a breach no audit found, a dim dot is a quarter that kept the terms, and a blank cell is a quarter in which the firm was not bound (before it joined, after it left or was expelled, or after the pact dissolved). Firms that left are marked "former". Ask what the pacts did and did not achieve.
-6. **DEBRIEF.** Five prompts, shown on screen:
+5. **NET CONTRIBUTION.** The firms re-ranked by the value they created for the whole market, not only for themselves. On the left, a line runs from each firm's rank by valuation to its rank by net contribution; firms that moved 3 places or more are thick (green ▲ rose, red ▼ fell). On the right, each firm's net contribution is built up on one axis: its valuation (blue), plus or minus what its decisions did to every firm's revenue through trust, against pace 2 and safety 15 with no cards (green ▲ or red ▼), plus a research credit for each PUBLISH card (amber outline, labelled "not money": it never changed anyone's cash), minus the value it took from rivals with BLITZ, POACH and RUSH (red outline). A moratorium's cost is charged to the firms that had drawn trust down before it. Under each firm, its conduct: ▲ what it did for the market, ▼ what it did against it. Ask the firm that led on valuation where it now sits, and why.
+6. **PACT RECORD.** Violations that no audit caught are now shown. Under the table, each pact has a row of quarter cells per firm: a solid red cell is a breach an audit found, a red outline is a breach no audit found, a dim dot is a quarter that kept the terms, and a blank cell is a quarter in which the firm was not bound (before it joined, after it left or was expelled, or after the pact dissolved). Firms that left are marked "former". Ask what the pacts did and did not achieve.
+7. **DEBRIEF.** Five prompts, shown on screen:
    1. When did your firm first notice trust falling, and what did you change?
    2. Which pacts held and which broke? Was the difference monitoring, sanctions or trust?
-   3. Compare your share of the damage with your share of the value. Is that outcome fair, and who should pay?
+   3. Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay?
    4. Would disclosure from quarter 1 have changed your decisions? Why?
    5. Where does this pattern appear in the real AI industry, and which of Ostrom's design principles would you add to the market?
 
@@ -217,7 +222,7 @@ The computers in the cloud cannot reach the live database, so a live rehearsal u
 4. Press **Create session**. On your phone, in a private browser tab, open the site, type the code and found a firm named Test Works with ticker TEST.
 5. On the laptop press **F9** (briefing), **F9** (quarter 1). Commit a decision on the phone. Watch the board: all bots count as committed.
 6. During a quarter, press **F8** (summit) and back, **F7** (disclosure) and **F6** (audit) once you have proposed a pact on the phone's PACTS tab.
-7. Let auto-resolve run through the quarters. When the session ends, press **F9** to step through the six results panels and check the card on the phone.
+7. Let auto-resolve run through the quarters. When the session ends, press **F9** to step through the seven results panels and check the card on the phone.
 8. On the console download both exports, then **DELETE SESSION**.
 
 What to check: the countdown is the same on laptop and phone; the board is readable from the back of the room; your phone's result card appears at each reveal; the results panels fit the screen.

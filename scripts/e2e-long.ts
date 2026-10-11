@@ -101,10 +101,10 @@ await runWithStack(async (browser) => {
     await fac.goto(`${BASE}#/results/${g}`);
     await waitText(fac, /RESULTS[\s\S]*FINAL BOARD/, 'the results screen opens', 15_000, '.scr');
     await snapProjector(fac, 'long-results-1');
-    const panels: Array<[number, RegExp]> = [[2, /TRUST TRACE/], [3, /COUNTERFACTUAL/], [4, /ATTRIBUTION/], [5, /PACT RECORD/], [6, /DEBRIEF/]];
+    const panels: Array<[number, RegExp]> = [[2, /TRUST TRACE/], [3, /COUNTERFACTUAL/], [4, /ATTRIBUTION/], [5, /NET CONTRIBUTION/], [6, /PACT RECORD/], [7, /DEBRIEF/]];
     for (const [n, re] of panels) {
       await key('F9');
-      await waitText(fac, new RegExp(`${n}/6`), `F9 steps to results panel ${n}`, 15_000, '.scr');
+      await waitText(fac, new RegExp(`${n}/7`), `F9 steps to results panel ${n}`, 15_000, '.scr');
       await waitText(fac, re, `panel ${n} shows its content`, 5_000, '.scr');
       await snapProjector(fac, `long-results-${n}`);
     }

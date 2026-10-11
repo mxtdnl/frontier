@@ -122,3 +122,31 @@ export function mergeWire(rounds: Record<string, RoundNode>, wire: Record<string
 /** Headline kinds that report harm (incidents, breaches, insolvency, the moratorium); the ticker marks them ▼. */
 const ALARM_KINDS: ReadonlySet<Headline['kind']> = new Set<Headline['kind']>(['incident', 'breach', 'insolvency', 'collapse', 'moratorium']);
 export const isAlarmKind = (kind: string): boolean => ALARM_KINDS.has(kind as Headline['kind']);
+
+/** Short uppercase label per headline kind, for the facilitator wire screen (§14.2, Session 18). */
+const WIRE_KIND_LABEL: Readonly<Record<Headline['kind'], string>> = {
+  collapse: 'MORAT',
+  moratorium: 'MORAT',
+  final: 'CLOSE',
+  breach: 'BREACH',
+  'audit-clean': 'AUDIT',
+  insolvency: 'INSOLV',
+  incident: 'INCID',
+  rank: 'RANK',
+  publish: 'PUBLISH',
+  lobby: 'LOBBY',
+  poach: 'POACH',
+  blitz: 'BLITZ',
+  share: 'SHARE',
+  rush: 'RUSH',
+  pace4: 'PACE',
+  'trust-band': 'POLL',
+  ambient: 'NEWS',
+  'pact-formed': 'PACT',
+  'pact-joined': 'PACT',
+  'pact-left': 'PACT',
+  'disclosure-on': 'DISCL',
+  'disclosure-off': 'DISCL',
+};
+
+export const wireKindLabel = (kind: string): string => WIRE_KIND_LABEL[kind as Headline['kind']] ?? kind.toUpperCase().slice(0, 7);

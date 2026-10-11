@@ -315,6 +315,7 @@
   color: var(--dim);
 }
 .tag-breach,
+.tag-incid,
 .tag-insolv {
   color: var(--down);
 }
@@ -1684,4 +1685,178 @@ legend {
 }
 .ctl-group .btn {
   padding: 0 1ch;
+}
+
+/* ---------- Incident block (spec §14.1, Session 18): takes the trust chart's place after the reveal ---------- */
+.incid-block {
+  flex: 1 1 0;
+  min-height: 0;
+  margin-top: 1lh;
+  overflow: hidden;
+}
+.incid-head {
+  font-weight: 600;
+}
+.incid-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.incid-line.is-sub {
+  padding-left: 2ch;
+}
+/* INCID view: every incident of the session; the list scrolls inside the panel. */
+.panel-body.incid-scroll {
+  overflow-y: auto;
+}
+
+/* ---------- Facilitator wire screen (spec §14.2, Session 18) ---------- */
+.wire-select {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.wire-sel-label {
+  min-width: 7ch;
+  text-align: center;
+  font-weight: 600;
+}
+.panel-body.wire-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.wire-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wire-line {
+  display: flex;
+  gap: 2ch;
+}
+.wire-line .wl-q {
+  flex: none;
+  width: 6ch;
+}
+.wire-line .wl-t {
+  flex: none;
+  width: 8ch;
+}
+.wire-line .wl-k {
+  flex: none;
+  width: 9ch;
+}
+.wire-q-head {
+  font-weight: 600;
+  margin-top: 1lh;
+}
+.wire-quarter:first-child .wire-q-head {
+  margin-top: 0;
+}
+.wire-off {
+  margin-top: 0.5lh;
+  padding-top: 0.5lh;
+  border-top: var(--rule-w) solid var(--rule);
+}
+
+/* ---------- NET CONTRIBUTION panel (spec §14.4 panel 5, Session 18) ---------- */
+.lc .sl-line {
+  stroke-width: 1;
+}
+.lc .sl-dim {
+  stroke: var(--rule);
+}
+.lc .sl-up {
+  stroke: var(--up);
+  stroke-width: 3;
+}
+.lc .sl-down {
+  stroke: var(--down);
+  stroke-width: 3;
+}
+.nc-grid {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 41ch minmax(0, 1fr);
+  column-gap: 2ch;
+}
+.nc-row {
+  display: grid;
+  grid-template-columns: 7ch 7ch minmax(0, 1fr) 8ch 9ch 8ch 9ch 8ch;
+  column-gap: 1ch;
+  align-items: center;
+  white-space: nowrap;
+}
+.nc-list {
+  display: flex;
+  flex-direction: column;
+}
+/* Lit-room mode (130 columns): a narrower slope and figure columns leave the waterfall room. */
+.lit-room .nc-grid {
+  grid-template-columns: 36ch minmax(0, 1fr);
+}
+.lit-room .nc-row {
+  grid-template-columns: 7ch 7ch minmax(0, 1fr) 7ch 8ch 7ch 8ch 7ch;
+}
+.nc-firm {
+  padding: 0.15lh 0;
+  border-bottom: var(--rule-w) solid var(--grid);
+}
+.nc-ledger {
+  padding-left: 15ch;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nc-track {
+  position: relative;
+  height: 1lh;
+}
+.nc-seg {
+  position: absolute;
+  top: 0.3lh;
+  height: 0.4lh;
+}
+.nc-seg.is-value {
+  background: var(--wire);
+}
+.nc-seg.is-up {
+  background: var(--up);
+}
+.nc-seg.is-down {
+  background: var(--down);
+}
+.nc-seg.is-credit {
+  border: var(--rule-w) solid var(--signal);
+}
+.nc-seg.is-rivalry {
+  border: var(--rule-w) solid var(--down);
+}
+.nc-zero {
+  position: absolute;
+  top: 0.1lh;
+  bottom: 0.1lh;
+  border-left: var(--rule-w) solid var(--dim);
+}
+.nc-net {
+  position: absolute;
+  top: 0.25lh;
+  width: 0.5lh;
+  height: 0.5lh;
+  margin-left: -0.25lh;
+  background: var(--text);
+}
+.nc-key {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 3ch;
+}
+.nc-key .nc-sw {
+  display: inline-block;
+  position: relative;
+  width: 2ch;
+  height: 0.5lh;
+  vertical-align: 0.1em;
+  margin-right: 1ch;
 }

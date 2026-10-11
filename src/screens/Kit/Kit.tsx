@@ -58,7 +58,8 @@ const toRow = (f: MockFirm, i: number): BoardRow => ({
   bot: f.tags.includes('BOT'),
   pacts: f.pacts,
   breach: f.breach,
-  disclosed: { pace: f.pace as 1 | 2 | 3 | 4, safety: f.safety, expo: f.expo },
+  incident: f.tags.includes('INCID'),
+  disclosed: { pace: f.pace as 1 | 2 | 3 | 4, safety: f.safety, expo: f.expo, risk: null },
 });
 
 /** Every component in every state (spec §16.3), plus the reveal simulator (§16.5). */

@@ -1,13 +1,14 @@
 import { PARAMS } from '../../engine';
 import { CommitMark, DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, RankMove, ShareStrip, Tag, TrendLine, ValueBar, type Column, type TagKind } from '../../ui/components';
-import { fmt, fmtInt, fmtShare } from '../../ui/format';
+import { fmt, fmtInt, fmtShare, quarterLabel } from '../../ui/format';
+import { GENERAL_CAUSE, incidentBlock, type IncidentLine } from '../../ui/incidents';
 import { BRIEFING_LINES } from './briefing';
 import { BOARD_W, boardCapacity, boardChartWidths, boardMode, boardPage, boardTagWidth, fitTags } from '../../ui/layout';
 import { shareSegments, sharedDomain, trendWindow } from '../../ui/performance';
 
 import { committedCount, marketCeiling, previousTrust, tagKey, trustSeries, type BoardRow, type ScreenData } from './model';
 
-const TAG_KINDS: ReadonlyArray<string> = ['BOT', 'AUTO', 'BREACH', 'INSOLV'];
+const TAG_KINDS: ReadonlyArray<string> = ['BOT', 'AUTO', 'BREACH', 'INCID', 'INSOLV'];
 
 interface BoardProps {
   rows: ReadonlyArray<BoardRow>;
@@ -25,6 +26,7 @@ interface BoardProps {
 export function boardTags(f: BoardRow): string[] {
   return [
     ...(f.breach ? ['BREACH'] : []),
+    ...(f.incident ? ['INCID'] : []),
     ...(f.insolvent ? ['INSOLV'] : []),
     ...(f.auto ? ['AUTO'] : []),
     ...(f.bot ? ['BOT'] : []),
@@ -221,13 +223,57 @@ export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, ba
   );
 }
 
-export function TrustPanel({ data, reveal }: { data: ScreenData; reveal: boolean }) {
+/**
+ * The INCIDENTS block (§14.1, Session 18): each incident of the quarter with its effect and cause, at most `max`, then
+ * `+N more`. With disclosure off the general cause is printed once at the foot, so it never names pace or safety.
+ */
+export function IncidentBlock({ round, lines, max }: { round: number; lines: ReadonlyArray<IncidentLine>; max: number }) {
+  const { shown, more } = incidentBlock(lines, max);
+  const general = shown.some((l) => !l.disclosed);
+  return (
+    <div className="incid-block" data-incident-block="" data-incidents={lines.length}>
+      <p className="incid-head">
+        INCIDENTS <span className="dim">· {quarterLabel(round)}</span>
+      </p>
+      {shown.map((l) => (
+        <div key={l.firmId} data-incident={l.ticker}>
+          <p className="incid-line">
+            <span className="neg-c">▼ {l.ticker}</span> {l.headline}
+          </p>
+          <p className="incid-line is-sub">{l.effect}</p>
+          {l.disclosed ? <p className="incid-line is-sub" data-incident-cause="">{l.cause}</p> : null}
+        </div>
+      ))}
+      {more > 0 ? (
+        <p className="incid-line dim" data-incident-more={more}>
+          +{more} more · INCID for the full list
+        </p>
+      ) : null}
+      {general ? (
+        <p className="dim" data-incident-cause="">
+          {GENERAL_CAUSE}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+interface TrustPanelProps {
+  data: ScreenData;
+  reveal: boolean;
+  /** The quarter's incidents once the reveal sequence has ended; the block then takes the chart's place. */
+  incidents?: ReadonlyArray<IncidentLine>;
+  /** Incidents the block lists before `+N more`. */
+  incidentMax?: number;
+}
+
+export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: TrustPanelProps) {
   const { pub, rounds } = data;
   const series = trustSeries(rounds);
   const prev = previousTrust(rounds);
   const delta = pub.round === 0 ? 0 : pub.T - prev;
   const latest = Object.values(rounds).length ? Math.max(...Object.keys(rounds).map(Number)) : 0;
-  const incidents = rounds[String(latest)]?.incidents ?? 0;
+  const incidentCount = rounds[String(latest)]?.incidents ?? 0;
   const firmCount = Object.keys(data.firms).length;
   const activePacts = Object.values(data.pacts).filter((p) => p.status === 'active').length;
   return (
@@ -241,18 +287,22 @@ export function TrustPanel({ data, reveal }: { data: ScreenData; reveal: boolean
           <Delta value={delta} /> <span className="dim">since last quarter</span>
         </div>
       </div>
-      <div className="col" style={{ flex: '1 1 0', marginTop: '1lh' }} data-trust-chart="">
-        <LineChart
-          series={[{ values: series, label: 'Trust', tone: 'signal' }]}
-          domain="trust"
-          changeStrip
-          alarmDrop={5}
-          description={`Public trust by quarter, from ${fmt(series[0] ?? PARAMS.T0)} to ${fmt(pub.T)}`}
-        />
-      </div>
+      {incidents.length > 0 ? (
+        <IncidentBlock round={latest} lines={incidents} max={incidentMax} />
+      ) : (
+        <div className="col" style={{ flex: '1 1 0', marginTop: '1lh' }} data-trust-chart="">
+          <LineChart
+            series={[{ values: series, label: 'Trust', tone: 'signal' }]}
+            domain="trust"
+            changeStrip
+            alarmDrop={5}
+            description={`Public trust by quarter, from ${fmt(series[0] ?? PARAMS.T0)} to ${fmt(pub.T)}`}
+          />
+        </div>
+      )}
       <div className="stack" style={{ margin: '1lh 0 0.5lh', gap: 0 }}>
         <HBar label="MARKET" labelW={11} textW={8} value={pub.M} domain={[0, marketCeiling(firmCount)]} text={fmtInt(pub.M)} describe={`Market size ${fmtInt(pub.M)}`} />
-        <div className="row"><span className="dim" style={{ width: '11ch' }}>INCIDENTS</span><span>{incidents} this quarter</span></div>
+        <div className="row"><span className="dim" style={{ width: '11ch' }}>INCIDENTS</span><span>{incidentCount} this quarter</span></div>
         <div className="row"><span className="dim" style={{ width: '11ch' }}>PACTS</span><span>{activePacts} active</span></div>
         <div className="row"><span className="dim" style={{ width: '11ch' }}>DISCLOSURE</span><span>{pub.disclosure ? 'ON' : 'OFF'}</span></div>
       </div>

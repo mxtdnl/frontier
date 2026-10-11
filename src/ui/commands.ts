@@ -6,6 +6,7 @@ export type Command =
   | { kind: 'help' }
   | { kind: 'firms' }
   | { kind: 'ranks' }
+  | { kind: 'incid' }
   | { kind: 'firm'; ticker: string }
   | { kind: 'error'; message: string };
 
@@ -17,6 +18,7 @@ export const COMMAND_HELP: ReadonlyArray<{ mnemonic: string; text: string }> = [
   { mnemonic: 'FIRM <TICKER>', text: 'Public profile of one firm' },
   { mnemonic: 'FIRMS', text: 'Every firm\'s valuation, same scale' },
   { mnemonic: 'RANKS', text: 'Rank of every firm by quarter' },
+  { mnemonic: 'INCID', text: 'Every incident by quarter, with effect and cause' },
   { mnemonic: 'HELP', text: 'This list' },
 ];
 
@@ -40,6 +42,8 @@ export function parseCommand(input: string): Command {
       return { kind: 'firms' };
     case 'RANKS':
       return { kind: 'ranks' };
+    case 'INCID':
+      return { kind: 'incid' };
     case 'FIRM': {
       const ticker = rest[0] ?? '';
       if (!/^[A-Z]{3,6}$/.test(ticker)) {

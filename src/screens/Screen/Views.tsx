@@ -5,6 +5,7 @@ import { fmt, fmtShare, quarterLabel } from '../../ui/format';
 import { KEY_BINDINGS } from '../../ui/keys';
 import { fillColumns, firmsGrid, firmsPage, lobbyColumns, tickerLine, truncateList } from '../../ui/layout';
 import { largestFaller, leaderOf, rankByQuarter, ranksHeadline, type FirmRef } from '../../ui/performance';
+import { allIncidents } from '../../ui/incidents';
 import { BRIEFING_LINES } from './briefing';
 import { boardRows, joinUrl, pactRows, previousTrust, trustSeries, valuationSeries, wireItems, type BoardRow, type PactRow, type ScreenData } from './model';
 
@@ -123,6 +124,31 @@ export function WireView({ data }: { data: ScreenData }) {
           <li key={i} className="row" style={{ gap: '2ch' }}>
             <span className="dim" style={{ width: '6ch' }}>{h.round > 0 ? quarterLabel(h.round) : 'PRE'}</span>
             <span className="wire-c">{h.text}</span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
+/** `INCID` (§14.1, Session 18): every incident of the session, newest quarter first, with its effect and cause. */
+export function IncidentsView({ data }: { data: ScreenData }) {
+  const lines = allIncidents(data.rounds, data.firms);
+  return (
+    <Panel title="INCID · INCIDENTS BY QUARTER" right={`${lines.length} in total · Esc returns to the board`} bodyClassName="pad incid-scroll">
+      {lines.length === 0 ? <p className="dim">No incidents yet.</p> : null}
+      <ul className="stack" style={{ listStyle: 'none', margin: 0, padding: 0, gap: 0 }} data-incid-view="">
+        {lines.map((l, i) => (
+          <li key={`${l.round}-${l.firmId}`} data-incident={l.ticker} data-round={l.round}>
+            <div className="row" style={{ gap: '2ch' }}>
+              <span className="dim" style={{ width: '6ch', flex: 'none' }}>{i === 0 || lines[i - 1]?.round !== l.round ? quarterLabel(l.round) : ''}</span>
+              <span className="neg-c" style={{ width: '9ch', flex: 'none', whiteSpace: 'nowrap' }}>▼ {l.ticker}</span>
+              <span>{l.headline}</span>
+            </div>
+            {/* Under the headline: 6ch quarter + 2ch gap + 9ch ticker + 2ch gap. */}
+            <div style={{ paddingLeft: '19ch' }}>
+              {l.effect} · <span className={l.disclosed ? undefined : 'dim'}>{l.cause}</span>
+            </div>
           </li>
         ))}
       </ul>

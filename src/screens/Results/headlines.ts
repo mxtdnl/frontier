@@ -89,7 +89,42 @@ export function attributionHeadline(r: FinalResults): string {
   return `${names} each caused ${share} of the damage; they kept ${listOf(tied.map(kept))} of the value.`;
 }
 
-/** Panel 5: "2 pacts formed. Members broke the terms 7 times; 4 breaches were never detected." */
+/**
+ * Panel 5 (Session 18): "Ranked by value created for the whole market, HUMN falls from 1st to 8th and ARCN rises from
+ * 9th to 2nd." The valuation leader's move, then the largest rise; a sentence for every net contribution below zero and
+ * for the moratorium cost.
+ */
+export function contributionHeadline(r: FinalResults): string {
+  const c = r.contribution;
+  const firms = Object.values(c?.firms ?? {});
+  if (!c || firms.length === 0) return 'Net contribution was not computed for this session.';
+  const lead = 'Ranked by value created for the whole market';
+  const leader = firms.find((f) => f.valuationRank === 1);
+  const rise = [...firms]
+    .filter((f) => f.valuationRank - f.rank > 0)
+    .sort((a, b) => b.valuationRank - b.rank - (a.valuationRank - a.rank) || a.rank - b.rank || (a.ticker < b.ticker ? -1 : 1))[0];
+  const parts: string[] = [];
+  if (leader && leader.rank !== 1) parts.push(`${leader.ticker} falls from 1st to ${ordinal(leader.rank)}`);
+  if (rise && rise.firmId !== leader?.firmId) parts.push(`${rise.ticker} rises from ${ordinal(rise.valuationRank)} to ${ordinal(rise.rank)}`);
+  let first: string;
+  if (parts.length === 0) first = `${lead}, every firm keeps its place.`;
+  else if (leader && leader.rank === 1) first = `${lead}, ${leader.ticker} holds 1st and ${parts.join(' and ')}.`;
+  else first = `${lead}, ${parts.join(' and ')}.`;
+  const out = [first];
+  if (firms.every((f) => belowZero(f.netContribution))) out.push(`Every firm's net contribution is below zero.`);
+  const m = c.moratorium;
+  if (m) {
+    const charged = firms.filter((f) => f.moratoriumShare > 0).length;
+    out.push(
+      m.allocated > 0
+        ? `The moratorium cost ${fmt(m.total, 0)}, charged to the ${charged} ${plural(charged, 'firm', 'firms')} that drew trust down before it.`
+        : `The moratorium cost ${fmt(m.total, 0)}; no firm had drawn trust down before it, so none is charged.`,
+    );
+  }
+  return out.join(' ');
+}
+
+/** Panel 6: "2 pacts formed. Members broke the terms 7 times; 4 breaches were never detected." */
 export function pactHeadline(r: FinalResults): string {
   const n = r.pacts.length;
   if (n === 0) return 'No pacts were formed.';
@@ -106,7 +141,7 @@ export function pactHeadline(r: FinalResults): string {
   return `${formed} Members broke the terms ${times}; ${tail}.`;
 }
 
-/** Panel 6: no data to summarise; the prompts are the content. */
+/** Panel 7: no data to summarise; the prompts are the content. */
 export const DEBRIEF_HEADLINE = 'Five questions. Discuss each in your firm, then with the room.';
 
 /** The headline for results panel `step` (0-based, the order of RESULT_PANELS). */
@@ -121,6 +156,8 @@ export function panelHeadline(r: FinalResults, step: number): string {
     case 3:
       return attributionHeadline(r);
     case 4:
+      return contributionHeadline(r);
+    case 5:
       return pactHeadline(r);
     default:
       return DEBRIEF_HEADLINE;

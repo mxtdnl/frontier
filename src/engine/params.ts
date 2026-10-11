@@ -58,6 +58,11 @@ export interface Params {
   PUBLISH_TRUST: number;
   PUBLISH_INC_MULT: number;
   LOBBY_TRUST: number;
+  /**
+   * Display only (results §10, Session 18): trust-point equivalents credited per PUBLISH card, × DRAW_REF_N / N, priced
+   * like any trust point. Never read by the resolution; it moves no money and no trust.
+   */
+  RESEARCH_CREDIT: number;
   BLITZ_MULT: number;
   /** Every firm's incident probability × this per SHARE card played (stacks per card). */
   SHARE_INC_MULT: number;
@@ -150,6 +155,7 @@ export const PARAMS: Params = {
   PUBLISH_TRUST: 0.25, // owner decision (S7): flat 1.0 → 0.25 × 8/N (Session 17)
   PUBLISH_INC_MULT: 0.5,
   LOBBY_TRUST: 0.5,
+  RESEARCH_CREDIT: 1.0, // owner decision 2026-10-10 (Session 18): display only, docs/CALIBRATION.md
   BLITZ_MULT: 1.2,
   SHARE_INC_MULT: 0.75,
   RUSH_CAP_GAIN: 4,

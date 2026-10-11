@@ -16,7 +16,7 @@ const pub = (over: Partial<PublicNode> = {}): PublicNode => ({
   joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0, resumePhase: null, pausedRemainingMs: null, ...over,
 });
 const pact = (over: Partial<Pact> = {}): Pact => ({ id: 'p1', name: 'PACT-A', proposer: 'a', terms: { maxPace: 2, minSafety: 10 }, members: { a: 1, b: 1 }, createdRound: 1, status: 'active', ...over });
-const roundNode = (over: Partial<RoundNode> = {}): RoundNode => ({ T: 70, dT: 0, M: 1, incidents: 0, headlines: [], audits: [], disclosure: null, results: {}, ...over });
+const roundNode = (over: Partial<RoundNode> = {}): RoundNode => ({ T: 70, dT: 0, M: 1, incidents: 0, incidentFirms: [], resolvedAt: null, headlines: [], audits: [], disclosure: null, results: {}, ...over });
 
 function data(over: Partial<ScreenData> = {}): ScreenData {
   return {
@@ -38,7 +38,7 @@ const cellsOf = (d: ScreenData, disclosure: boolean, label: string): string[] =>
 };
 
 describe('disclosure columns on the board (spec §9.3)', () => {
-  const snapshot = { a: { pace: 3, safety: 12, expo: PARAMS.DRAW[3] }, b: { pace: 1, safety: 25, expo: 0.1 } } as const;
+  const snapshot = { a: { pace: 3, safety: 12, expo: PARAMS.DRAW[3], risk: null }, b: { pace: 1, safety: 25, expo: 0.1, risk: null } } as const;
 
   it('shows PACE, SAFETY and EXPOSURE only while disclosure is on', () => {
     const labels = (on: boolean) => boardColumns(on, false).map((c) => c.label);

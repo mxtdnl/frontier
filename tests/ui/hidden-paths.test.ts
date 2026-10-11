@@ -63,6 +63,22 @@ describe('participant pages never load a hidden-value reader', () => {
   }
 });
 
+describe('the facilitator wire screen never reaches the projector or a phone (Session 18)', () => {
+  for (const entry of [...PARTICIPANT_ENTRIES, 'src/screens/Screen/Screen.tsx', 'src/screens/Results/Results.tsx']) {
+    it(entry, () => {
+      const files = [...graph(entry)];
+      expect(files.length).toBeGreaterThan(1);
+      expect(files.filter((f) => f.startsWith('src/screens/Wire/'))).toEqual([]);
+    });
+  }
+
+  it('is reached only through the router, behind the facilitator gate', () => {
+    const importers = [...graph('src/App.tsx')].filter((f) => /from '\.\/screens\/Wire\/Wire'|from '\.\.\/Wire\//.test(readFileSync(f, 'utf8')));
+    expect(importers).toEqual(['src/App.tsx']);
+    expect(readFileSync('src/screens/Wire/Wire.tsx', 'utf8')).toMatch(/<FacilitatorGate>/);
+  });
+});
+
 describe('projector source never subscribes to or renders a hidden node', () => {
   it('src/screens/Screen/*', () => {
     for (const f of ['Screen.tsx', 'BoardView.tsx', 'Views.tsx', 'model.ts', 'briefing.ts']) {

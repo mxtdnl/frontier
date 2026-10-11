@@ -31,6 +31,7 @@ import {
 import * as api from './api';
 import {
   AUTO_RESOLVE_DELAY_MS,
+  RESULT_PANEL_COUNT,
   adjustTimer,
   claimRetry,
   enterSummit,
@@ -329,7 +330,7 @@ export async function ensureResults(ctx: Ctx): Promise<ActionResult | null> {
 export async function stepResults(ctx: Ctx, delta: 1 | -1): Promise<ActionResult> {
   const t = await transition(ctx, stepResultsStep(delta));
   if (!t.ok) return t;
-  return ok(`Results panel ${t.after.revealStep + 1} of 6.`);
+  return ok(`Results panel ${t.after.revealStep + 1} of ${RESULT_PANEL_COUNT}.`);
 }
 
 /** Deletes the session record and frees its join code. The caller collects the double confirmation. */
@@ -540,14 +541,17 @@ async function runResolution(ctx: Ctx, round: number): Promise<ActionResult> {
       dT: out.dT,
       M: out.M,
       incidents: out.incidents,
+      incidentFirms: out.incidentFirms,
       headlines: out.headlines,
       audits: out.audits,
       disclosure: out.disclosure,
       results: Object.fromEntries(
         Object.entries(out.firms).map(([id, r]) => [id, { share: r.share, profit: r.profit, valuation: r.valuation, rank: r.rank }]),
       ),
+      resolvedAt: null,
     };
-    patch[rel.round(round)] = roundNode;
+    // The server stamps the resolution time (the wire screen shows it beside the quarter's headlines).
+    patch[rel.round(round)] = { ...roundNode, resolvedAt: serverTimestamp() };
 
     for (const f of next.firms) {
       const r = out.firms[f.id];

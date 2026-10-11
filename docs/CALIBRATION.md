@@ -485,3 +485,14 @@ The worst strategy is pace 4 (pace 3 at N ≤ 3), safety 0, RUSH every other qua
   - 80–91% at N = 4, 20–30% at N = 5, 1.2–2.4% at N = 6, 0% at N = 8
   - by quarter 30: 74–99% at N = 6, 2.4–40% at N = 8.
 - **Pact breach (M3)** and the symmetric flag (L9, pace 1, safety 0, PUBLISH) are unchanged in substance.
+
+---
+
+## 2026-10-11 — Session 18 (display-only value)
+
+### RESEARCH_CREDIT = 1.0 (new, display only; owner decision 2026-10-10)
+
+- **What it is.** Trust-point equivalents credited per PUBLISH card on the results screen's NET CONTRIBUTION panel (§10, §14.4 panel 5), × 8/N and priced like any trust point (γ × M_t / T_t × the quarters left).
+- **What it is not.** It never enters `resolveRound`: no cash, capability, trust or valuation moves. It is shown under its own label, "research credit, not money", and never merged into valuation.
+- **Why 1.0.** It is 4 times PUBLISH's real trust effect since Session 17 (0.25 × 8/N) and equal to PUBLISH's effect before Session 17 (a flat 1.0 at N = 8). The owner chose the proposed value. SHARE earns no credit: its benefit to other firms is already valued in the market effect.
+- **Effect on calibration.** None. C1–C5 and every diagnostic are unchanged; no report was re-run for this value.

@@ -6,17 +6,18 @@ import { useCommitSync, useDecisions, useAutoResolve, useLiveWire, useMembers, u
 import { Brand, CommandLine, Countdown, FKeyBar, Panel, PhaseBlock, StatusLine, Ticker, TopBar, useRemainingMs, type CommandLineHandle } from '../../ui/components';
 import { parseCommand } from '../../ui/commands';
 import { fmt, quarterLabel } from '../../ui/format';
+import { incidentCap, incidentLines } from '../../ui/incidents';
 import { matchKey, projectorKeys, type KeyAction } from '../../ui/keys';
 import { BOARD_HOLD_MS, BOARD_ROTATE_MS, boardCapacity, boardMode, firmsGrid } from '../../ui/layout';
 import { useLitRoom } from '../../ui/litRoom';
-import { playReveal } from '../../ui/reveal';
+import { REVEAL, playReveal } from '../../ui/reveal';
 import { statusSentence } from '../../ui/status';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
 import { BoardPanel, TrustPanel } from './BoardView';
 import { boardRows, committedCount, latestRound, pactRows, previousTrust, revealInput, tickerTone, wireItems, type ScreenData } from './model';
-import { AuditView, BriefingView, FirmView, FirmsView, HelpView, LobbyView, PactsView, RanksView, TrustView, WireView } from './Views';
+import { AuditView, BriefingView, FirmView, FirmsView, HelpView, IncidentsView, LobbyView, PactsView, RanksView, TrustView, WireView } from './Views';
 
-type View = { kind: 'board' | 'trust' | 'pacts' | 'wire' | 'help' | 'audit' | 'firms' | 'ranks' } | { kind: 'firm'; ticker: string };
+type View = { kind: 'board' | 'trust' | 'pacts' | 'wire' | 'help' | 'audit' | 'firms' | 'ranks' | 'incid' } | { kind: 'firm'; ticker: string };
 
 const PHASE_LABEL = {
   lobby: 'LOBBY',
@@ -67,7 +68,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
 
   const [view, setView] = useState<View>(() => {
     const v = route.query.get('view');
-    return v === 'trust' || v === 'pacts' || v === 'wire' || v === 'help' || v === 'firms' || v === 'ranks' ? { kind: v } : { kind: 'board' };
+    return v === 'trust' || v === 'pacts' || v === 'wire' || v === 'help' || v === 'firms' || v === 'ranks' || v === 'incid' ? { kind: v } : { kind: 'board' };
   });
   const [notice, setNotice] = useState('');
   const cmd = useRef<CommandLineHandle>(null);
@@ -233,16 +234,31 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [act, queue]);
 
-  // Reveal sequence, once per quarter, only when the page watched the quarter resolve.
+  // Reveal sequence, once per quarter, only when the page watched the quarter resolve. The INCIDENTS block appears
+  // instantly when it ends (§14.1, §16.5), so the sequence itself is unchanged.
   const phase = pub?.phase ?? null;
   const prevPhase = useRef<typeof phase>(null);
+  const [revealing, setRevealing] = useState(false);
   useEffect(() => {
     const before = prevPhase.current;
     prevPhase.current = phase;
     if (phase !== 'reveal' || (before !== 'open' && before !== 'resolving') || view.kind !== 'board' || !root.current) return;
     lastFlipAt.current = Date.now();
     const run = playReveal(root.current);
-    return () => run.cancel();
+    let live = true;
+    setRevealing(true);
+    const end = () => {
+      if (live) setRevealing(false);
+    };
+    void run.done.then(end);
+    // The sequence never runs longer than REVEAL.totalMaxMs; a paused animation frame (a hidden tab) must not hold the block back.
+    const fallback = window.setTimeout(end, REVEAL.totalMaxMs + 100);
+    return () => {
+      live = false;
+      window.clearTimeout(fallback);
+      run.cancel();
+      setRevealing(false);
+    };
   }, [phase, pub?.round, view.kind]);
 
   const data: ScreenData | null = useMemo(
@@ -306,6 +322,8 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   const keys = projectorKeys({ phase: pub.phase, view: view.kind, activePacts });
   pactIdsRef.current = pactRows(data).slice(0, 9).map((p) => p.id);
 
+  const incid = reveal && !revealing ? incidentLines(latestRound(rounds), rounds[String(latestRound(rounds))], firms) : [];
+
   let main;
   if (pub.phase === 'lobby') {
     main = <div className="scr-main"><LobbyView code={meta.code} firms={firms} memberCounts={data.memberCounts} /></div>;
@@ -322,7 +340,12 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
             <p>The session has ended. Press F9 for the results screen.</p>
           </Panel>
         ) : (
-          <TrustPanel data={data} reveal={reveal} />
+          <TrustPanel
+            data={data}
+            reveal={reveal}
+            incidents={incid}
+            incidentMax={incidentCap(meta.settings.litRoom, incid.some((l) => l.disclosed))}
+          />
         )}
       </div>
     );
@@ -337,6 +360,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
         {view.kind === 'firm' ? <FirmView ticker={view.ticker} data={data} /> : null}
         {view.kind === 'firms' ? <FirmsView data={data} page={boardTick} /> : null}
         {view.kind === 'ranks' ? <RanksView data={data} /> : null}
+        {view.kind === 'incid' ? <IncidentsView data={data} /> : null}
       </div>
     );
   }

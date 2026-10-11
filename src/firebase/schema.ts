@@ -8,6 +8,7 @@
 import { PARAMS } from '../engine/params';
 import type { Params } from '../engine/params';
 import type { FinalResults } from '../engine/results';
+import type { ConductLedger, Contribution, FirmContribution } from '../engine/contribution';
 import type {
   AuditBreach,
   AuditResult,
@@ -170,10 +171,14 @@ export interface RoundNode {
   dT: number;
   M: number;
   incidents: number;
+  /** Firms that had an incident, in creation order (§12, Session 18). Public: the headlines already name them. */
+  incidentFirms: string[];
   headlines: Headline[];
   audits: AuditResult[];
   disclosure: Record<string, DisclosureEntry> | null;
   results: Record<string, RoundResultEntry>;
+  /** Server time in ms of the resolution, for the facilitator wire screen (§14.2, Session 18); null before Session 18. */
+  resolvedAt: number | null;
 }
 
 /** `pacts/{pactId}`; the id is the key, not a stored field. */
@@ -423,7 +428,7 @@ export const fromAudit = (v: Raw): AuditResult => {
 
 const fromDisclosureEntry = (v: Raw): DisclosureEntry => {
   const o = obj(v);
-  return { pace: num(o.pace, 2) as Pace, safety: num(o.safety), expo: num(o.expo) };
+  return { pace: num(o.pace, 2) as Pace, safety: num(o.safety), expo: num(o.expo), risk: numOrNull(o.risk) };
 };
 
 const fromDisclosure = (v: Raw): Record<string, DisclosureEntry> | null =>
@@ -436,6 +441,7 @@ export function fromRound(v: Raw): RoundNode | null {
     dT: num(v.dT),
     M: num(v.M),
     incidents: num(v.incidents),
+    incidentFirms: arr(v.incidentFirms, (x) => str(x)),
     headlines: arr(v.headlines, fromHeadline),
     audits: arr(v.audits, fromAudit),
     disclosure: fromDisclosure(v.disclosure),
@@ -443,6 +449,7 @@ export function fromRound(v: Raw): RoundNode | null {
       const o = obj(x);
       return { share: num(o.share), profit: num(o.profit), valuation: num(o.valuation), rank: num(o.rank) };
     }),
+    resolvedAt: numOrNull(v.resolvedAt),
   };
 }
 
@@ -531,6 +538,7 @@ function fromRoundRecord(v: Raw): RoundRecord {
     disclosure: fromDisclosure(o.disclosure),
     firms: rec(o.firms, fromFirmRoundResult),
     incidentDraws: arr(o.incidentDraws, (x) => num(x)),
+    incidentFirms: arr(o.incidentFirms, (x) => str(x)),
   };
 }
 
@@ -653,6 +661,55 @@ export function fromResults(v: Raw): ResultsNode | null {
         quarters: rec(o.quarters, (q) => str(q)),
       };
     }),
+    contribution: fromContribution(v.contribution),
     dataLines: arr(v.dataLines, (x) => str(x)),
+  };
+}
+
+const ledgerOf = (l: Record<string, unknown>): ConductLedger => ({
+  publish: num(l.publish),
+  share: num(l.share),
+  restraint: num(l.restraint),
+  compliant: num(l.compliant),
+  poach: num(l.poach),
+  blitz: num(l.blitz),
+  lobby: num(l.lobby),
+  rush: num(l.rush),
+  breaches: num(l.breaches),
+  incidents: num(l.incidents),
+});
+
+/** NET CONTRIBUTION (§10, Session 18); null in results written before it existed. */
+export function fromContribution(v: Raw): Contribution | null {
+  if (!isObj(v) || !isObj(v.firms)) return null;
+  const m = isObj(v.moratorium) ? v.moratorium : null;
+  return {
+    firms: rec(v.firms, (x, k): FirmContribution => {
+      const o = obj(x);
+      const rv = obj(o.rivalry);
+      const l = obj(o.ledger);
+      return {
+        firmId: k,
+        ticker: str(o.ticker),
+        valuation: num(o.valuation),
+        valuationRank: num(o.valuationRank),
+        trustPoints: num(o.trustPoints),
+        marketEffect: num(o.marketEffect),
+        shareBenefit: num(o.shareBenefit),
+        moratoriumShare: num(o.moratoriumShare),
+        researchCredit: num(o.researchCredit),
+        rivalry: { blitz: num(rv.blitz), poach: num(rv.poach), rush: num(rv.rush) },
+        rivalryTaken: num(o.rivalryTaken),
+        valueCreated: num(o.valueCreated),
+        damageCreated: num(o.damageCreated),
+        netContribution: num(o.netContribution),
+        rank: num(o.rank),
+        ledger: ledgerOf(l),
+      };
+    }),
+    moratorium: m
+      ? { round: num(m.round), revenue: num(m.revenue), cash: num(m.cash), capability: num(m.capability), total: num(m.total), allocated: num(m.allocated) }
+      : null,
+    researchCreditPerCard: num(v.researchCreditPerCard),
   };
 }

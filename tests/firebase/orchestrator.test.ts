@@ -252,20 +252,20 @@ describe('phase machine', () => {
     expect(w.pub().revealStep).toBe(1);
   });
 
-  it('steps the six results panels with 50 firms; long panels scroll instead of paging (spec §14.4)', async () => {
+  it('steps the seven results panels with 50 firms; long panels scroll instead of paging (spec §14.4)', async () => {
     const w = world({ endMode: 'fixed', fixedEnd: 1, humans: 48, bots: ['standard', 'greedy'], mode: 'multiplayer' });
     await toOpen(w);
     expect((await advance(w.ctx)).ok).toBe(true); // resolve
     expect((await advance(w.ctx)).ok).toBe(true); // → ended
     expect(w.pub().phase).toBe('ended');
     const seen = [w.pub().revealStep];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       expect((await advance(w.ctx)).ok).toBe(true);
       seen.push(w.pub().revealStep);
     }
-    expect(seen).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(seen).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect((await advance(w.ctx)).message).toBe('This is the last results panel.');
-    expect((await stepResults(w.ctx, -1)).message).toBe('Results panel 5 of 6.');
+    expect((await stepResults(w.ctx, -1)).message).toBe('Results panel 6 of 7.');
   });
 
   it('stops after round 30 in manual mode', async () => {
@@ -914,18 +914,18 @@ describe('results (spec §10, §14.4)', () => {
     expect(JSON.stringify(w.db.results)).toBe(first);
   });
 
-  it('steps the results panels with F9 and back, within 1 to 6', async () => {
+  it('steps the results panels with F9 and back, within 1 to 7', async () => {
     const w = await ended();
     expect(w.pub().revealStep).toBe(0);
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 6; i++) {
       expect((await stepResults(w.ctx, 1)).ok).toBe(true);
       expect(w.pub().revealStep).toBe(i);
     }
     const last = await stepResults(w.ctx, 1);
     expect(last.ok).toBe(false);
-    expect(w.pub().revealStep).toBe(5);
+    expect(w.pub().revealStep).toBe(6);
     expect((await stepResults(w.ctx, -1)).ok).toBe(true);
-    expect(w.pub().revealStep).toBe(4);
+    expect(w.pub().revealStep).toBe(5);
   });
 
   it('does not step results while the session is running', async () => {

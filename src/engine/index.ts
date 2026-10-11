@@ -16,6 +16,15 @@ export {
   pactLeftHeadline,
   disclosureHeadline,
 } from './headlines';
+export {
+  computeContribution,
+  trustPointValue,
+  blitzTaken,
+  type Contribution,
+  type FirmContribution,
+  type ConductLedger,
+  type MoratoriumCost,
+} from './contribution';
 export { runCounterfactual, attribution, compareIndustry, type CounterfactualResult, type AttributionRow } from './counterfactual';
 export { botDecision } from './policies';
 export { exposureLabel, exposureOf, estimatedCost, dataLine } from './data';
