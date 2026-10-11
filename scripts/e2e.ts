@@ -276,6 +276,38 @@ async function scenario(browser: Browser): Promise<void> {
     check(!/tau|endRound/.test(text) && !text.includes(String(tau)), `no hidden value in ${node}`);
   }
 
+  // ── 9b. Facilitator wire screen (Session 18) ───────────────────────────────
+  {
+    // A visitor who is not signed in, and a signed-in account off the allowlist, never see the log.
+    const anon = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const a = watch(await anon.newPage(), 'wire visitor');
+    await a.goto(`${BASE}#/wire/${g}`);
+    await waitText(a, /SIGN IN/i, '#/wire asks a signed-out visitor to sign in');
+    check((await a.locator('[data-wire-log]').count()) === 0, '#/wire shows no log to a signed-out visitor');
+    await a.getByLabel('Email').fill('outsider@example.test');
+    await a.getByLabel('Password').fill('correct-horse-9');
+    await a.getByRole('button', { name: 'Sign in' }).click();
+    await waitText(a, /not on the facilitator allowlist/i, '#/wire refuses an account off the allowlist');
+    check((await a.locator('[data-wire-log]').count()) === 0, '#/wire shows no log to a non-facilitator');
+    await anon.close();
+
+    // The facilitator opens it from the console link in a second tab.
+    const [wirePage] = await Promise.all([facCtx.waitForEvent('page'), control.getByRole('link', { name: 'WIRE LOG' }).click()]);
+    const w = watch(wirePage, 'wire screen');
+    await w.setViewportSize({ width: 1440, height: 900 });
+    await waitText(w, /WIRE LOG · Q/, '#/wire opens from the console link on the current quarter');
+    await w.getByRole('button', { name: 'ALL' }).click();
+    await waitText(w, /WIRE LOG · ALL QUARTERS/, 'ALL lists every quarter');
+    // Rounds 1… come back as an array with an empty slot 0.
+    const roundsNode = Object.fromEntries(Object.entries((await adminGet<Record<string, { headlines?: unknown[] | Record<string, unknown> } | null>>(`games/${g}/rounds`)) ?? {}).filter(([, v]) => v !== null)) as Record<string, { headlines?: unknown[] | Record<string, unknown> }>;
+    const wireNode = (await adminGet<Record<string, unknown> | null>(`games/${g}/wire`)) ?? {};
+    const expected = Object.values(roundsNode).reduce((n, r) => n + Object.keys(r.headlines ?? {}).length, 0) + Object.keys(wireNode).length;
+    check((await w.locator('[data-wire-log] [data-wire-line]').count()) === expected, `#/wire lists all ${expected} wire entries`);
+    check((await w.locator('[data-not-on-wire]').count()) === Object.keys(roundsNode).length, `#/wire has a NOT ON THE WIRE section for each of the ${Object.keys(roundsNode).length} resolved quarters, not for the discarded one`);
+    await shot(w, 'wire-all');
+    await w.close();
+  }
+
   // ── 10. Console at phone and desktop widths ────────────────────────────────
   for (const [w, hgt] of [[390, 844], [1440, 900]] as const) {
     await control.setViewportSize({ width: w, height: hgt });

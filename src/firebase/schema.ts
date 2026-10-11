@@ -176,6 +176,8 @@ export interface RoundNode {
   audits: AuditResult[];
   disclosure: Record<string, DisclosureEntry> | null;
   results: Record<string, RoundResultEntry>;
+  /** Server time in ms of the resolution, for the facilitator wire screen (§14.2, Session 18); null before Session 18. */
+  resolvedAt: number | null;
 }
 
 /** `pacts/{pactId}`; the id is the key, not a stored field. */
@@ -446,6 +448,7 @@ export function fromRound(v: Raw): RoundNode | null {
       const o = obj(x);
       return { share: num(o.share), profit: num(o.profit), valuation: num(o.valuation), rank: num(o.rank) };
     }),
+    resolvedAt: numOrNull(v.resolvedAt),
   };
 }
 
@@ -660,3 +663,4 @@ export function fromResults(v: Raw): ResultsNode | null {
     dataLines: arr(v.dataLines, (x) => str(x)),
   };
 }
+

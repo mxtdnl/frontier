@@ -1709,3 +1709,51 @@ legend {
 .panel-body.incid-scroll {
   overflow-y: auto;
 }
+
+/* ---------- Facilitator wire screen (spec §14.2, Session 18) ---------- */
+.wire-select {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.wire-sel-label {
+  min-width: 7ch;
+  text-align: center;
+  font-weight: 600;
+}
+.panel-body.wire-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.wire-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.wire-line {
+  display: flex;
+  gap: 2ch;
+}
+.wire-line .wl-q {
+  flex: none;
+  width: 6ch;
+}
+.wire-line .wl-t {
+  flex: none;
+  width: 8ch;
+}
+.wire-line .wl-k {
+  flex: none;
+  width: 9ch;
+}
+.wire-q-head {
+  font-weight: 600;
+  margin-top: 1lh;
+}
+.wire-quarter:first-child .wire-q-head {
+  margin-top: 0;
+}
+.wire-off {
+  margin-top: 0.5lh;
+  padding-top: 0.5lh;
+  border-top: var(--rule-w) solid var(--rule);
+}

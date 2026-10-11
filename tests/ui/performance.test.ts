@@ -23,7 +23,7 @@ const round = (results: Record<string, [number, number]>): RoundNode => ({
   T: 70,
   dT: 0,
   M: 1,
-  incidents: 0, incidentFirms: [],
+  incidents: 0, incidentFirms: [], resolvedAt: null,
   headlines: [],
   audits: [],
   disclosure: null,

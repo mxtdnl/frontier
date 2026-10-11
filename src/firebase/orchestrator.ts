@@ -547,8 +547,10 @@ async function runResolution(ctx: Ctx, round: number): Promise<ActionResult> {
       results: Object.fromEntries(
         Object.entries(out.firms).map(([id, r]) => [id, { share: r.share, profit: r.profit, valuation: r.valuation, rank: r.rank }]),
       ),
+      resolvedAt: null,
     };
-    patch[rel.round(round)] = roundNode;
+    // The server stamps the resolution time (the wire screen shows it beside the quarter's headlines).
+    patch[rel.round(round)] = { ...roundNode, resolvedAt: serverTimestamp() };
 
     for (const f of next.firms) {
       const r = out.firms[f.id];

@@ -25,7 +25,7 @@ const FIRMS: Record<string, FirmNode> = Object.fromEntries(TICKERS.map((t, i) =>
 const results = (n: number): RoundNode['results'] =>
   Object.fromEntries(TICKERS.slice(0, n).map((_, i) => [`f${i}`, { share: 1 / n, profit: 0, valuation: 100, rank: i + 1 }]));
 const node = (over: Partial<RoundNode> = {}): RoundNode => ({
-  T: 60, dT: -4, M: 500, incidents: 0, incidentFirms: [], headlines: [], audits: [], disclosure: null, results: results(10), ...over,
+  T: 60, dT: -4, M: 500, incidents: 0, incidentFirms: [], resolvedAt: null, headlines: [], audits: [], disclosure: null, results: results(10), ...over,
 });
 const text = (el: ReturnType<typeof createElement>): string => renderToStaticMarkup(el).replace(/<[^>]+>/g, ' ');
 

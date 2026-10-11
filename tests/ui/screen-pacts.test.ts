@@ -16,7 +16,7 @@ const pub = (over: Partial<PublicNode> = {}): PublicNode => ({
   joinLocked: true, resolvingBy: null, endedAt: null, revealStep: 0, resumePhase: null, pausedRemainingMs: null, ...over,
 });
 const pact = (over: Partial<Pact> = {}): Pact => ({ id: 'p1', name: 'PACT-A', proposer: 'a', terms: { maxPace: 2, minSafety: 10 }, members: { a: 1, b: 1 }, createdRound: 1, status: 'active', ...over });
-const roundNode = (over: Partial<RoundNode> = {}): RoundNode => ({ T: 70, dT: 0, M: 1, incidents: 0, incidentFirms: [], headlines: [], audits: [], disclosure: null, results: {}, ...over });
+const roundNode = (over: Partial<RoundNode> = {}): RoundNode => ({ T: 70, dT: 0, M: 1, incidents: 0, incidentFirms: [], resolvedAt: null, headlines: [], audits: [], disclosure: null, results: {}, ...over });
 
 function data(over: Partial<ScreenData> = {}): ScreenData {
   return {

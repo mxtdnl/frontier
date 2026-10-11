@@ -22,7 +22,7 @@ const fp = (over: Partial<FirmPublicNode>): FirmPublicNode => ({
   share: 0.5, profit: 0, valuation: INITIAL_VALUATION, rank: 1, rankDelta: 0, submittedRound: 0, auto: false, insolvent: false, breachUntilRound: 0, ...over,
 });
 const round = (T: number, results: RoundNode['results'], headlines: RoundNode['headlines'] = []): RoundNode => ({
-  T, dT: 0, M: 100, incidents: 1, incidentFirms: [], headlines, audits: [], disclosure: null, results,
+  T, dT: 0, M: 100, incidents: 1, incidentFirms: [], resolvedAt: null, headlines, audits: [], disclosure: null, results,
 });
 const pub = (over: Partial<PublicNode> = {}): PublicNode => ({
   phase: 'open', round: 2, deadline: 1, paused: false, disclosure: false, T: 70, M: 500, collapsed: false, collapseRound: null,

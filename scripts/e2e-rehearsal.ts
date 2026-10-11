@@ -278,6 +278,24 @@ await runWithStack(async (browser) => {
       check(own !== undefined && t.includes(ownResultSentence(own, FIRMS)), 'the card opens with the result sentence');
       check((await human.locator('.hbar').count()) === 2, 'the card shows damage and value shares as two bars');
       await shot(human, 'rehearsal-human-card');
+
+      // Session 18: #/wire shows every wire entry of every quarter.
+      const wirePage = watchPage(await ctx.newPage(), 'wire', ignore);
+      await wirePage.setViewportSize({ width: 1440, height: 900 });
+      await wirePage.goto(`${BASE}#/wire/${g}`);
+      await waitText(wirePage, /WIRE LOG · /, '#/wire opens for the facilitator');
+      await wirePage.getByRole('button', { name: 'ALL' }).click();
+      await waitText(wirePage, /WIRE LOG · ALL QUARTERS/, '#/wire shows every quarter');
+      // Rounds 1… come back as an array with an empty slot 0.
+      const roundsNode = Object.fromEntries(Object.entries((await adminGet<Record<string, { headlines?: Record<string, unknown> | unknown[] } | null>>(`games/${g}/rounds`)) ?? {}).filter(([, v]) => v !== null)) as Record<string, { headlines?: Record<string, unknown> | unknown[] }>;
+      const wireNode = (await adminGet<Record<string, unknown> | null>(`games/${g}/wire`)) ?? {};
+      const entries = Object.values(roundsNode).reduce((n, r) => n + Object.keys(r.headlines ?? {}).length, 0) + Object.keys(wireNode).length;
+      check((await wirePage.locator('[data-wire-log] [data-wire-line]').count()) === entries, `#/wire lists all ${entries} wire entries of the rehearsal`);
+      for (let r = 1; r <= REHEARSAL_QUARTERS; r++) {
+        check((await wirePage.locator(`[data-wire-quarter="${r}"] [data-wire-line]`).count()) === Object.keys(roundsNode[String(r)]?.headlines ?? {}).length + Object.values(wireNode).filter((e) => (e as { round?: number }).round === r).length, `#/wire lists every entry of quarter ${r}`);
+      }
+      await shot(wirePage, 'rehearsal-wire');
+      await wirePage.close();
     }
     console.log(`rehearsal events: ${events.join(', ')}`);
     await hctx.close();

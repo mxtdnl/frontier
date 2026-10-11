@@ -114,7 +114,7 @@ describe('participant-visible nodes', () => {
   });
 
   it('restores a round with no audits, no disclosure and empty headlines', () => {
-    const r = { T: 60, dT: -3, M: 300, incidents: 0, incidentFirms: [], headlines: [], audits: [], disclosure: null, results: { f0: { share: 1, profit: 2, valuation: 3, rank: 1 } } };
+    const r = { T: 60, dT: -3, M: 300, incidents: 0, incidentFirms: [], headlines: [], audits: [], disclosure: null, results: { f0: { share: 1, profit: 2, valuation: 3, rank: 1 } }, resolvedAt: null };
     expect(fromRound(storeAndRead(r))).toEqual(r);
   });
 
@@ -123,6 +123,7 @@ describe('participant-visible nodes', () => {
       T: 60, dT: -3, M: 300, incidents: 2, incidentFirms: ['f2', 'f0'], headlines: [], audits: [],
       disclosure: { f0: { pace: 4 as const, safety: 0, expo: 9, risk: 0.3 }, f1: { pace: 1 as const, safety: 30, expo: 0.6, risk: null } },
       results: {},
+      resolvedAt: 1_760_000_000_000,
     };
     expect(fromRound(storeAndRead(r))).toEqual(r);
   });

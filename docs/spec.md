@@ -50,8 +50,9 @@ The app is a single-page app using hash routing. It is built to one `index.html`
 | `#/control/:gameId` | Facilitator | Same as above | Private console on a non-mirrored device: setup, hidden parameters, submissions, presence, audits |
 | `#/results/:gameId` | Participants and facilitator | Same as the game | Results. The projector sequence is facilitator-driven; participants see their own firm's results card |
 | `#/new` | Facilitator | Facilitator | Create a game and configure settings (§5.4) |
+| `#/wire/:gameId` | Facilitator | Same as `#/control` | The full wire log by quarter, with the events the headline cap left out (§14.2; Session 18). Linked from `#/control`; works on a second laptop or tab while `#/control` stays open |
 
-The projector route must never render hidden parameters: τ, the end round, unaudited violations, or private firm data. Those appear only on `#/control`.
+The projector route must never render hidden parameters: τ, the end round, unaudited violations, or private firm data. Those appear only on `#/control` and `#/wire`.
 
 ---
 
@@ -433,7 +434,7 @@ The facilitator's client runs resolution. There are no Cloud Functions, so the p
   decisions/{round}/{firmId}: {pace, safety, card, target|null, by: uid, at: serverTs}
   rounds/{round}:        {T, dT, M, incidents, incidentFirms[] (firm ids, creation order; Session 18), headlines[], audits[],
                           disclosure{firmId:{pace,safety,expo,risk|null}}|null (risk only for an incident firm; Session 18),
-                          results{firmId:{share, profit, valuation, rank}}}
+                          results{firmId:{share, profit, valuation, rank}}, resolvedAt (server time; Session 18)}
   pacts/{pactId}:        {name, proposer, terms{maxPace, minSafety}, members{firmId: joinedRound}, createdRound, status}
   pactsPrivate/{pactId}: {violations{round:{firmId:true}}, sanctions{firmId:count}, lastAuditRound}
   engine:                {seed, params, tau, endMode, endRound|null, rngNotes, cfCache|null}
@@ -598,6 +599,13 @@ Scale rules (Session 10):
 - The table can be sorted by firm (creation order), commit status or devices online.
 - Two filters: NOT COMMITTED (open quarter only) and OFFLINE (no device online; bot firms excluded).
 - The session's mode and firm limit are shown in the Game panel.
+
+**Wire screen** (`#/wire/:gameId`, Session 18). A facilitator-only page, opened from the `WIRE LOG` link in the console header (a new tab). It only reads.
+- **Log:** every wire entry of the session, grouped by quarter: the round headlines (`rounds/{r}/headlines`, timed by `rounds/{r}/resolvedAt`) and the pact and disclosure events (`wire`). Entries before quarter 1 are under `PRE`. Each line: quarter, time, kind (a short label such as `INCID`, `PACT`, `BLITZ`) and text, coloured by kind as on the ticker (§14.1), with ▼ or ▲ beside alarm and clean-audit kinds. Within a quarter the lines run in the order they happened: events while the quarter was open, its headlines at resolution, then events during its reveal. Headlines resolved before Session 18 carry no time (`--:--:--`).
+- **Quarter selector:** ◄ ► buttons and the arrow keys step one quarter; a quarter number field (0 is `PRE`); `ALL` shows every quarter, newest first. It opens on the current quarter, and every earlier quarter stays available. (The selector uses ◄ ►, because `lint:copy` treats ◀ ▶ as emoji.)
+- **NOT ON THE WIRE · facilitator only:** below each resolved quarter's entries, the events of that quarter that no headline reports, built from `engine.history`: incidents (with pace and safety), cards played (with the POACH target), audits and insolvencies. It is never rendered on `#/screen` or `#/play` (an import-graph test).
+- **`COPY`:** copies the selected quarter, or all of them, as plain text for the debrief, the facilitator section included.
+- **Scale:** with 50 firms and 30 quarters the list scrolls inside its panel and renders `ALL` within 2 s (`npm run test:e2e:wire`).
 
 ### 14.3 Participant control centre (`#/play`) — mobile-first
 

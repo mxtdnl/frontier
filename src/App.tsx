@@ -7,6 +7,7 @@ import { NewGame } from './screens/NewGame/NewGame';
 import { Play } from './screens/Play/Play';
 import { Results } from './screens/Results/Results';
 import { Screen } from './screens/Screen/Screen';
+import { Wire } from './screens/Wire/Wire';
 
 export function App() {
   const { segments } = useRoute();
@@ -27,6 +28,8 @@ export function App() {
       return <Results />;
     case 'kit':
       return <Kit />;
+    case 'wire':
+      return <Wire />;
     default:
       return (
         <div className="page stack">

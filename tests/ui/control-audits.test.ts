@@ -5,7 +5,7 @@ import { auditOutcomes } from '../../src/screens/Control/Control';
 
 const firm = (ticker: string): FirmNode => ({ name: ticker, ticker, createdAt: 1, order: 0, isBot: false, botPolicy: null });
 const pact: Pact = { id: 'p1', name: 'PACT-A', proposer: 'a', terms: { maxPace: 2, minSafety: null }, members: { a: 1 }, createdRound: 1, status: 'active' };
-const round = (audits: RoundNode['audits']): RoundNode => ({ T: 0, dT: 0, M: 0, incidents: 0, incidentFirms: [], headlines: [], audits, disclosure: null, results: {} });
+const round = (audits: RoundNode['audits']): RoundNode => ({ T: 0, dT: 0, M: 0, incidents: 0, incidentFirms: [], resolvedAt: null, headlines: [], audits, disclosure: null, results: {} });
 
 describe('audit outcomes on the console', () => {
   it('lists automatic and manual audits newest first, with fines, waivers and expulsions', () => {
