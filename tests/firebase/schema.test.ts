@@ -114,8 +114,25 @@ describe('participant-visible nodes', () => {
   });
 
   it('restores a round with no audits, no disclosure and empty headlines', () => {
-    const r = { T: 60, dT: -3, M: 300, incidents: 0, headlines: [], audits: [], disclosure: null, results: { f0: { share: 1, profit: 2, valuation: 3, rank: 1 } } };
+    const r = { T: 60, dT: -3, M: 300, incidents: 0, incidentFirms: [], headlines: [], audits: [], disclosure: null, results: { f0: { share: 1, profit: 2, valuation: 3, rank: 1 } }, resolvedAt: null };
     expect(fromRound(storeAndRead(r))).toEqual(r);
+  });
+
+  it('restores incident firms in creation order and the disclosed incident risk (Session 18)', () => {
+    const r = {
+      T: 60, dT: -3, M: 300, incidents: 2, incidentFirms: ['f2', 'f0'], headlines: [], audits: [],
+      disclosure: { f0: { pace: 4 as const, safety: 0, expo: 9, risk: 0.3 }, f1: { pace: 1 as const, safety: 30, expo: 0.6, risk: null } },
+      results: {},
+      resolvedAt: 1_760_000_000_000,
+    };
+    expect(fromRound(storeAndRead(r))).toEqual(r);
+  });
+
+  it('loads a round written before Session 18 with no incident firms and no risk', () => {
+    const old = { T: 60, dT: -3, M: 300, incidents: 1, headlines: [], audits: [], disclosure: { f0: { pace: 4, safety: 0, expo: 9 } }, results: {} };
+    const r = fromRound(storeAndRead(old));
+    expect(r?.incidentFirms).toEqual([]);
+    expect(r?.disclosure?.f0?.risk).toBeNull();
   });
 
   it('restores a decision without a target', () => {

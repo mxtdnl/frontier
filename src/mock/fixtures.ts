@@ -3,7 +3,7 @@
  * to drive the static screens. None of it is engine output or a tunable parameter.
  */
 
-export type MockTag = 'BOT' | 'AUTO' | 'INSOLV';
+export type MockTag = 'BOT' | 'AUTO' | 'INCID' | 'INSOLV';
 
 export interface MockFirm {
   ticker: string;

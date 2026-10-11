@@ -50,8 +50,9 @@ The app is a single-page app using hash routing. It is built to one `index.html`
 | `#/control/:gameId` | Facilitator | Same as above | Private console on a non-mirrored device: setup, hidden parameters, submissions, presence, audits |
 | `#/results/:gameId` | Participants and facilitator | Same as the game | Results. The projector sequence is facilitator-driven; participants see their own firm's results card |
 | `#/new` | Facilitator | Facilitator | Create a game and configure settings (§5.4) |
+| `#/wire/:gameId` | Facilitator | Same as `#/control` | The full wire log by quarter, with the events the headline cap left out (§14.2; Session 18). Linked from `#/control`; works on a second laptop or tab while `#/control` stays open |
 
-The projector route must never render hidden parameters: τ, the end round, unaudited violations, or private firm data. Those appear only on `#/control`.
+The projector route must never render hidden parameters: τ, the end round, unaudited violations, or private firm data. Those appear only on `#/control` and `#/wire`.
 
 ---
 
@@ -115,7 +116,7 @@ Firms commit with a single button. They can change and recommit until the deadli
 
 A firm may not play the same card in consecutive quarters. Insolvent firms (§6.7) cannot play cards.
 
-Owner decisions 2026-10-08/09 (Session 17): PUBLISH's trust effect falls from a flat +1.0 to 0.25 × 8/N per card; `SHARE` and `RUSH` added. `SHARE` stacks per card. `RUSH`'s multipliers were proposed as draw ×2 and incident ×1.5; the owner first raised the incident multiplier to ×2 (×3 measured alongside), then set both to ×1.5 (2026-10-10) because at ×2 one firm alone could trigger the moratorium in 20–33% of sessions at 6 firms (REVIEW M1). The results conduct ledger (Session 18) counts `PUBLISH` and `SHARE` as for the market, `RUSH` as against it.
+Owner decisions 2026-10-08/09 (Session 17): PUBLISH's trust effect falls from a flat +1.0 to 0.25 × 8/N per card; `SHARE` and `RUSH` added. `SHARE` stacks per card. `RUSH`'s multipliers were proposed as draw ×2 and incident ×1.5; the owner first raised the incident multiplier to ×2 (×3 measured alongside), then set both to ×1.5 (2026-10-10) because at ×2 one firm alone could trigger the moratorium in 20–33% of sessions at 6 firms (REVIEW M1). The results conduct ledger (Session 18, §10) counts `PUBLISH` and `SHARE` as for the market, `POACH`, `BLITZ`, `LOBBY` and `RUSH` as against it; BLITZ, POACH and RUSH also count as rivalry taken.
 
 ### 5.3 Pacts (participant side)
 
@@ -192,6 +193,7 @@ Per firm:
 | MORATORIUM_M | Market multiplier after collapse | 0.15 |
 | MORATORIUM_R | Regeneration multiplier after collapse | 0.25 |
 | BACKLASH | One-off trust drop at collapse | 10 |
+| RESEARCH_CREDIT | Display only (results §10): trust-point equivalents per PUBLISH card, × 8/N; never used by the resolution | 1.0 (Session 18, owner decision 2026-10-10) |
 | INSOLVENCY | Cash level that triggers insolvency | −100 |
 
 ### 6.3 Resolution order (one quarter)
@@ -373,7 +375,7 @@ Fines leave the economy. `LOBBY` in the quarter of detection waives the fine but
 ### 9.3 Disclosure toggle
 
 - The facilitator toggles it with F7 at any phase.
-- While it is on, each resolution publishes `{pace, safety, d_i}` per firm for that round, and the board gains `PACE`, `SAFE` and `EXPO` columns.
+- While it is on, each resolution publishes `{pace, safety, d_i}` per firm for that round, and the board gains `PACE`, `SAFE` and `EXPO` columns. For a firm that had an incident it also publishes `risk`, the firm's incident probability q_i that quarter with every card multiplier applied (§6.3 step 5), for the incident cause line (§14.1; owner decision 2026-10-10, Session 18).
 - While it is off, those columns are absent and the data is written only to the facilitator-only path.
 - Toggling produces a wire headline: "Assembly passes frontier disclosure rule" / "Disclosure rule suspended".
 - The toggle state is always visible in the board status line.
@@ -399,6 +401,17 @@ Fines leave the economy. `LOBBY` in the quarter of detection waives the fine but
 - Value share keeps counting negative valuations as 0. When no firm finishes above zero, the value side of the attribution chart shows the single line "No firm finished with positive value" instead of 0.0% bars.
 
 **Attribution.** For each firm: share of cumulative draw (Σ over rounds of d_i × 8/N, divided by the total) against share of final industry valuation. Plot as a ranked pair of bars per firm.
+
+**Net contribution** (Session 18; owner decisions 2026-10-10). What each firm's decisions did to the whole market, computed in `buildResults` from the stored engine history with no replay (pure, deterministic). The baseline is the ALTERNATIVE policy (pace 2, safety 15, no card). Per-firm replays were rejected: near a moratorium, switching one firm can move it by a quarter and swing other firms' values by thousands.
+- **Trust effect of firm i in quarter t** (trust points): the firm's own terms of the §6.3 step 6 update, −d_i × 8/N − (incident ? INC_TRUST × 8/N : 0) + (PUBLISH ? PUBLISH_TRUST × 8/N : 0) − (LOBBY ? LOBBY_TRUST : 0) (RUSH acts through d_i), minus the same terms for the ALTERNATIVE in the firm's place. The ALTERNATIVE's incident uses the firm's own stored incident draw u_{t,i} and the quarter's SHARE multiplier from other firms' cards (common random numbers, as in the counterfactual), so an incident counts against a firm only when the ALTERNATIVE would have avoided it, and a firm that played the ALTERNATIVE has a trust effect of exactly 0 (owner decision 2026-10-10; the expected-loss wording first proposed could not give exactly 0).
+- **Value of one trust point in quarter t:** γ × M_t / T_t × (quarters played − t + 1), with M_t as resolved (after a moratorium it carries the moratorium multiplier); 0 when T_t = 0.
+- **SHARE benefit:** for each SHARE card, Σ over other firms j of q_j × (1 − SHARE_INC_MULT) × INC_TRUST × 8/N × the value of a trust point, where q_j is j's incident probability before any SHARE multiplier. It is part of the market effect.
+- **Moratorium cost**, if the moratorium happened: the market revenue lost to the moratorium multiplier in every quarter whose market carries it (Σ M_t / MORATORIUM_M − M_t, the moratorium quarter included), plus the positive cash removed by the haircut (cash at the end of the quarter before, × (1 − COLLAPSE_CASH_HAIRCUT)), plus the capability written down at final trust (CAP_MULT × Σ C × T_final/100 × (1 − COLLAPSE_CAP_WRITEDOWN)). It is allocated to the firms whose market effect up to and including the moratorium quarter is negative, in proportion to that negative effect; if no firm's is, it is not allocated (the headline says so).
+- **Market effect** of firm i = Σ_t trust effect × value of a trust point + SHARE benefit − its moratorium allocation.
+- **Research credit** of firm i = Σ over its PUBLISH quarters of RESEARCH_CREDIT × 8/N × the value of a trust point (RESEARCH_CREDIT 1.0, display only, never money; SHARE earns none).
+- **Rivalry taken:** BLITZ, the firm's revenue that quarter minus its revenue without the BLITZ multiplier (shares recomputed exactly); POACH, POACH_LOSS × CAP_MULT × T_final/100 per completed POACH; RUSH, RUSH_CAP_GAIN × CAP_MULT × T_final/100 per card.
+- **Value created** = final valuation + max(0, market effect) + research credit. **Damage created** = max(0, −market effect) + rivalry taken. **Net contribution** = final valuation + market effect + research credit − rivalry taken. Firms are ranked by net contribution; ties by final cash, then creation order (the engine's tie-break).
+- **Conduct ledger**, per firm. For the market: PUBLISH and SHARE cards, restraint quarters (pace ≤ 2 and safety ≥ 15), and quarters that kept the terms as a checked member of a pact with 2 or more checked members. Against it: POACH, BLITZ, LOBBY and RUSH cards, pact breaches (detected and undetected) and incidents.
 
 ---
 
@@ -431,8 +444,9 @@ The facilitator's client runs resolution. There are no Cloud Functions, so the p
   members/{uid}:         {firmId, label, joinedAt}
   presence/{uid}:        {online, lastSeen}
   decisions/{round}/{firmId}: {pace, safety, card, target|null, by: uid, at: serverTs}
-  rounds/{round}:        {T, dT, M, incidents, headlines[], audits[], disclosure{firmId:{pace,safety,expo}}|null,
-                          results{firmId:{share, profit, valuation, rank}}}
+  rounds/{round}:        {T, dT, M, incidents, incidentFirms[] (firm ids, creation order; Session 18), headlines[], audits[],
+                          disclosure{firmId:{pace,safety,expo,risk|null}}|null (risk only for an incident firm; Session 18),
+                          results{firmId:{share, profit, valuation, rank}}, resolvedAt (server time; Session 18)}
   pacts/{pactId}:        {name, proposer, terms{maxPace, minSafety}, members{firmId: joinedRound}, createdRound, status}
   pactsPrivate/{pactId}: {violations{round:{firmId:true}}, sanctions{firmId:count}, lastAuditRound}
   engine:                {seed, params, tau, endMode, endRound|null, rngNotes, cfCache|null}
@@ -490,7 +504,7 @@ The layout is built on a monospace character grid (§16.2). Regions:
 ├ BOARD (left ~62%) ─────────────────────────────────┬ TRUST (right ~38%) ───────────────────────────────┤
 │ VALUE SHARE [HUMN 30% │ BTC 22% │ …]  2 below zero │ PUBLIC TRUST                                      │
 │ # MOVE FIRM SHARE PROFIT VALUE CHANGE ✓ bar trend  │ Total market revenue tracks public trust.         │
-│ rows… (BREACH / AUTO / INSOLV / BOT tags)          │                                                   │
+│ rows… (BREACH / INCID / INSOLV / AUTO / BOT tags)  │ INCIDENTS block in place of the chart after reveal │
 │ [PACE SAFETY EXPOSURE columns if disclosure on]    │ 61.8  ▼6.3 since last quarter   (large numerals)  │
 │ key strip: only the tags on screen                 │ line chart + change strip │ MKT │ INCID │ PACTS │ DISCLOSURE │
 ├ WIRE  Q3 Y2 ▼ incident headline · Q3 Y2 headline … (scrolling; static list if reduced motion) ───────────────┤
@@ -539,6 +553,7 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
   - `FIRM <TICKER>`: a public firm profile with share and valuation history
   - `FIRMS`: small multiples of every firm's valuation (Session 13)
   - `RANKS`: rank by quarter for every firm (Session 13)
+  - `INCID`: every incident of the session by quarter, newest first, each with its headline, effect and cause; the list scrolls inside the panel (Session 18)
   - `HELP`: lists every command above and every key
 - Esc returns to the board.
 - F-keys mirror these.
@@ -556,7 +571,7 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
   - Each reveal returns to page 1.
   - Above the page, separated by a rule, pinned rows show firms that are not on the current page: the leader, then the firm with the largest rank change of 3 places or more. Pinned rows use the two-line slots the page leaves free: 2 as standard, 1 under the summit banner, none in lit-room mode. Pinned rows keep their real rank number.
 
-**Board tags** stay on one line, in priority order: `BREACH`, `INSOLV`, `AUTO`, `BOT`, then pact tags. Tags that do not fit the column show as a dim `+N` (most often in lit-room mode with disclosure on), so a row never grows past its height (Session 10).
+**Board tags** stay on one line, in priority order: `BREACH`, `INCID`, `INSOLV`, `AUTO`, `BOT`, then pact tags. `INCID` (Session 18) marks a firm that had an incident in the latest resolved quarter, during that quarter's reveal and the following open phase. Tags that do not fit the column show as a dim `+N` (most often in lit-room mode with disclosure on), so a row never grows past its height (Session 10).
 
 **Lobby state.**
 - A large join code.
@@ -572,6 +587,13 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
 **`RANKS` view** (Session 13). Rank by valuation for each resolved quarter as connected lines, rank 1 at the top. The rank for a quarter is the engine's rank (valuation, then the engine's own tie-break); where two firms would still tie the ticker decides, so the chart is deterministic. Two firms are highlighted automatically: the current leader in `--signal` and the firm with the largest fall from its best rank in `--down` (ties: the larger fall, then the ticker); both are drawn thicker with a square at each quarter. Every other firm is a thin `--rule` line. Labels sit at the line ends: the highlighted firms always (`HUMN 1st`, `BTC ▼3`), the others where they do not overlap. A headline sentence above the chart, e.g. "HUMN rose to 1st. BTC fell from 1st to 2nd." ("holds 1st" when the leader was already 1st; "No firm is below its best rank." when nothing fell). Rank axis labels: every rank up to 16 firms, then 1 and every 5th. One resolved quarter shows "1 quarter resolved" instead of lines.
 
 **Reveal state.** One orchestrated motion moment, described in §16.5.
+
+**Incidents** (Session 18; owner decisions 2026-10-10). When the reveal sequence ends, an `INCIDENTS` block appears instantly in the PUBLIC TRUST panel, in place of the trust chart, for the rest of the reveal; the chart returns when the next quarter opens. The board rows never move. The block is built from `rounds/{r}/incidentFirms`, so it never depends on the headline cap. Each incident, in firm creation order:
+- ▼, the ticker and the incident's wire headline (the first incident template when the cap left the incident out);
+- the effect: "trust −1.2 · BTC revenue −15% this quarter" (the trust cost per incident is INC_TRUST × 8/N, shown as a number);
+- the cause: with disclosure on at that resolution, "pace 4 · safety 5% · incident risk 27%" from `rounds/{r}/disclosure` (the risk is the stored q_i, with PUBLISH, RUSH and SHARE applied); with disclosure off, no pace, safety or risk, and the general cause "Incident risk rises with pace and falls with safety spend." once at the foot of the block.
+
+At most 4 incidents (3 in lit-room mode with disclosure on), then "+N more · INCID for the full list". With no incidents the block is absent. It fits at 1280×720 and 1920×1080 for 4 to 50 firms.
 
 ### 14.2 Facilitator console (`#/control`)
 
@@ -589,6 +611,13 @@ Scale rules (Session 10):
 - The table can be sorted by firm (creation order), commit status or devices online.
 - Two filters: NOT COMMITTED (open quarter only) and OFFLINE (no device online; bot firms excluded).
 - The session's mode and firm limit are shown in the Game panel.
+
+**Wire screen** (`#/wire/:gameId`, Session 18). A facilitator-only page, opened from the `WIRE LOG` link in the console header (a new tab). It only reads.
+- **Log:** every wire entry of the session, grouped by quarter: the round headlines (`rounds/{r}/headlines`, timed by `rounds/{r}/resolvedAt`) and the pact and disclosure events (`wire`). Entries before quarter 1 are under `PRE`. Each line: quarter, time, kind (a short label such as `INCID`, `PACT`, `BLITZ`) and text, coloured by kind as on the ticker (§14.1), with ▼ or ▲ beside alarm and clean-audit kinds. Within a quarter the lines run in the order they happened: events while the quarter was open, its headlines at resolution, then events during its reveal. Headlines resolved before Session 18 carry no time (`--:--:--`).
+- **Quarter selector:** ◄ ► buttons and the arrow keys step one quarter; a quarter number field (0 is `PRE`); `ALL` shows every quarter, newest first. It opens on the current quarter, and every earlier quarter stays available. (The selector uses ◄ ►, because `lint:copy` treats ◀ ▶ as emoji.)
+- **NOT ON THE WIRE · facilitator only:** below each resolved quarter's entries, the events of that quarter that no headline reports, built from `engine.history`: incidents (with pace and safety), cards played (with the POACH target), audits and insolvencies. It is never rendered on `#/screen` or `#/play` (an import-graph test).
+- **`COPY`:** copies the selected quarter, or all of them, as plain text for the debrief, the facilitator section included.
+- **Scale:** with 50 firms and 30 quarters the list scrolls inside its panel and renders `ALL` within 2 s (`npm run test:e2e:wire`).
 
 ### 14.3 Participant control centre (`#/play`) — mobile-first
 
@@ -616,7 +645,7 @@ Scale rules (Session 10):
 
 ### 14.4 Results (`#/results`)
 
-On the projector the facilitator steps through panels with F9:
+On the projector the facilitator steps through seven panels with F9 (NET CONTRIBUTION added as panel 5 in Session 18):
 
 1. **FINAL BOARD**: ranked by final valuation. A dumbbell per firm from peak (hollow square) to final (solid square) on one axis that includes zero; final value and drop from peak on the right; final values below zero in `--down` with a − sign.
 2. **TRUST TRACE**: full history as a `LineChart`. The collapse quarter is a labelled vertical marker. The τ line, with a hatched band below it, appears only if the "Reveal threshold" setting is on.
@@ -631,10 +660,15 @@ Series are labelled on the chart; no abbreviations (SUST, ACT, DEPL) or prose le
 - Scrolling: mouse wheel or trackpad, or the arrow keys, Page Up, Page Down, Home and End on the results page. Each panel opens at the top.
 - ATTRIBUTION: up to 24 firms, one row per firm. Above 24, the 12 firms with the largest share of damage, then one `OTHERS` row with the combined shares of the rest; the heading states how many firms it combines. The `OTHERS` row shows its two shares as figures without bars, below a rule, so the axis serves the listed firms.
 - PACT RECORD: member lists follow the long-list rule (§14.1).
-5. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).
-6. **DEBRIEF**: the five prompts in §15.5.
+5. **NET CONTRIBUTION** (Session 18): value created for the whole market (§10).
+   - The headline, written from the data: "Ranked by value created for the whole market, HUMN falls from 1st to 8th and ARCN rises from 9th to 2nd." (the valuation leader's move, then the largest rise; "HUMN holds 1st and …" when the leader keeps 1st; "every firm keeps its place." when no rank changes). A second sentence when every net contribution is below zero, and one for the moratorium cost and how many firms it is charged to.
+   - Left: a slope chart from rank by valuation to rank by net contribution. Firms that move 3 places or more are drawn thick, ▲ in `--up` or ▼ in `--down`, with the move beside the label; the rest are dim. Labels never overlap: the leader, then the largest moves, then the rest where they fit.
+   - Right, per firm in rank of net contribution: on one zero-based axis, a bar from 0 to the final valuation, then the market effect (▲ in `--up` or ▼ in `--down`), the research credit (an amber outline, labelled "research credit, not money", never merged into valuation), the rivalry taken (a red outline, shown with a − sign), and a square at the net contribution; the same figures as numbers; under each firm its conduct ledger, e.g. "▲ PUBLISH 6 · restraint 9  ▼ POACH 2 · BLITZ 3 · breaches 1".
+   - Many firms, as ATTRIBUTION: up to 24 firms every firm; above, the 12 firms whose rank changed most, then one `OTHERS` row with the sums of the rest as figures without bars (the axis serves the listed firms). The slope chart always shows every firm. The list scrolls like FINAL BOARD.
+6. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).
+7. **DEBRIEF**: the five prompts in §15.5.
 
-Participants see their own firm's card: final rank, valuation actual vs counterfactual, cumulative exposure share, and undetected violations of their own.
+Participants see their own firm's card: final rank, valuation actual vs counterfactual, cumulative exposure share, undetected violations of their own, and (Session 18) their net contribution with its parts, their rank by net contribution, their research credit (labelled "not money") and their conduct ledger.
 
 ### 14.5 Briefing (projector, one screen)
 
@@ -661,6 +695,9 @@ The voice is that of a financial terminal and a wire service:
 
 ### 15.3 Banned before the results screen (non-telegraphing)
 
+The results screen, including the NET CONTRIBUTION panel and its copy (Session 18), may use these words; nothing before it may.
+
+
 "commons", "tragedy", "sustainable", "sustainability", "cooperate", "cooperation", "collective", "shared resource", "tipping point", "threshold", "collapse" (the word may appear only in the moratorium event headline), "game", "player", "score", "win", "level". Use "firm", "board", "valuation", "quarter" and "market" instead.
 
 ### 15.4 Wire headline bank (template engine; seeded choice via the `headline` stream)
@@ -683,6 +720,7 @@ The voice is that of a financial terminal and a wire service:
 - Rank change: "{FIRM} overtakes {FIRM2} on valuation"
 - Pace 4: "{FIRM} accelerates release schedule" (only when disclosure is on; otherwise "Unnamed lab accelerates release schedule, sources say")
 - Incident: "Service outage traced to {FIRM} model", "{FIRM} model linked to fraud wave", "Data leak hits {FIRM} enterprise clients"
+- Incident cause lines (projector block and `INCID`, Session 18): with disclosure on, "pace {P} · safety {S}% · incident risk {Q}%"; with disclosure off, "Incident risk rises with pace and falls with safety spend."
 - PUBLISH: "{FIRM} publishes evaluation results"
 - LOBBY: "{FIRM} expands policy team in capital"
 - POACH: "{FIRM} hires senior researchers from {TARGET}"
@@ -700,11 +738,11 @@ The voice is that of a financial terminal and a wire service:
 
 Calibration builds will extend the bank to at least 40 templates in the same register.
 
-### 15.5 Debrief prompts (results panel 6)
+### 15.5 Debrief prompts (results panel 7)
 
 1. When did your firm first notice trust falling, and what did you change?
 2. Which pacts held and which broke? Was the difference monitoring, sanctions or trust?
-3. Compare your share of the damage with your share of the value. Is that outcome fair, and who should pay?
+3. Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay? (Owner wording 2026-10-10, Session 18.)
 4. Would disclosure from quarter 1 have changed your decisions? Why?
 5. Where does this pattern appear in the real AI industry, and which of Ostrom's design principles would you add to the market?
 
@@ -801,6 +839,8 @@ Allowed exception: a flat 45° hatch (1 px lines in a token colour, no gradient 
 **Ticker:** constant slow scroll.
 
 **Reduced motion:** all of the above becomes instant, and the ticker becomes a static list of the latest 3 headlines.
+
+**Incident block:** appears instantly when the reveal sequence ends (§14.1), with no motion of its own; with reduced motion it appears at once (Session 18).
 
 **Board pages:** when the board is paged (§14.1) the page changes every 8 s as an instant cut, with no transition. This is the only automatic change outside the reveal and the ticker (Session 10).
 

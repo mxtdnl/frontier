@@ -161,6 +161,19 @@ describe('step 5: incidents', () => {
     expect(a.incident).toBe(true);
     expect(a.revenue).toBeCloseTo(a.share * out.M * (1 - p.INC_REV_LOSS), 9);
   });
+
+  it('lists incident firms in creation order, and none without incidents (Session 18)', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const g = game(6, { seed });
+      const out = resolveRound(g, all(g, dec(4, 0)), p).outputs;
+      const expected = g.firms.filter((f) => out.firms[f.id]?.incident).map((f) => f.id);
+      expect(out.incidentFirms).toEqual(expected);
+      expect(out.incidentFirms).toHaveLength(out.incidents);
+    }
+    const quiet = resolveRound(game(4), {}, { ...p, INC_BASE: [0, 0, 0, 0] }).outputs;
+    expect(quiet.incidentFirms).toEqual([]);
+    expect(resolveRound(game(4), {}, { ...p, INC_BASE: [0, 0, 0, 0] }).state.history[0]?.incidentFirms).toEqual([]);
+  });
 });
 
 describe('step 6: trust update', () => {

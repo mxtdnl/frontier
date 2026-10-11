@@ -3,6 +3,7 @@
  * record and DATA lines for a finished session. Pure: the facilitator client calls this once
  * the phase is `ended` and writes the output to `/results` in one update.
  */
+import { computeContribution, type Contribution } from './contribution';
 import { attribution, compareIndustry, runCounterfactual, type AttributionRow, type CounterfactualResult } from './counterfactual';
 import { dataLine } from './data';
 import { PARAMS, type Params } from './params';
@@ -103,6 +104,8 @@ export interface FinalResults {
   /** Ranked by draw share, highest first. */
   attribution: AttributionRow[];
   pacts: PactFinal[];
+  /** NET CONTRIBUTION (§10, Session 18). Null only in results written before Session 18. */
+  contribution: Contribution | null;
   dataLines: string[];
 }
 
@@ -196,6 +199,7 @@ export function buildResults(state: EngineState, opts: { revealTau: boolean }, p
     counterfactual: cfSummary,
     attribution: attr,
     pacts,
+    contribution: computeContribution(state, p),
     dataLines: dataLinesOf(state),
   };
 }

@@ -201,7 +201,14 @@ async function runPlan(browser: Browser, plan: Plan, email: string, seed: number
       await waitText(fac, /REVEAL/, `${tag}: quarter ${r} resolves`, 30_000, '.scr');
       const resolveMs = Date.now() - t0 - 600;
       const stored = await adminGet<Json>(`games/${g}/rounds/${r}`);
-      const diffs = diffPaths(storeAndRead(stored), storeAndRead((copy.rounds as Json | undefined)?.[String(r)]));
+      // resolvedAt is the server's clock at resolution (Session 18); a replay cannot reproduce it, so it is compared as present only.
+      const withoutTime = (v: unknown): unknown => {
+        if (!v || typeof v !== 'object') return v;
+        const { resolvedAt: _t, ...rest } = v as Json;
+        return rest;
+      };
+      check(typeof (stored as Json | null)?.resolvedAt === 'number', `${tag}: quarter ${r} carries its server resolution time`);
+      const diffs = diffPaths(storeAndRead(withoutTime(stored)), storeAndRead(withoutTime((copy.rounds as Json | undefined)?.[String(r)])));
       check(diffs.length === 0, `${tag}: quarter ${r} stored result equals the replay${diffs.length ? ` (differs at ${diffs.join('; ')})` : ''}`);
       report.quarters.push({ round: r, resolveMs, writeBytes, roundBytes: size(stored), firmsPublicBytes: size(await adminGet(`games/${g}/firmsPublic`)) });
       if (r === 1 || r === 7 || r === QUARTERS) await snapProjector(fac, `scale-run-${plan.mode}-q${r}`);
@@ -210,12 +217,12 @@ async function runPlan(browser: Browser, plan: Plan, email: string, seed: number
     await key('F9');
     await waitText(fac, /ENDED/, `${tag}: the session ends after quarter ${QUARTERS}`, 20_000, '.scr');
 
-    // Results: F9 on the ended projector opens them; then F9 steps through the six panels.
+    // Results: F9 on the ended projector opens them; then F9 steps through the seven panels.
     await key('F9');
     await fac.waitForURL(/#\/results\//);
     const seq: string[] = [];
-    for (let step = 0; step < 6; step++) {
-      const want = `${step + 1}/6`;
+    for (let step = 0; step < 7; step++) {
+      const want = `${step + 1}/7`;
       const ok = await fac
         .waitForFunction((w) => document.querySelector('[data-results-pos]')?.textContent === w, want, { timeout: 20_000 })
         .then(() => true, () => false);

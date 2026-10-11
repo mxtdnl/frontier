@@ -7,6 +7,7 @@ import { PARAMS, type DisclosureEntry, type Pact } from '../../engine';
 import type { FirmNode, FirmPublicNode, MetaNode, PublicNode, RoundNode, WireNode } from '../../firebase/schema';
 import { isAlarmKind, mergeWire } from '../../firebase/wire';
 import type { TickerTone } from '../../ui/components/Ticker';
+import { incidentTagged } from '../../ui/incidents';
 import type { RevealInput } from '../../ui/status';
 
 export interface ScreenData {
@@ -46,6 +47,8 @@ export interface BoardRow {
   /** Names of the active pacts the firm belongs to. */
   pacts: string[];
   breach: boolean;
+  /** An incident in the latest resolved quarter, tagged for its reveal and the next open quarter (§14.1, Session 18). */
+  incident: boolean;
   /** From the last published snapshot; null when disclosure is off or nothing was published. */
   disclosed: DisclosureEntry | null;
 }
@@ -78,6 +81,7 @@ export function boardRows(d: ScreenData): BoardRow[] {
   const prevRound = d.rounds[String(last - 1)];
   const disclosure = d.pub.disclosure ? (d.rounds[String(last)]?.disclosure ?? null) : null;
   const activePacts = Object.values(d.pacts).filter((p) => p.status === 'active');
+  const incid = incidentTagged(last, d.rounds[String(last)], d.pub.round, d.pub.phase);
   const rows = ids.map((id, i): BoardRow => {
     const f = d.firms[id] as FirmNode;
     const fp = d.firmsPublic[id];
@@ -105,6 +109,7 @@ export function boardRows(d: ScreenData): BoardRow[] {
       bot: f.isBot,
       pacts: activePacts.filter((p) => id in p.members).map((p) => p.name).sort(),
       breach: !!fp && fp.breachUntilRound > 0 && d.pub.round <= fp.breachUntilRound,
+      incident: incid.has(id),
       disclosed: disclosure?.[id] ?? null,
     };
   });
@@ -237,6 +242,7 @@ export function tickerTone(kind: string): TickerTone {
  */
 export const TAG_MEANING: ReadonlyArray<readonly [string, string]> = [
   ['BREACH', 'terms breached'],
+  ['INCID', 'incident'],
   ['INSOLV', 'lowest pace forced'],
   ['AUTO', 'defaults applied'],
   ['BOT', 'automated'],

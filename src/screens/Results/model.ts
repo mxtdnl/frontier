@@ -1,14 +1,14 @@
 /** Pure helpers for the results panels (spec §14.4). */
-import { PACT_QUARTER, type FinalResults, type FirmFinal, type PactFinal, type PactQuarterCode } from '../../engine';
+import { PACT_QUARTER, type ConductLedger, type FinalResults, type FirmContribution, type FirmFinal, type PactFinal, type PactQuarterCode } from '../../engine';
 import { ATTRIBUTION_ALL_MAX, ATTRIBUTION_TOP, tickerLine } from '../../ui/layout';
 
-export const RESULT_PANELS = ['FINAL BOARD', 'TRUST TRACE', 'COUNTERFACTUAL', 'ATTRIBUTION', 'PACT RECORD', 'DEBRIEF'] as const;
+export const RESULT_PANELS = ['FINAL BOARD', 'TRUST TRACE', 'COUNTERFACTUAL', 'ATTRIBUTION', 'NET CONTRIBUTION', 'PACT RECORD', 'DEBRIEF'] as const;
 
-/** Spec §15.5. */
+/** Spec §15.5. Prompt 3 refers to the NET CONTRIBUTION panel (owner wording, 2026-10-10, Session 18). */
 export const DEBRIEF_PROMPTS: ReadonlyArray<string> = [
   'When did your firm first notice trust falling, and what did you change?',
   'Which pacts held and which broke? Was the difference monitoring, sanctions or trust?',
-  'Compare your share of the damage with your share of the value. Is that outcome fair, and who should pay?',
+  'Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay?',
   'Would disclosure from quarter 1 have changed your decisions? Why?',
   'Where does this pattern appear in the real AI industry, and which of Ostrom’s design principles would you add to the market?',
 ];
@@ -178,3 +178,119 @@ export function pactStripRows(r: FinalResults, pact: PactFinal): PactStripRow[] 
     .sort((a, b) => (a.ticker < b.ticker ? -1 : a.ticker > b.ticker ? 1 : 0));
   return [...current, ...former].filter((row) => bound(row.cells));
 }
+
+// ── NET CONTRIBUTION (§14.4 panel 5, Session 18) ─────────────────────────────
+
+/** A rank change of this many places or more is highlighted on the slope chart. */
+export const SLOPE_HIGHLIGHT = 3;
+
+export interface ContributionRow {
+  firmId: string;
+  ticker: string;
+  valuationRank: number;
+  /** Rank by net contribution. */
+  rank: number;
+  /** Places gained against the valuation rank: positive rose, negative fell. */
+  move: number;
+  highlight: 'up' | 'down' | null;
+  valuation: number;
+  market: number;
+  credit: number;
+  /** Rivalry taken, as a positive amount; shown with a − sign. */
+  rivalry: number;
+  net: number;
+  ledger: string;
+}
+
+const LEDGER_FOR: ReadonlyArray<readonly [keyof ConductLedger, string]> = [
+  ['publish', 'PUBLISH'],
+  ['share', 'SHARE'],
+  ['restraint', 'restraint'],
+  ['compliant', 'pact kept'],
+];
+const LEDGER_AGAINST: ReadonlyArray<readonly [keyof ConductLedger, string]> = [
+  ['poach', 'POACH'],
+  ['blitz', 'BLITZ'],
+  ['lobby', 'LOBBY'],
+  ['rush', 'RUSH'],
+  ['breaches', 'breaches'],
+  ['incidents', 'incidents'],
+];
+
+/** "▲ PUBLISH 6 · restraint 9  ▼ POACH 2 · BLITZ 3 · breaches 1": counts for the market, then against it. */
+export function ledgerLine(l: ConductLedger): string {
+  const side = (items: ReadonlyArray<readonly [keyof ConductLedger, string]>): string =>
+    items
+      .filter(([k]) => l[k] > 0)
+      .map(([k, label]) => `${label} ${l[k]}`)
+      .join(' · ') || 'none';
+  return `▲ ${side(LEDGER_FOR)}  ▼ ${side(LEDGER_AGAINST)}`;
+}
+
+function contributionRow(c: FirmContribution): ContributionRow {
+  const move = c.valuationRank - c.rank;
+  return {
+    firmId: c.firmId,
+    ticker: c.ticker,
+    valuationRank: c.valuationRank,
+    rank: c.rank,
+    move,
+    highlight: move >= SLOPE_HIGHLIGHT ? 'up' : move <= -SLOPE_HIGHLIGHT ? 'down' : null,
+    valuation: c.valuation,
+    market: c.marketEffect,
+    credit: c.researchCredit,
+    rivalry: c.rivalryTaken,
+    net: c.netContribution,
+    ledger: ledgerLine(c.ledger),
+  };
+}
+
+/** Every firm by rank of net contribution. Empty for results written before Session 18. */
+export function contributionRows(r: FinalResults): ContributionRow[] {
+  return Object.values(r.contribution?.firms ?? {})
+    .map(contributionRow)
+    .sort((a, b) => a.rank - b.rank || (a.ticker < b.ticker ? -1 : 1));
+}
+
+/**
+ * The figures list as drawn (§14.4, following ATTRIBUTION's many-firms rule): every firm up to 24; above, the 12 firms
+ * whose rank changed most (then by rank of net contribution), in rank order, and one OTHERS row summing the rest.
+ */
+export function contributionView(r: FinalResults): { rows: ContributionRow[]; others: ContributionRow | null; combined: number } {
+  const all = contributionRows(r);
+  if (all.length <= ATTRIBUTION_ALL_MAX) return { rows: all, others: null, combined: 0 };
+  const keep = new Set(
+    [...all]
+      .sort((a, b) => Math.abs(b.move) - Math.abs(a.move) || a.rank - b.rank)
+      .slice(0, ATTRIBUTION_TOP)
+      .map((x) => x.firmId),
+  );
+  const rest = all.filter((x) => !keep.has(x.firmId));
+  const sum = (k: 'valuation' | 'market' | 'credit' | 'rivalry' | 'net'): number => rest.reduce((a, x) => a + x[k], 0);
+  return {
+    rows: all.filter((x) => keep.has(x.firmId)),
+    others: {
+      firmId: OTHERS_ID,
+      ticker: 'OTHERS',
+      valuationRank: 0,
+      rank: 0,
+      move: 0,
+      highlight: null,
+      valuation: sum('valuation'),
+      market: sum('market'),
+      credit: sum('credit'),
+      rivalry: sum('rivalry'),
+      net: sum('net'),
+      ledger: '',
+    },
+    combined: rest.length,
+  };
+}
+
+/** The running totals a firm's row passes through: 0, valuation, + market effect, + research credit, − rivalry (= net). */
+export const waterfallPoints = (x: Pick<ContributionRow, 'valuation' | 'market' | 'credit' | 'rivalry'>): [number, number, number, number, number] => {
+  const a = x.valuation;
+  const b = a + x.market;
+  const c = b + x.credit;
+  return [0, a, b, c, c - x.rivalry];
+};

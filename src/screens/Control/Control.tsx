@@ -285,6 +285,7 @@ function LiveControl({ g, uid }: { g: string; uid: string }) {
           <h1 className="signal">CONTROL</h1>
           <span className="dim">{meta.title} · code {meta.code}</span>
           <a href={`#/screen/${g}`}>SCREEN</a>
+          <a href={`#/wire/${g}`} target="_blank" rel="noopener">WIRE LOG</a>
           {pub.phase === 'ended' ? <a href={`#/results/${g}`}>RESULTS</a> : null}
           <span className="dim">
             {pub.phase.toUpperCase()}

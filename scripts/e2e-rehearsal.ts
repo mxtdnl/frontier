@@ -4,7 +4,7 @@
  * A facilitator (projector and console, real browser) runs 14 quarters with 8 bot clients
  * (`tools/bots.ts`, policy mixed) and one scripted human. It covers a summit, a pact, two manual
  * audits, a disclosure toggle, a forced collapse (fixed seed, checked against the engine-only
- * replica in scripts/lib/rehearsal-model.ts), the counterfactual and all six results panels.
+ * replica in scripts/lib/rehearsal-model.ts), the counterfactual and all seven results panels.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createWriteStream, mkdirSync } from 'node:fs';
@@ -12,6 +12,7 @@ import { buildResults, dataLinesOf } from '../src/engine';
 import { engineStateOf, fromEngine, fromResults } from '../src/firebase/schema';
 import { ownResultSentence, panelHeadline } from '../src/screens/Results/headlines';
 import { fmt } from '../src/ui/format';
+import { incidentCap } from '../src/ui/incidents';
 import { adminSet } from './emulator-rules';
 import {
   BASE, OUT, adminGet, check, checkResultsPanel, h, runWithStack, screenText, shot, signUp, snapProjector, waitText, watchPage,
@@ -100,6 +101,7 @@ await runWithStack(async (browser) => {
     let pactId = '';
     const committed = new RegExp(`${FIRMS}/${FIRMS} COMMITTED`);
     const events: string[] = [];
+    const incidentShots = new Set<boolean>();
     for (let r = 1; r <= REHEARSAL_QUARTERS; r++) {
       await waitText(fac, new RegExp(`${label(r)}[\\s\\S]*OPEN`), `quarter ${r} is open`, 15_000, '.scr');
       check(!(await fac.content()).includes(String(engine0.tau)), `tau is not on the projector in quarter ${r}`);
@@ -151,6 +153,28 @@ await runWithStack(async (browser) => {
       await waitText(fac, /REVEAL/, `quarter ${r} resolves`, 20_000, '.scr');
       const round = await adminGet<{ T: number; audits?: unknown[]; disclosure?: unknown } | null>(`games/${g}/rounds/${r}`);
       check(round !== null && typeof round.T === 'number', `quarter ${r} results are written`);
+
+      // Session 18: every incident of the quarter is named on the projector with its effect and cause.
+      const hit = Object.values((await adminGet<Record<string, string> | string[] | null>(`games/${g}/rounds/${r}/incidentFirms`)) ?? {});
+      if (hit.length > 0) {
+        await fac.waitForTimeout(1700);
+        const firmsNode = await adminGet<Record<string, { ticker: string }>>(`games/${g}/firms`);
+        const block = fac.locator('[data-incident-block]');
+        const text = (await block.count()) ? await block.innerText() : '';
+        const disclosed = round?.disclosure != null;
+        const cap = incidentCap(false, disclosed);
+        for (const id of hit.slice(0, cap)) {
+          const t = firmsNode[id]?.ticker ?? '?';
+          check(new RegExp(`▼ ${t}\\b`).test(text) && text.includes(`trust −`) && text.includes(`${t} revenue −15% this quarter`), `quarter ${r}: the incident of ${t} is named with its effect`);
+        }
+        if (hit.length > cap) check(text.includes(`+${hit.length - cap} more`), `quarter ${r}: the block counts the incidents it does not list`);
+        if (disclosed) check(/pace \d · safety \d+% · incident risk \d+%/.test(text), `quarter ${r}: the cause names pace, safety and risk while disclosure is on`);
+        else check(text.includes('Incident risk rises with pace and falls with safety spend.') && !/pace \d|safety \d|risk \d/.test(text), `quarter ${r}: the cause is general and private values stay hidden while disclosure is off`);
+        if (!incidentShots.has(disclosed)) {
+          incidentShots.add(disclosed);
+          await snapProjector(fac, `rehearsal-incidents-${disclosed ? 'on' : 'off'}`);
+        }
+      }
 
       if (r === DISCLOSURE_ON.from + 1 || r === DISCLOSURE_ON.to) {
         await fac.waitForTimeout(1700);
@@ -217,14 +241,22 @@ await runWithStack(async (browser) => {
       };
       await headlineIs(1);
       await snapProjector(fac, 'rehearsal-results-1');
-      const panels: Array<[number, RegExp]> = [[2, /TRUST TRACE/], [3, /COUNTERFACTUAL[\s\S]*INDUSTRY VALUE[\s\S]*ALTERNATIVE[\s\S]*VALUE LOST/], [4, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE/], [5, /PACT RECORD[\s\S]*UNDETECTED/], [6, /DEBRIEF/]];
+      const panels: Array<[number, RegExp]> = [[2, /TRUST TRACE/], [3, /COUNTERFACTUAL[\s\S]*INDUSTRY VALUE[\s\S]*ALTERNATIVE[\s\S]*VALUE LOST/], [4, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE/], [5, /NET CONTRIBUTION[\s\S]*research credit, not money/], [6, /PACT RECORD[\s\S]*UNDETECTED/], [7, /DEBRIEF/]];
       for (const [n, re] of panels) {
         await key('F9');
-        await waitText(fac, new RegExp(`${n}/6`), `F9 steps to results panel ${n}`, 15_000, '.scr');
+        await waitText(fac, new RegExp(`${n}/7`), `F9 steps to results panel ${n}`, 15_000, '.scr');
         await waitText(fac, re, `panel ${n} shows its content`, 5_000, '.scr');
         if (n === 2) check(/moratorium from Q\d Y\d/.test(await screenText(fac)) && /MORATORIUM Q\d Y\d/.test(await screenText(fac)) && !/τ|tau/i.test(await screenText(fac)), 'the trust trace labels the moratorium and shows no tau line');
         if (n === 3) check((await screenText(fac)).replace(/\s+/g, ' ').includes(`INDUSTRY VALUE ${fmt(res.industry.actual, 0)}`), 'panel 3 shows the stored actual industry value');
         if (n === 5) {
+          // NET CONTRIBUTION (Session 18): a slope per firm, figures and a ledger per firm, and a re-ranking.
+          const c = stored?.contribution;
+          check(c != null && Object.keys(c.firms).length === FIRMS, 'the results hold a net contribution for every firm');
+          check((await fac.locator('.scr [data-chart="slope"] g[data-firm]').count()) === FIRMS, `the slope chart draws all ${FIRMS} firms`);
+          check((await fac.locator('.scr .nc-firm[data-firm] [data-ledger]').count()) === FIRMS, 'every firm row carries its conduct ledger');
+          check(c?.moratorium?.round === model.collapseRound, 'the moratorium cost is computed for the forced moratorium');
+        }
+        if (n === 6) {
           // The pact quarter strip (§14.4): one row per bound firm, one cell per quarter, the breach cells counted in the table.
           const strip = await fac.evaluate(() => {
             const rows = [...document.querySelectorAll<HTMLElement>('[data-pact-strip] .ps-row[data-firm]')];
@@ -254,6 +286,24 @@ await runWithStack(async (browser) => {
       check(own !== undefined && t.includes(ownResultSentence(own, FIRMS)), 'the card opens with the result sentence');
       check((await human.locator('.hbar').count()) === 2, 'the card shows damage and value shares as two bars');
       await shot(human, 'rehearsal-human-card');
+
+      // Session 18: #/wire shows every wire entry of every quarter.
+      const wirePage = watchPage(await ctx.newPage(), 'wire', ignore);
+      await wirePage.setViewportSize({ width: 1440, height: 900 });
+      await wirePage.goto(`${BASE}#/wire/${g}`);
+      await waitText(wirePage, /WIRE LOG · /, '#/wire opens for the facilitator');
+      await wirePage.getByRole('button', { name: 'ALL' }).click();
+      await waitText(wirePage, /WIRE LOG · ALL QUARTERS/, '#/wire shows every quarter');
+      // Rounds 1… come back as an array with an empty slot 0.
+      const roundsNode = Object.fromEntries(Object.entries((await adminGet<Record<string, { headlines?: Record<string, unknown> | unknown[] } | null>>(`games/${g}/rounds`)) ?? {}).filter(([, v]) => v !== null)) as Record<string, { headlines?: Record<string, unknown> | unknown[] }>;
+      const wireNode = (await adminGet<Record<string, unknown> | null>(`games/${g}/wire`)) ?? {};
+      const entries = Object.values(roundsNode).reduce((n, r) => n + Object.keys(r.headlines ?? {}).length, 0) + Object.keys(wireNode).length;
+      check((await wirePage.locator('[data-wire-log] [data-wire-line]').count()) === entries, `#/wire lists all ${entries} wire entries of the rehearsal`);
+      for (let r = 1; r <= REHEARSAL_QUARTERS; r++) {
+        check((await wirePage.locator(`[data-wire-quarter="${r}"] [data-wire-line]`).count()) === Object.keys(roundsNode[String(r)]?.headlines ?? {}).length + Object.values(wireNode).filter((e) => (e as { round?: number }).round === r).length, `#/wire lists every entry of quarter ${r}`);
+      }
+      await shot(wirePage, 'rehearsal-wire');
+      await wirePage.close();
     }
     console.log(`rehearsal events: ${events.join(', ')}`);
     await hctx.close();

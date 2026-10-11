@@ -7,7 +7,7 @@ import { bookRows } from '../../src/screens/Play/model';
 
 const firm = (ticker: string, createdAt: number): FirmNode => ({ name: `${ticker} Inc`, ticker, createdAt, order: createdAt, isBot: false, botPolicy: null });
 const round = (results: Record<string, [number, number]>): RoundNode => ({
-  T: 70, dT: 0, M: 1, incidents: 0, headlines: [], audits: [], disclosure: null,
+  T: 70, dT: 0, M: 1, incidents: 0, incidentFirms: [], resolvedAt: null, headlines: [], audits: [], disclosure: null,
   results: Object.fromEntries(Object.entries(results).map(([id, [valuation, rank]]) => [id, { share: 0, profit: 0, valuation, rank }])),
 });
 

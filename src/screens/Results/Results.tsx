@@ -12,12 +12,14 @@ import { fmt, quarterLabel } from '../../ui/format';
 import { matchKey, resultsKeys, type KeyAction } from '../../ui/keys';
 import { useLitRoom } from '../../ui/litRoom';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
-import { Butterfly, Dumbbell } from './charts';
-import { DEBRIEF_HEADLINE, attributionHeadline, counterfactualHeadline, finalBoardHeadline, pactHeadline, trustHeadline } from './headlines';
+import { Butterfly, Dumbbell, Slope } from './charts';
+import { DEBRIEF_HEADLINE, attributionHeadline, contributionHeadline, counterfactualHeadline, finalBoardHeadline, pactHeadline, trustHeadline } from './headlines';
 import {
   DEBRIEF_PROMPTS,
   RESULT_PANELS,
   attributionView,
+  contributionRows,
+  contributionView,
   counterfactualTrustSeries,
   finalBoardRows,
   headlineFigures,
@@ -25,6 +27,8 @@ import {
   pactStripRows,
   rankedFirms,
   trustSeries,
+  waterfallPoints,
+  type ContributionRow,
   type PactStripRow,
 } from './model';
 
@@ -152,8 +156,9 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
         {step === 1 ? <TrustTrace r={results} /> : null}
         {step === 2 ? <Counterfactual r={results} /> : null}
         {step === 3 ? <Attribution r={results} /> : null}
-        {step === 4 ? <PactRecord r={results} /> : null}
-        {step === 5 ? <Debrief /> : null}
+        {step === 4 ? <NetContribution r={results} /> : null}
+        {step === 5 ? <PactRecord r={results} /> : null}
+        {step === 6 ? <Debrief /> : null}
       </>
     );
   }
@@ -332,6 +337,127 @@ export function Attribution({ r }: { r: FinalResults }) {
       <Headline text={attributionHeadline(r)} />
       <Butterfly rows={rows} anyPositive={anyPositive} others={others} />
     </Panel>
+  );
+}
+
+/**
+ * NET CONTRIBUTION (§14.4 panel 5, Session 18): the slope from valuation rank to rank by net contribution, and per firm
+ * the figures on one zero-based axis (valuation, market effect, research credit, rivalry taken, net) with its conduct
+ * ledger underneath.
+ */
+export function NetContribution({ r }: { r: FinalResults }) {
+  const all = contributionRows(r);
+  const alt = PARAMS.BOT_SUSTAINABLE;
+  if (all.length === 0) {
+    return (
+      <Panel title="NET CONTRIBUTION" bodyClassName="pad col">
+        <Headline text={contributionHeadline(r)} />
+      </Panel>
+    );
+  }
+  const { rows, others, combined } = contributionView(r);
+  // The axis serves the listed firms; OTHERS shows its sums as figures without bars (as in ATTRIBUTION).
+  const points = rows.flatMap(waterfallPoints);
+  const { domain } = niceDomain(Math.min(0, ...points), Math.max(0, ...points), 4);
+  const right = others
+    ? `the ${rows.length} largest rank changes · OTHERS combines ${combined} firms`
+    : `against every firm at pace ${alt.pace}, safety ${alt.safety} · research credit is not money`;
+  return (
+    <Panel title="NET CONTRIBUTION · value created for the whole market" right={right} bodyClassName="pad col">
+      <Headline text={contributionHeadline(r)} />
+      <div className="nc-grid">
+        <div className="col">
+          <Slope rows={all} />
+        </div>
+        <ContributionList rows={rows} others={others} domain={domain} />
+      </div>
+    </Panel>
+  );
+}
+
+const signed = (v: number): string => (fmt(v, 0) === '0' || fmt(v, 0) === '−0' ? '0' : `${v > 0 ? '▲' : '▼'}${fmt(Math.abs(v), 0)}`);
+
+function Waterfall({ x, domain }: { x: ContributionRow; domain: readonly [number, number] }) {
+  const span = domain[1] - domain[0] || 1;
+  const at = (v: number): number => ((v - domain[0]) / span) * 100;
+  const [zero, value, market, credit, net] = waterfallPoints(x);
+  const seg = (a: number, b: number, cls: string, mark: string) =>
+    Math.abs(b - a) > 0 ? <span className={`nc-seg ${cls}`} data-mark={mark} style={{ left: `${at(Math.min(a, b)).toFixed(2)}%`, width: `${(Math.abs(at(b) - at(a))).toFixed(2)}%` }} /> : null;
+  return (
+    <span className="nc-track" role="img" aria-label={`${x.ticker}: valuation ${fmt(x.valuation, 0)}, market effect ${fmt(x.market, 0)}, research credit ${fmt(x.credit, 0)}, rivalry taken ${fmt(x.rivalry, 0)}, net ${fmt(x.net, 0)}`}>
+      <span className="nc-zero" style={{ left: `${at(0).toFixed(2)}%` }} />
+      {seg(zero, value, 'is-value', 'valuation')}
+      {seg(value, market, x.market >= 0 ? 'is-up' : 'is-down', 'market')}
+      {seg(market, credit, 'is-credit', 'credit')}
+      {seg(credit, net, 'is-rivalry', 'rivalry')}
+      <span className="nc-net" data-mark="net" style={{ left: `${at(net).toFixed(2)}%` }} />
+    </span>
+  );
+}
+
+function ContributionFigures({ x, domain, bars = true }: { x: ContributionRow; domain: readonly [number, number]; bars?: boolean }) {
+  return (
+    <div className="nc-row">
+      <strong>{x.ticker}</strong>
+      <span className={x.highlight === 'up' ? 't-up' : x.highlight === 'down' ? 't-down' : 'dim'} data-rank-move={x.move}>
+        {x.rank > 0 ? `${x.valuationRank}→${x.rank}` : ''}
+      </span>
+      {bars ? <Waterfall x={x} domain={domain} /> : <span className="dim">sums, no bars</span>}
+      <span className={`num${x.valuation < 0 ? ' t-down' : ''}`}>{fmt(x.valuation, 0)}</span>
+      <span className={`num${signed(x.market) === '0' ? '' : x.market > 0 ? ' t-up' : ' t-down'}`}>{signed(x.market)}</span>
+      <span className="num">{fmt(x.credit, 0) === '0' ? '0' : `+${fmt(x.credit, 0)}`}</span>
+      <span className={`num${fmt(x.rivalry, 0) === '0' ? '' : ' t-down'}`}>{fmt(x.rivalry, 0) === '0' ? '0' : `−${fmt(x.rivalry, 0)}`}</span>
+      <strong className={`num${x.net < 0 ? ' t-down' : ''}`}>{fmt(x.net, 0)}</strong>
+    </div>
+  );
+}
+
+function ContributionList({ rows, others, domain }: { rows: ReadonlyArray<ContributionRow>; others: ContributionRow | null; domain: readonly [number, number] }) {
+  const zeroAt = ((0 - domain[0]) / (domain[1] - domain[0] || 1)) * 100;
+  return (
+    <div className="res-scroll nc-list" data-res-scroll="" tabIndex={0} aria-label={`Net contribution figures for ${rows.length} firms. Scroll for every firm.`}>
+      <div className="nc-row dim res-sticky-top">
+        <span>FIRM</span>
+        <span>RANK</span>
+        <span>VALUATION ▸ NET, FROM 0</span>
+        <span className="num">VALUE</span>
+        <span className="num">MARKET</span>
+        <span className="num">CREDIT</span>
+        <span className="num">RIVALRY</span>
+        <span className="num">NET</span>
+      </div>
+      {rows.map((x) => (
+        <div key={x.firmId} className="nc-firm" data-firm={x.ticker}>
+          <ContributionFigures x={x} domain={domain} />
+          <p className="nc-ledger" data-ledger="">{x.ledger}</p>
+        </div>
+      ))}
+      {others ? (
+        <div className="nc-firm" data-firm="OTHERS" data-others="">
+          <ContributionFigures x={others} domain={domain} bars={false} />
+        </div>
+      ) : null}
+      <div className="res-sticky-bottom">
+        <div className="nc-row dim">
+          <span />
+          <span />
+          <span className="cmp-axis">
+            <span>{fmt(domain[0], 0)}</span>
+            {domain[0] < 0 ? <span style={{ left: `${zeroAt.toFixed(2)}%` }}>0</span> : null}
+            <span>{fmt(domain[1], 0)}</span>
+          </span>
+        </div>
+        <p className="nc-key dim" data-key="contribution">
+          <span><span className="nc-sw"><span className="nc-seg is-value" style={{ left: 0, width: '100%' }} /></span>valuation</span>
+          <span><span className="nc-sw"><span className="nc-seg is-up" style={{ left: 0, width: '100%' }} /></span>market effect ▲</span>
+          <span><span className="nc-sw"><span className="nc-seg is-down" style={{ left: 0, width: '100%' }} /></span>market effect ▼</span>
+          <span><span className="nc-sw"><span className="nc-seg is-credit" style={{ left: 0, width: '100%' }} /></span>research credit, not money</span>
+          <span><span className="nc-sw"><span className="nc-seg is-rivalry" style={{ left: 0, width: '100%' }} /></span>rivalry taken −</span>
+          <span><span className="nc-sw"><span className="nc-net" style={{ left: '50%' }} /></span>net contribution</span>
+          <span>▲ for the market · ▼ against it</span>
+        </p>
+      </div>
+    </div>
   );
 }
 
