@@ -145,6 +145,12 @@ describe('copyText', () => {
     expect(copyText(3, groups, () => [], time, 'x', 3)).toContain('Q3 Y1\nNo wire entries.\nNOT ON THE WIRE\nNothing left out.');
   });
 
+  it('puts the QUARTER BRIEF first under each resolved quarter (Session 19)', () => {
+    const brief = (r: number) => (r === 1 ? ['Trust ▼2.0 to 70.0. Recovery +2.6 · draw −4.6.', 'Closing.'] : null);
+    expect(copyText(1, groups, off, time, 'x', 1, brief)).toContain('Q1 Y1\nQUARTER BRIEF\nTrust ▼2.0 to 70.0. Recovery +2.6 · draw −4.6.\nClosing.\nQ1 Y1  T1000  INCID');
+    expect(copyText(2, groups, off, time, 'x', 1, () => ['never'])).not.toContain('QUARTER BRIEF');
+  });
+
   it('has no NOT ON THE WIRE section for a quarter not yet resolved', () => {
     expect(copyText(2, groups, off, time, 'x', 1)).not.toContain('NOT ON THE WIRE');
   });

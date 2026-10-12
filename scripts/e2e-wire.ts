@@ -103,6 +103,12 @@ async function scenario(browser: Browser): Promise<void> {
   check(lines === headlines + live, `ALL lists every wire entry (${lines} of ${headlines + live})`);
   check(took < 2000, `ALL renders within 2 s (${took} ms)`);
   check((await page.locator('[data-not-on-wire]').count()) === QUARTERS, `a NOT ON THE WIRE section for each of ${QUARTERS} quarters`);
+  // Session 19: a QUARTER BRIEF at the top of each resolved quarter, its terms summing to the quarter's trust change.
+  const briefs = await page.locator('[data-quarter-brief]').evaluateAll((els) =>
+    els.map((e) => ({ sum: Number(e.getAttribute('data-terms-sum')), dt: Number(e.getAttribute('data-dt')), first: e.querySelector('p')?.textContent ?? '' })),
+  );
+  check(briefs.length === QUARTERS, `a QUARTER BRIEF for each of ${QUARTERS} quarters (${briefs.length})`);
+  check(briefs.every((b) => Math.abs(b.sum - b.dt) < 1e-9 && /^Trust /.test(b.first)), 'every QUARTER BRIEF opens with the trust change and its terms sum to it');
   const off = await page.locator('[data-not-on-wire] li').count();
   check(off > QUARTERS, `NOT ON THE WIRE lists the events the cap left out (${off})`);
   for (const [w, h] of [[1440, 900], [390, 844]] as const) {
@@ -135,6 +141,7 @@ async function scenario(browser: Browser): Promise<void> {
   const clip = await page.evaluate(() => navigator.clipboard.readText());
   check(clip.startsWith('FRONTIER WIRE · Wire scale · code WIRE · Q4 Y3'), 'the clipboard holds the quarter heading');
   check(clip.includes('NOT ON THE WIRE') && !clip.includes('Q3 Y3'), 'the clipboard holds only the selected quarter, with its facilitator section');
+  check(/Q4 Y3\nQUARTER BRIEF\nTrust /.test(clip) && clip.includes('Largest draws:'), 'the clipboard holds the QUARTER BRIEF first');
   await ctx.close();
 }
 

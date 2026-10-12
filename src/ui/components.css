@@ -1761,6 +1761,16 @@ legend {
 .wire-quarter:first-child .wire-q-head {
   margin-top: 0;
 }
+/* QUARTER BRIEF (Session 19): facilitator only, at the top of each resolved quarter. */
+.wire-brief {
+  margin-bottom: 0.5lh;
+  padding: 0.25lh 1ch;
+  border-left: 2px solid var(--signal-dim);
+  background: var(--panel);
+}
+.wire-brief p {
+  max-width: 120ch;
+}
 .wire-off {
   margin-top: 0.5lh;
   padding-top: 0.5lh;
