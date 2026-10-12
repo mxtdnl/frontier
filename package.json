@@ -26,7 +26,9 @@
     "test:e2e:wire": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/e2e-wire.ts\"",
     "test:e2e:hardening": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/e2e-hardening.ts\"",
     "test:a11y": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/lighthouse.ts\"",
-    "audit:build": "tsx scripts/audit-build.ts"
+    "audit:build": "tsx scripts/audit-build.ts",
+    "guide:shots": "firebase emulators:exec --config firebase.test.json --only auth,database --project demo-frontier \"tsx scripts/guide-shots.ts\"",
+    "guide:pdf": "tsx scripts/guide-pdf.ts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.3.0",

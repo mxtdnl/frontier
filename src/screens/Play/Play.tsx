@@ -35,6 +35,7 @@ import {
 import { OwnResultsCard } from '../Results/OwnResultsCard';
 import { Book, RevealCard, StepStrip, Wire } from './Panels';
 import { PactsTab } from './PactsTab';
+import { pactNotices } from './pacts';
 import { useHeldFor, useServerNow } from './useServerNow';
 
 /** Phase block on the phone header: each view distinct, always with its word (§16.1). */
@@ -332,6 +333,7 @@ function PlayLive({ g, uid }: { g: string; uid: string }) {
                 sending={sending}
                 offline={offline}
                 error={error}
+                pactNotices={pactNotices(pactsSub.data, firmId, insolvent ? 1 : draft.pace, draft.safety)}
                 onCommit={() => void commit()}
               />
               <TeamPanel name={firm.name} ticker={firm.ticker} pin={pin} />

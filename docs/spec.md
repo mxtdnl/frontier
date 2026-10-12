@@ -121,7 +121,7 @@ Owner decisions 2026-10-08/09 (Session 17): PUBLISH's trust effect falls from a 
 ### 5.3 Pacts (participant side)
 
 - Any firm may propose a pact during `open` or `summit`.
-- Terms are a maximum pace (1–4 or none) and/or a minimum safety level (0–30 or none).
+- Terms are a maximum pace (1–4 or none) and/or a minimum safety level (0–30 or none). Meeting a term exactly is compliant: pace equal to the maximum, safety equal to the minimum.
 - Other firms join from the PACTS tab and may leave at any time.
 - Joining and leaving are public and generate wire headlines.
 - Mechanics are in §9.
@@ -268,6 +268,10 @@ They never see τ, endRound, other firms' cash, capability, pace or safety (unle
 - Pace builds capability faster, and capability wins market share.
 - Safety spend costs money and lowers your public exposure and incident risk.
 - Valuation reflects cash plus capability, priced by the market.
+- Every cost comes out of cash, and cash counts in full in your valuation.
+- A firm whose cash falls too far below zero becomes insolvent: it is held at Cautious pace and cannot play cards.
+- A firm that falls behind on capability loses market share.
+  (The last three lines: owner wording 2026-10-12, Session 19. The briefing does not say that a slow firm goes bankrupt: that is false in the current model, `reports/observer-feedback-2026-10-12.md` section 3.)
 - Cards: one line each (§14.5). The `SHARE` line says it protects every firm; the `RUSH` line says it raises your exposure and incident risk.
 
 The briefing does not mention any threshold.
@@ -616,7 +620,13 @@ Scale rules (Session 10):
 - **Log:** every wire entry of the session, grouped by quarter: the round headlines (`rounds/{r}/headlines`, timed by `rounds/{r}/resolvedAt`) and the pact and disclosure events (`wire`). Entries before quarter 1 are under `PRE`. Each line: quarter, time, kind (a short label such as `INCID`, `PACT`, `BLITZ`) and text, coloured by kind as on the ticker (§14.1), with ▼ or ▲ beside alarm and clean-audit kinds. Within a quarter the lines run in the order they happened: events while the quarter was open, its headlines at resolution, then events during its reveal. Headlines resolved before Session 18 carry no time (`--:--:--`).
 - **Quarter selector:** ◄ ► buttons and the arrow keys step one quarter; a quarter number field (0 is `PRE`); `ALL` shows every quarter, newest first. It opens on the current quarter, and every earlier quarter stays available. (The selector uses ◄ ►, because `lint:copy` treats ◀ ▶ as emoji.)
 - **NOT ON THE WIRE · facilitator only:** below each resolved quarter's entries, the events of that quarter that no headline reports, built from `engine.history`: incidents (with pace and safety), cards played (with the POACH target), audits and insolvencies. It is never rendered on `#/screen` or `#/play` (an import-graph test).
-- **`COPY`:** copies the selected quarter, or all of them, as plain text for the debrief, the facilitator section included.
+- **QUARTER BRIEF · facilitator only** (Session 19): at the top of each resolved quarter, in plain sentences built from `engine.history` by the pure engine function `trustBreakdown` (`src/engine/trust.ts`) and `src/screens/Wire/brief.ts`:
+  - the trust change and its §6.3 step 6–7 terms, which sum to the stored dT: recovery (R_eff × T × (1 − T/100) with R_eff as at the start of the quarter), draw (−Σ draw), incidents (−INC_TRUST × 8/N each, with the firms), PUBLISH (+PUBLISH_TRUST × 8/N each) and LOBBY (−LOBBY_TRUST each) with the firms, the clamp to [0, 100] when it acted, and in the moratorium quarter the drop actually applied (−BACKLASH, or less when T was below BACKLASH)
+  - the three largest draws, with each firm's rank after the quarter, pace and safety (ties in creation order)
+  - the cards of the top half (rank ≤ ceil(N/2)) and the bottom half of the board in rank order, each marked ▲ or ▼ by its conduct ledger side (§10), plus breaches found by audit that quarter (▼)
+  - "Every trust loss this quarter came from firms’ own pace, safety, cards and incidents."
+  It shows pace, safety and cards even while disclosure is off, never τ or the end round, and is never rendered on `#/screen`, `#/play` or `#/results` (import-graph test).
+- **`COPY`:** copies the selected quarter, or all of them, as plain text for the debrief, the QUARTER BRIEF and the facilitator section included.
 - **Scale:** with 50 firms and 30 quarters the list scrolls inside its panel and renders `ALL` within 2 s (`npm run test:e2e:wire`).
 
 ### 14.3 Participant control centre (`#/play`) — mobile-first
@@ -625,14 +635,14 @@ Scale rules (Session 10):
 - Bottom tab bar on mobile, left rail on desktop. The active tab has a 2 px `--signal` top border (left border on the desktop rail) and `--signal` text on `--raise`, not a solid block. Tabs:
   - **DESK**: the decisions
   - **BOOK**: own P&L history and "against the field": a zero-based valuation chart with every other firm as a thin dim line, the own firm in `--signal` with its value tag, a dotted zero line, a key, and a sentence such as "Rank 1 of 9. Highest valuation for 13 quarters running." (or "Up 2 places since last quarter." / "Down 1 place since last quarter." / "Same place as last quarter."). The chart and the sentence use only `rounds/*/results` (valuations and ranks every signed-in user may read, §13); no other firm's private data
-  - **PACTS**: propose, join, leave, terms, members
+  - **PACTS**: propose, join, leave, terms, members. The propose form opens with no term ticked, so a firm chooses each term it signs, and a preview above SIGN reads "You are signing: pace 2 or lower · safety 25 or higher" (owner decision 2026-10-12, Session 19)
   - **WIRE**: the feed
 - **Three-step strip** (lobby, briefing and quarter 1 only): `1 DECIDE → 2 COMMIT → 3 REVEAL`, one line each: "Set pace, safety and an optional card." / "Press COMMIT. Edit until the timer ends." / "Results appear for every firm at once."
 - DESK contents, in order:
   - **PACE**: 4 segments, ≥ 44 px targets. The selected segment is a `--raise` fill with a 3 px `--signal` bottom border (drawn as a border), not a solid block.
   - **SAFETY · share of reference budget**: slider plus numeric stepper, with `0%` and `30%` printed at the ends.
   - **CARD**: the picker trigger, with the selected card's one-line effect (`CARD_INFO`) under the card name. The card rules (no repeat in consecutive quarters, POACH target, insolvency) are printed inside the card sheet, not on the desk. The target list gains a ticker filter above 8 targets and scrolls inside the sheet.
-  - **Decision ticket**: a 1 px bordered block directly above COMMIT holding *Estimated cost this quarter* and *Public exposure* as a four-step meter (LOW, MED, HIGH, SEVERE, filled up to the current step) plus the label word. At 360×640 the ticket and the COMMIT bar are both inside the viewport without scrolling; the TEAM panel sits below them.
+  - **Decision ticket**: a 1 px bordered block directly above COMMIT holding *Estimated cost this quarter* and *Public exposure* as a four-step meter (LOW, MED, HIGH, SEVERE, filled up to the current step) plus the label word. When the pace and safety on the ticket would break the terms of an active pact the firm belongs to, the ticket adds one line per pact, e.g. "▼ Breaks PACT-A: pace 2 or lower.", computed with the engine's `breaches()` (equality is compliant) and with the pace the engine will apply (Cautious when insolvent). The line never blocks COMMIT and is not shown for a pact the firm has left or been expelled from (Session 19). At 360×640 the ticket and the COMMIT bar are both inside the viewport without scrolling; the TEAM panel sits below them.
   - **Commit bar**: before commit, the signal COMMIT button, full width. After commit, a full-width status bar: "COMMITTED 14:02:31 · edit until close", plus the committing device's label for teammates. When the draft differs from the committed decision the bar reads "CHANGES NOT COMMITTED" with a RECOMMIT button. Locked and offline states keep the bar and state why.
 - Reveal state: opens with one result sentence ("You ranked 2nd of 9, ▲1. Profit 57.7."; variants: "▼2", "unchanged", quarter 1 with no movement, negative profit "Loss 12.4."), then the figures (revenue, costs, profit, Δshare, valuation, rank), then notices as lines with a 2 px left rule coloured by kind (card dropped, incident, insolvency and breach in `--down`; audits and clean outcomes in `--dim`), then the headlines.
 - Summit state: one banner (the banner is the only notice of the summit; the PACTS tab adds none), with the PACTS tab auto-selected. Pact terms read "pace ≤ 2 · safety ≥ 15%" (either part alone when only one is set).

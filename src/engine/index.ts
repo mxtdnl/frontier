@@ -25,6 +25,7 @@ export {
   type ConductLedger,
   type MoratoriumCost,
 } from './contribution';
+export { trustBreakdown, breakdownSum, type TrustBreakdown } from './trust';
 export { runCounterfactual, attribution, compareIndustry, type CounterfactualResult, type AttributionRow } from './counterfactual';
 export { botDecision } from './policies';
 export { exposureLabel, exposureOf, estimatedCost, dataLine } from './data';

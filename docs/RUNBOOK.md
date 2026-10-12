@@ -14,6 +14,72 @@ A typical session is 8 to 14 quarters (35 to 60 minutes) plus a 20 to 30 minute 
 
 ---
 
+## What the session teaches (facilitators only)
+
+Read this section before your first class. Do not show it to participants, and do not read any of it aloud before the results screen. Sources are given in brackets: `docs/spec.md` (the spec), `src/engine/params.ts` (the numbers), and the reports in `reports/`.
+
+### The four learning objectives (spec §1)
+
+By the end of the session, students should be able to:
+1. Explain how competition that makes sense for each firm can destroy something every firm depends on. Here that is public trust, which sets the size of the whole market.
+2. Tell private gains from shared costs. A firm keeps all of what its pace earns, but every firm pays for the trust it uses up (a negative externality).
+3. Judge why voluntary agreements (pacts) fail under competitive pressure, and how monitoring (audits), disclosure and graduated sanctions (fines that grow with each breach) change behaviour. These are Elinor Ostrom's design principles.
+4. Connect this to the real debate about racing to deploy AI without enough safety work.
+
+### What the room is told, and what the session is built to show
+
+**What the room is told.** FRONTIER is a competitive business simulation. Each firm runs an AI company and is ranked by valuation. The briefing says only true things (spec §6.6):
+- Total market revenue tracks public trust.
+- Trust recovers when pressure eases.
+- Pace builds capability faster, and capability wins market share.
+- Safety spend costs money and lowers public exposure and incident risk.
+- Valuation reflects cash plus capability, priced by the market.
+- Every cost comes out of cash, and cash counts in full in your valuation.
+- A firm whose cash falls too far below zero becomes insolvent: it is held at Cautious pace and cannot play cards.
+- A firm that falls behind on capability loses market share.
+
+**What it is built to show.** Faster pace wins a firm more capability, and so more market share, and the firm keeps all of that gain. Every firm's pace also draws down public trust, a single pool that every firm shares. When trust falls, the whole market shrinks for everyone. One firm's draw moves trust by only about 1/N of the total, so for each firm on its own, racing looks worth it (spec §6.3 step 4). If trust falls below a hidden level, the regulator (OFS) imposes a moratorium: the market drops to 15% of its size, cash and capability are written down, and trust recovers at a quarter of its normal rate (`params.ts`: MORATORIUM_M 0.15, MORATORIUM_R 0.25).
+
+### What not to say before the results screen
+
+- **Never tell the room that the goal is public trust,** or that the firms should protect it together. A warned room plays differently, and the lesson is lost (spec §1, "non-telegraphing").
+- **Do not use these words** while the session is running: commons, tragedy, sustainable, sustainability, cooperate, cooperation, collective, shared resource, tipping point, threshold, collapse, game, player, score, win, level (spec §15.3). Say "firm", "board", "valuation", "quarter" and "market" instead.
+- **Do not hint that a hidden level exists,** or say when the session ends. The app never shows either.
+- **Do not label conduct as good or bad.** Report what happened ("HUMN played POACH"), not what it means.
+- If a team asks "what are we trying to do?", the true answer is: "maximise your firm's valuation."
+
+### Why aggressive firms lead the board, and why the room copies them
+
+- **Pace pays the firm.** Capability gain per quarter is 2, 4, 7 and 11 at paces 1 to 4. Market share is in proportion to the square of capability (`params.ts`: CAP_GAIN, ALPHA 2.0). Breakneck pace costs more cash per quarter (48 against 20 at Standard), but the extra share pays for it while trust holds.
+- **The cost is shared.** Pace 3 draws about five times as much trust as pace 2 (`params.ts`: DRAW 0.25 against 1.2). That loss shrinks every firm's revenue, not only the racer's.
+- **The board rewards it.** If the other firms stay restrained (pace 2, safety 15), one firm's best plan is pace 4 with no safety spend, alternating POACH and BLITZ. At 8 firms its valuation over quarters 10–14 is about 2,100, against about 630 for a restrained firm (median of 100 seeds; `reports/strategy-audit.md`, section 1).
+- **The room copies the leaders.** Observers of the October 2026 classes reported that teams copied the firms at the top of the board (`reports/observer-feedback-2026-10-12.md`, section 1). This is an observation from live classes, not a property of the model. Whether a given room copies its leaders depends on the room.
+
+### True statements you can rely on
+
+Every statement below comes from the spec, `params.ts` or a committed report. Statements marked "depends on the room" are measured results, not guarantees.
+- **Equal is compliant.** A firm that meets a pact's minimum safety exactly, or plays exactly at its maximum pace, keeps the pact (spec §5.3; `src/engine/pacts.ts`).
+- **Spending counts.** Every unit of cash spent (compute, safety, cards, fines) is one unit less valuation. Valuation is cash plus capability priced by trust (spec §6.3 step 13).
+- **A slow firm does not go bankrupt in a calm room.** In a scratch run of 8 firms over 14 quarters, a firm at pace 1 never became insolvent while its rivals stayed calm (`reports/observer-feedback-2026-10-12.md`, section 3). Do not tell the room that "playing it safe" leads to bankruptcy. It is false in the current model.
+- **After a moratorium most firms become insolvent,** and the slowest firm keeps the most value (same report, section 3). Depends on the room.
+- **No single strategy wins in every room.** The best plan depends on what the other firms do (`reports/strategy-audit.md`, section 1). In a room where every firm races, every strategy ends near or below zero.
+- **Restraint by everyone beats the race.** If every firm plays pace 2 with safety 15, the room never reaches the moratorium, even over 30 quarters (section 4 below, "When to expect the moratorium").
+- **One firm alone rarely triggers the moratorium at 6 firms or more.** By quarter 14 it happens in 2.4% of sessions at 6 firms and never at 8 (`reports/strategy-audit.md`, section 4). With 4 firms it happens in 80–91% of sessions, which is why at least 6 firms are needed.
+- **Every trust loss comes from the firms.** There are no market-wide shocks. Every incident is drawn for a firm from its own pace, safety and cards, and its trust cost falls on every firm (spec §6.3 step 5; observer report, section 2). A quarter in which every firm loses is the shared trust shrinking, not bad luck. The QUARTER BRIEF on `#/wire` shows where each quarter's loss came from.
+- **Breaking a pact pays, even after fines.** In the strategy audit (8 firms, automatic audits at 0.25), a firm that breaks a pace-2 pact at pace 4 with BLITZ ends at about 1,450 after fines, against about 630 for a firm that keeps it (`reports/strategy-audit.md`, section 3). Audits and fines narrow the gap; they do not close it.
+
+### How the results panels turn the board around
+
+1. **FINAL BOARD.** The ranking the room has been chasing, by valuation, with each firm's peak. Leaders who peaked early show the largest drops.
+2. **TRUST TRACE.** Trust quarter by quarter. Red squares mark quarters that lost 5 or more points, and the moratorium is marked if it happened. The room sees that its own decisions moved the line.
+3. **COUNTERFACTUAL.** The same room replayed with every firm at pace 2 and safety 15, with the same luck. The VALUE LOST figure is what the race cost the whole industry.
+4. **ATTRIBUTION.** Each firm's share of the trust damage against its share of the value. Ask whether the firms with the largest share of the damage also kept the largest share of the value.
+5. **NET CONTRIBUTION.** This is the turning point. Firms are re-ranked by what they added to the whole market: valuation, plus or minus what their decisions did to trust, plus a research credit for PUBLISH, minus value taken from rivals. In the four October 2026 live rooms, the valuation leader fell to between 5th and 9th (`docs/SESSIONS.md`, Session 18). Depends on the room: in a calm room with no moratorium, an aggressive firm can still rank high (`reports/observer-feedback-2026-10-12.md`, section 3, finding 4).
+6. **PACT RECORD.** Breaches no audit caught are revealed. The room sees how much the pacts relied on monitoring.
+7. **DEBRIEF.** Five prompts. From here on you may name the lesson and use every word listed above.
+
+---
+
 ## 1. One-time Firebase set-up
 
 1. Open the Firebase console, project **frontier-sim**.
@@ -236,6 +302,7 @@ What to check: the countdown is the same on laptop and phone; the board is reada
 
 ## 10. Where the technical details are
 
+- **Facilitator guide (PDF, facilitators only):** `docs/facilitator-guide/FRONTIER-facilitator-guide.pdf`, a step-by-step walkthrough with screenshots. Rebuilt with `npm run guide:pdf`; screenshots with `npm run guide:shots`.
 - Full rules and numbers: `docs/spec.md`.
 - What each build session did, and what is still open: `docs/PROGRESS.md`.
 - How the market was tuned: `docs/CALIBRATION.md` and `reports/calibration.md`.

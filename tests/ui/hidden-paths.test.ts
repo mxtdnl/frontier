@@ -79,6 +79,19 @@ describe('the facilitator wire screen never reaches the projector or a phone (Se
   });
 });
 
+describe('the QUARTER BRIEF stays on the facilitator wire screen (Session 19)', () => {
+  for (const entry of [...PARTICIPANT_ENTRIES, 'src/screens/Screen/Screen.tsx', 'src/screens/Results/Results.tsx']) {
+    it(entry, () => {
+      expect([...graph(entry)]).not.toContain('src/screens/Wire/brief.ts');
+    });
+  }
+
+  it('is imported only by the wire screen', () => {
+    const importers = [...graph('src/App.tsx')].filter((f) => /from '\.\/brief'|Wire\/brief'/.test(readFileSync(f, 'utf8')));
+    expect(importers).toEqual(['src/screens/Wire/Wire.tsx']);
+  });
+});
+
 describe('projector source never subscribes to or renders a hidden node', () => {
   it('src/screens/Screen/*', () => {
     for (const f of ['Screen.tsx', 'BoardView.tsx', 'Views.tsx', 'model.ts', 'briefing.ts']) {

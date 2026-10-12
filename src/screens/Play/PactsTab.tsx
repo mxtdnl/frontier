@@ -4,7 +4,7 @@ import type { FirmNode, Phase } from '../../firebase/schema';
 import { GlyphGe, GlyphLe, Panel, Segmented4, Tag } from '../../ui/components';
 import { truncateList } from '../../ui/layout';
 import { PACE_OPTIONS } from './model';
-import { DEFAULT_TERMS_FORM, canPropose, pactAction, sortPacts, termsFromForm, termsParts, termsShort, type TermsForm } from './pacts';
+import { DEFAULT_TERMS_FORM, canPropose, pactAction, sortPacts, termsFromForm, termsParts, termsPreview, termsShort, type TermsForm } from './pacts';
 
 /** Terms as `pace ≤ 2 · safety ≥ 15%` with the comparison signs drawn as shapes. */
 export function PactTermsText({ terms }: { terms: PactTerms }) {
@@ -91,7 +91,7 @@ export function PactsTab(p: Props) {
             <Segmented4
               label="Maximum pace value"
               options={PACE_OPTIONS}
-              value={form.maxPace}
+              value={form.limitPace ? form.maxPace : null}
               onChange={(v) => setForm({ ...form, maxPace: v as Pace, limitPace: true })}
             />
             <label className="field check">
@@ -113,6 +113,9 @@ export function PactsTab(p: Props) {
             </div>
             <p className="dim">A breach found by an audit is published and fined. Repeated breaches lead to removal from the pact.</p>
             {formError ? <p className="notice err" role="alert">{formError}</p> : null}
+            <p className="pact-preview" role="status" aria-live="polite" data-pact-preview="">
+              {termsPreview(form) ?? 'No term chosen. Tick a maximum pace, a minimum safety spend, or both.'}
+            </p>
             <div className="row">
               <button type="submit" className="btn btn-signal" disabled={p.busy || p.offline}>SIGN {p.nextName}</button>
               <button type="button" className="btn" onClick={() => setProposing(false)}>CANCEL</button>

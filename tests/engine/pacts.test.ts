@@ -38,6 +38,24 @@ describe('compliance', () => {
     expect(r2.state.pactsPrivate.p1?.violations['2']).toEqual({ f0: true });
   });
 
+  it('treats safety equal to the minimum and pace equal to the maximum as compliant (Session 19)', () => {
+    const g = game(4);
+    addPact(g, ['f0', 'f1', 'f2'], { maxPace: 2, minSafety: 25 }, { id: 'p1' });
+    addPact(g, ['f0', 'f1'], { maxPace: null, minSafety: 25 }, { id: 'p2' });
+    // f0 sits exactly on both terms; f1 on the safety floor; f2 one point below it.
+    const r = resolveRound(g, { f0: dec(2, 25), f1: dec(1, 25), f2: dec(2, 24) }, NO_INC);
+    expect(r.state.pactsPrivate.p1?.violations['1']).toEqual({ f2: true });
+    expect(r.state.pactsPrivate.p2?.violations['1']).toBeUndefined();
+    expect(r.state.pactsPrivate.p1?.checked['1']).toEqual({ f0: true, f1: true, f2: true });
+  });
+
+  it('a safety-only pact sets no pace term (Session 19)', () => {
+    const g = game(3);
+    addPact(g, ['f0', 'f1'], { maxPace: null, minSafety: 25 });
+    const r = resolveRound(g, { f0: dec(4, 25), f1: dec(3, 30) }, NO_INC);
+    expect(r.state.pactsPrivate.p1?.violations['1']).toBeUndefined();
+  });
+
   it('checks the applied pace of an insolvent firm', () => {
     const g = game(3);
     firm(g, 'f0').insolvent = true;

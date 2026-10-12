@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { breakdownSum } from '../../engine';
 import { useRoute } from '../../router';
 import { useFirms, usePacts, usePublic, useRounds, useWire } from '../../state';
 import { useEngine, useMeta } from '../../state/facilitator';
 import { Panel } from '../../ui/components';
 import { fmtTime } from '../../ui/format';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
+import { quarterBrief, type QuarterBrief } from './brief';
 import { copyText, groupLabel, notOnWire, quarterRange, tickerMap, wireGroups, type OffWireLine, type Selection, type WireGroup, type WireLine } from './model';
 
 /**
@@ -58,6 +60,15 @@ function LiveWire({ g }: { g: string }) {
     };
   }, [engine, tickers, pactNames]);
 
+  const brief = useMemo(() => {
+    const cache = new Map<number, QuarterBrief | null>();
+    return (round: number): QuarterBrief | null => {
+      if (!engine) return null;
+      if (!cache.has(round)) cache.set(round, quarterBrief(engine, round, tickers, pactNames, engine.params));
+      return cache.get(round) ?? null;
+    };
+  }, [engine, tickers, pactNames]);
+
   const step = (d: number): void => {
     const base = selection === 'all' ? current : selection;
     const next = Math.min(range[range.length - 1] ?? 0, Math.max(0, base + d));
@@ -100,7 +111,7 @@ function LiveWire({ g }: { g: string }) {
   // NOT ON THE WIRE exists only for resolved quarters (an open or discarded quarter has no history).
   const resolved = engine?.round ?? 0;
   const copy = (): void => {
-    const text = copyText(selection, groups, off, time, `${meta.title} · code ${meta.code}`, resolved);
+    const text = copyText(selection, groups, off, time, `${meta.title} · code ${meta.code}`, resolved, (r) => brief(r)?.lines ?? null);
     navigator.clipboard.writeText(text).then(
       () => setNotice(`Copied ${selection === 'all' ? 'every quarter' : groupLabel(selection)} as plain text.`),
       () => setNotice('Copy failed: the browser refused clipboard access. Select the log and copy it with Ctrl+C.'),
@@ -151,7 +162,13 @@ function LiveWire({ g }: { g: string }) {
       <Panel title={selection === 'all' ? 'WIRE LOG · ALL QUARTERS' : `WIRE LOG · ${groupLabel(selection)}`} bodyClassName="pad wire-scroll">
         <div data-wire-log="">
           {shown.map((r) => (
-            <QuarterBlock key={r} round={r} group={groups.find((x) => x.round === r)} off={r > 0 && r <= resolved ? off(r) : null} />
+            <QuarterBlock
+              key={r}
+              round={r}
+              group={groups.find((x) => x.round === r)}
+              off={r > 0 && r <= resolved ? off(r) : null}
+              brief={r > 0 && r <= resolved ? brief(r) : null}
+            />
           ))}
         </div>
       </Panel>
@@ -170,10 +187,18 @@ function Line({ l }: { l: WireLine }) {
   );
 }
 
-function QuarterBlock({ round, group, off }: { round: number; group: WireGroup | undefined; off: OffWireLine[] | null }) {
+function QuarterBlock({ round, group, off, brief }: { round: number; group: WireGroup | undefined; off: OffWireLine[] | null; brief: QuarterBrief | null }) {
   return (
     <section className="wire-quarter" data-wire-quarter={round}>
       <h2 className="wire-q-head">{groupLabel(round)}</h2>
+      {brief ? (
+        <div className="wire-brief" data-quarter-brief={round} data-terms-sum={breakdownSum(brief.breakdown)} data-dt={brief.breakdown.dT}>
+          <h3 className="dim">QUARTER BRIEF · facilitator only</h3>
+          {brief.lines.map((l, i) => (
+            <p key={i}>{l}</p>
+          ))}
+        </div>
+      ) : null}
       {group && group.lines.length > 0 ? (
         <ul className="wire-list">
           {group.lines.map((l, i) => (

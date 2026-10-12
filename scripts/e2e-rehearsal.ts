@@ -302,6 +302,26 @@ await runWithStack(async (browser) => {
       for (let r = 1; r <= REHEARSAL_QUARTERS; r++) {
         check((await wirePage.locator(`[data-wire-quarter="${r}"] [data-wire-line]`).count()) === Object.keys(roundsNode[String(r)]?.headlines ?? {}).length + Object.values(wireNode).filter((e) => (e as { round?: number }).round === r).length, `#/wire lists every entry of quarter ${r}`);
       }
+      // Session 19: a QUARTER BRIEF at the top of every resolved quarter, whose terms add up to the quarter's trust change.
+      {
+        const eng = fromEngine(await adminGet<unknown>(`games/${g}/engine`));
+        for (let r = 1; r <= REHEARSAL_QUARTERS; r++) {
+          const brief = wirePage.locator(`[data-wire-quarter="${r}"] [data-quarter-brief]`);
+          const rec = eng?.history.find((x) => x.round === r);
+          if ((await brief.count()) !== 1 || !rec) {
+            check(false, `#/wire shows a QUARTER BRIEF for quarter ${r}`);
+            continue;
+          }
+          const sum = Number(await brief.getAttribute('data-terms-sum'));
+          const first = await wirePage.locator(`[data-wire-quarter="${r}"] > *`).nth(1).getAttribute('data-quarter-brief');
+          check(
+            Math.abs(sum - rec.dT) < 1e-9 && first !== null && /^Trust /.test(await brief.locator('p').first().innerText()),
+            `quarter ${r}: the QUARTER BRIEF opens the quarter and its terms sum to the trust change (${rec.dT.toFixed(3)})`,
+          );
+        }
+        check(!(await screenText(fac)).includes('QUARTER BRIEF'), 'the projector never shows the QUARTER BRIEF');
+        check(!(await human.locator('body').innerText()).includes('QUARTER BRIEF'), 'the phone never shows the QUARTER BRIEF');
+      }
       await shot(wirePage, 'rehearsal-wire');
       await wirePage.close();
     }

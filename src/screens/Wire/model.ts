@@ -152,6 +152,8 @@ export function copyText(
   title: string,
   /** Last resolved quarter: only resolved quarters have a NOT ON THE WIRE section. */
   resolved: number,
+  /** QUARTER BRIEF sentences for a resolved quarter (Session 19), or null. */
+  brief: (round: number) => ReadonlyArray<string> | null = () => null,
 ): string {
   const chosen = selection === 'all' ? groups : groups.filter((g) => g.round === selection);
   const rounds = selection === 'all' ? chosen.map((g) => g.round) : [selection];
@@ -159,6 +161,8 @@ export function copyText(
   for (const r of rounds) {
     const g = chosen.find((x) => x.round === r);
     lines.push('', groupLabel(r));
+    const b = r > 0 && r <= resolved ? brief(r) : null;
+    if (b) lines.push('QUARTER BRIEF', ...b);
     if (!g || g.lines.length === 0) lines.push('No wire entries.');
     for (const l of g?.lines ?? []) lines.push(`${groupLabel(l.round)}  ${l.at !== null ? time(l.at) : '--:--:--'}  ${l.kind.padEnd(7)}  ${l.text}`);
     const o = off(r);
