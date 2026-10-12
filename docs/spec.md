@@ -268,6 +268,10 @@ They never see τ, endRound, other firms' cash, capability, pace or safety (unle
 - Pace builds capability faster, and capability wins market share.
 - Safety spend costs money and lowers your public exposure and incident risk.
 - Valuation reflects cash plus capability, priced by the market.
+- Every cost comes out of cash, and cash counts in full in your valuation.
+- A firm whose cash falls too far below zero becomes insolvent: it is held at Cautious pace and cannot play cards.
+- A firm that falls behind on capability loses market share.
+  (The last three lines: owner wording 2026-10-12, Session 19. The briefing does not say that a slow firm goes bankrupt: that is false in the current model, `reports/observer-feedback-2026-10-12.md` section 3.)
 - Cards: one line each (§14.5). The `SHARE` line says it protects every firm; the `RUSH` line says it raises your exposure and incident risk.
 
 The briefing does not mention any threshold.

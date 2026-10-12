@@ -333,7 +333,7 @@ export function BriefingView() {
   return (
     <>
       <Panel title="MARKET" bodyClassName="pad" style={{ width: 'var(--board-w)' }}>
-        <div className="stack">
+        <div className="stack briefing-stack">
           {BRIEFING_LINES.market.map((l) => (
             <p key={l}>{l}</p>
           ))}
@@ -344,7 +344,7 @@ export function BriefingView() {
         </div>
       </Panel>
       <Panel title="CONTROLS" bodyClassName="pad">
-        <div className="stack">
+        <div className="stack briefing-stack">
           {BRIEFING_LINES.controls.map(([k, v]) => (
             <div key={k} className="row" style={{ flexWrap: 'nowrap' }}>
               <span className="signal" style={{ width: '8ch', flexShrink: 0 }}>{k}</span>

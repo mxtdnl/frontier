@@ -6,6 +6,10 @@ export const BRIEFING_LINES = {
     'Pace builds capability faster. Capability earns market share.',
     'Safety spend costs money. It lowers public exposure and incident risk.',
     'Valuation reflects cash plus capability, priced by the market.',
+    // Owner wording 2026-10-12 (Session 19): spending and insolvency, true and without numbers.
+    'Every cost comes out of cash, and cash counts in full in your valuation.',
+    'A firm whose cash falls too far below zero becomes insolvent: it is held at Cautious pace and cannot play cards.',
+    'A firm that falls behind on capability loses market share.',
   ],
   controls: [
     ['PACE', 'Cautious, Standard, Aggressive or Breakneck.'],

@@ -137,6 +137,19 @@ async function scenario(browser: Browser): Promise<void> {
   const p4 = await participant('late participant');
   check(await refused(() => h(p4.page, 'found', g, 'Late Works', 'LATE', 'ZZ')), 'a firm cannot be founded after the lobby');
   await snapProjector(fac, 'briefing');
+  // Session 19: the spending and insolvency lines, on one screen at both sizes and in lit-room mode.
+  {
+    const text = await screenText(fac);
+    for (const line of [
+      'Every cost comes out of cash, and cash counts in full in your valuation.',
+      'A firm whose cash falls too far below zero becomes insolvent: it is held at Cautious pace and cannot play cards.',
+      'A firm that falls behind on capability loses market share.',
+    ]) check(text.includes(line), `the briefing reads "${line}"`);
+    await adminSet(`games/${g}/meta/settings/litRoom`, true);
+    await fac.waitForFunction(() => document.documentElement.classList.contains('lit-room'), undefined, { timeout: 5_000 }).catch(() => fail('lit-room mode applies on the projector'));
+    await snapProjector(fac, 'briefing-lit');
+    await adminSet(`games/${g}/meta/settings/litRoom`, false);
+  }
   await fac.keyboard.press('Shift+A');
   await waitText(fac, /OPEN/, 'Shift+A opens quarter 1', 15_000, '.scr');
   await waitText(fac, /Q1 Y1/, 'the quarter label reads Q1 Y1', 5_000, '.scr');
