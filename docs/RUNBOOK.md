@@ -302,6 +302,7 @@ What to check: the countdown is the same on laptop and phone; the board is reada
 
 ## 10. Where the technical details are
 
+- **Facilitator guide (PDF, facilitators only):** `docs/facilitator-guide/FRONTIER-facilitator-guide.pdf`, a step-by-step walkthrough with screenshots. Rebuilt with `npm run guide:pdf`; screenshots with `npm run guide:shots`.
 - Full rules and numbers: `docs/spec.md`.
 - What each build session did, and what is still open: `docs/PROGRESS.md`.
 - How the market was tuned: `docs/CALIBRATION.md` and `reports/calibration.md`.

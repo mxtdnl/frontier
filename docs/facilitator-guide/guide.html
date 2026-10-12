@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FRONTIER facilitator guide</title>
+<!--
+  Facilitator guide (Session 19 Part E). Source for FRONTIER-facilitator-guide.pdf: `npm run guide:pdf`.
+  Facilitator only. It names the lesson and may use the spec §15.3 words; the §15.2 words stay banned (tests/ui/guide.test.ts).
+  Screenshots: `npm run guide:shots` (emulators, fixed seed, bot firms, fictional tickers). No network fetches: the font
+  comes from node_modules/@fontsource, images from img/.
+-->
+<style>
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: block; src: url('../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: block; src: url('../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600; font-display: block; src: url('../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-600-normal.woff2') format('woff2'); }
+
+/* Colours from src/ui/tokens.css. The page itself is unfilled paper. */
+:root {
+  --dim: #9A947C;
+  --signal: #FFB000;
+  --signal-dim: #8A6400;
+  --signal-ink: #000000;
+  --wire: #5EC8D8;
+  --up: #7FD15B;
+  --down: #FF4D3D;
+  --font: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@page { size: A4; margin: 15mm 15mm 17mm 15mm;
+  @bottom-left { content: "FRONTIER facilitator guide"; font-family: var(--font); font-size: 7.5pt; color: var(--signal-dim); }
+  @bottom-right { content: "page " counter(page) " of " counter(pages); font-family: var(--font); font-size: 7.5pt; color: var(--signal-dim); }
+}
+@page quiet {
+  @top-left { content: "▼ FACILITATOR ONLY · DO NOT READ ALOUD"; font-family: var(--font); font-size: 7.5pt; font-weight: 600; color: var(--signal-ink); }
+}
+@page cover { @bottom-left { content: none; } @bottom-right { content: none; } }
+
+* { box-sizing: border-box; border-radius: 0; }
+html { font-family: var(--font); font-size: 9pt; line-height: 1.35; color: var(--signal-ink); font-variant-numeric: tabular-nums; }
+body { margin: 0; }
+h1, h2, h3, h4 { font-weight: 600; margin: 0; line-height: 1.35; }
+h1 { font-size: 16pt; margin-bottom: 1lh; }
+h2 { font-size: 12pt; margin: 1lh 0 0.5lh; break-after: avoid; }
+h3 { font-size: 9.5pt; margin: 1lh 0 0.25lh; break-after: avoid; }
+p, ul, ol, table, figure, dl { margin: 0 0 0.5lh; }
+ul { padding-left: 3ch; }
+ol { padding-left: 4ch; }
+li { margin-bottom: 0.15lh; }
+strong { font-weight: 600; }
+code, .k { font-family: var(--font); }
+.k { display: inline-block; border: 1px solid var(--signal-ink); padding: 0 0.5ch; line-height: 1.2; font-weight: 500; }
+.label { color: var(--signal-dim); font-weight: 500; }
+.part { break-before: page; }
+.part-head { display: flex; gap: 2ch; align-items: baseline; border-bottom: 1px solid var(--signal-ink); padding-bottom: 0.25lh; margin-bottom: 1lh; }
+.part-head .n { background: var(--signal); padding: 0 1ch; font-weight: 600; }
+.part-head h1 { margin: 0; }
+.quiet { page: quiet; }
+.warn { border-left: 2px solid var(--down); padding: 0.25lh 1ch; margin: 0.5lh 0 1lh; }
+.warn::before { content: "▼ "; }
+.say { border-left: 2px solid var(--up); padding: 0.25lh 1ch; margin: 0.5lh 0; }
+.say::before { content: "▲ SAY  "; font-weight: 600; }
+.dont { border-left: 2px solid var(--down); padding: 0.25lh 1ch; margin: 0.5lh 0; }
+.dont::before { content: "▼ DO NOT SAY  "; font-weight: 600; }
+.note { border-left: 2px solid var(--signal-dim); padding: 0.25lh 1ch; margin: 0.5lh 0; }
+table { border-collapse: collapse; width: 100%; break-inside: auto; }
+th, td { text-align: left; vertical-align: top; padding: 0.15lh 1ch 0.15lh 0; border-bottom: 1px solid var(--dim); }
+th { font-weight: 600; border-bottom: 1px solid var(--signal-ink); }
+tr { break-inside: avoid; }
+td.num, th.num { text-align: right; padding-right: 2ch; }
+figure { break-inside: avoid; margin: 0.5lh 0 1lh; }
+figure img { display: block; width: 100%; border: 1px solid var(--signal-ink); }
+figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
+.phones { display: flex; gap: 3ch; align-items: flex-start; break-inside: avoid; margin: 0.5lh 0 1lh; }
+.phones figure { flex: 0 0 52mm; margin: 0; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 3ch; }
+.keep { break-inside: avoid; }
+.cover { page: cover; height: 260mm; display: flex; flex-direction: column; justify-content: space-between; }
+.brand { display: inline-block; background: var(--signal); padding: 0.25lh 1.5ch; font-weight: 600; font-size: 22pt; }
+.toc li { margin-bottom: 0.3lh; }
+.ref { page: quiet; break-before: page; font-size: 8pt; }
+.ref h1 { font-size: 12pt; margin-bottom: 0.5lh; }
+.ref h2 { font-size: 9pt; margin: 0.6lh 0 0.2lh; }
+.ref p, .ref ol, .ref table { margin-bottom: 0.25lh; }
+.ref td, .ref th { padding: 0.05lh 1ch 0.05lh 0; }
+</style>
+</head>
+<body>
+
+<!-- ───────────────────────────── Cover ───────────────────────────── -->
+<section class="cover">
+  <div>
+    <p><span class="brand">FRONTIER</span></p>
+    <h1 style="font-size: 20pt; margin-top: 2lh;">Facilitator guide</h1>
+    <p style="font-size: 11pt;">How to prepare, run and debrief a FRONTIER session, for someone running it for the first time.</p>
+    <p class="warn" style="margin-top: 2lh;">For facilitators only. This guide names what the session is built to teach. Never show it, project it or read from it to participants before the results screen.</p>
+  </div>
+  <div>
+    <h2>Contents</h2>
+    <ol class="toc">
+      <li>What FRONTIER is and what it teaches</li>
+      <li>How the model works</li>
+      <li>Before class</li>
+      <li>Running the session, step by step</li>
+      <li>Ending and the results</li>
+      <li>Troubleshooting and the key map</li>
+      <li>Quick reference (last page)</li>
+    </ol>
+    <p class="label">Live site: https://mxtdnl.github.io/frontier/ · Sources: docs/spec.md, docs/RUNBOOK.md, src/engine/params.ts and the reports in reports/ in the frontier repository. Screenshots come from a staged practice session with computer-run and scripted firms under invented names.</p>
+  </div>
+</section>
+
+<!-- ─────────────────── Part 1: what FRONTIER teaches ─────────────────── -->
+<section class="part quiet">
+  <div class="part-head"><span class="n">1</span><h1>What FRONTIER is and what it teaches</h1></div>
+
+  <h2>The rule that comes first</h2>
+  <p style="font-size: 11pt;"><strong>Before the results screen, never tell the room what the session is about.</strong></p>
+  <ul style="font-size: 10pt;">
+    <li>Never say that the goal is public trust, or that the firms should protect it together.</li>
+    <li>Never use these words while the quarters run: <strong>commons, tragedy, sustainable, sustainability, cooperate, cooperation, collective, shared resource, tipping point, threshold, collapse, game, player, score, win, level</strong> (spec §15.3). Say firm, board, valuation, quarter and market instead.</li>
+    <li>Never hint that a hidden trust level exists, or say how many quarters there will be.</li>
+    <li>Never call a firm's conduct good or bad. Report what happened ("QRRY played RUSH"), not what it means.</li>
+  </ul>
+  <p style="font-size: 10pt;">A warned room plays differently, and then there is nothing to discover. The app is built so that nothing a participant sees before the results screen names or hints at the lesson (spec §1). The facilitator is the only person who can break that rule.</p>
+  <p style="font-size: 10pt;">If a team asks what they are trying to do, the true answer is: <strong>"Maximise your firm's valuation."</strong></p>
+  <p style="font-size: 10pt;">From the results screen on, you may name the lesson and use every word above.</p>
+
+  <h2 style="break-before: page;">What FRONTIER is</h2>
+  <p>FRONTIER is a classroom simulation. Teams (or individuals) each run a fictional AI company, called a firm. Over a series of quarters every firm makes three decisions at once on a phone: how fast to deploy (pace), how much to spend on safety, and whether to play one optional card. The projector shows a public board that ranks firms by valuation. A session is usually 8 to 14 quarters (35 to 60 minutes), then 20 to 30 minutes of results and debrief.</p>
+  <p>The room is told it is a competitive business simulation. It is built to produce a tragedy of the commons: each firm's racing makes sense for that firm, and together the racing destroys the public trust that every firm's revenue depends on.</p>
+
+  <h2>The four learning objectives (spec §1)</h2>
+  <ol>
+    <li>Explain how competition that makes sense for each firm can destroy a resource every competitor depends on (Hardin 1968; Ostrom 1990). Here that resource is public trust, which sets the size of the whole market.</li>
+    <li>Tell private returns from shared costs: a firm keeps everything its pace earns, while the trust it uses up is lost to every firm (a negative externality).</li>
+    <li>Judge why non-binding agreements fail under competitive pressure, and how monitoring (audits), disclosure and graduated sanctions (fines that rise with each breach) change behaviour. These are among Elinor Ostrom's design principles.</li>
+    <li>Connect the dynamics to the real debate about AI safety racing (Armstrong, Bostrom and Shulman 2016).</li>
+  </ol>
+
+  <h2>What the room is told, and what the session is built to show</h2>
+  <table>
+    <tr><th style="width: 50%;">What the room is told (all true; spec §6.6)</th><th>What the session is built to show</th></tr>
+    <tr><td>Total market revenue tracks public trust.</td><td>Trust is one pool shared by every firm. When it falls, the whole market shrinks for everyone.</td></tr>
+    <tr><td>Pace builds capability faster. Capability earns market share.</td><td>A firm keeps all of the share its pace wins. That is the private gain.</td></tr>
+    <tr><td>Safety spend costs money. It lowers public exposure and incident risk.</td><td>Safety protects trust for everyone, but its cost falls on the firm that pays it.</td></tr>
+    <tr><td>Trust recovers when pressure eases.</td><td>Recovery is slow, and much slower after a moratorium. Damage done early lasts.</td></tr>
+    <tr><td>Valuation reflects cash plus capability, priced by the market.</td><td>The board ranks by private valuation only. It never shows what a firm cost the others.</td></tr>
+    <tr><td>Every cost comes out of cash, and cash counts in full in your valuation.</td><td>Spending is real: every unit spent is one unit less valuation.</td></tr>
+    <tr><td>A firm whose cash falls too far below zero becomes insolvent.</td><td>In rooms that reach the moratorium, most firms become insolvent (observer report, section 3).</td></tr>
+    <tr><td>A firm that falls behind on capability loses market share.</td><td>Falling behind costs share, which pushes every firm to keep up with the leaders.</td></tr>
+  </table>
+
+  <h2>Why aggressive firms lead the board</h2>
+  <ul>
+    <li><strong>Pace pays the firm.</strong> Capability grows by 2, 4, 7 or 11 a quarter at paces 1 to 4, and market share is in proportion to the square of capability (params.ts: CAP_GAIN, ALPHA 2.0).</li>
+    <li><strong>The cost is shared.</strong> Pace 3 draws about five times as much trust as pace 2 (params.ts: DRAW 0.25 against 1.2), and that loss shrinks every firm's revenue. Each firm's draw is scaled so that one firm's effect is about 1/N of the total (spec §6.3 step 4). For any one firm, racing looks cheap.</li>
+    <li><strong>The board rewards it.</strong> With the other firms restrained (pace 2, safety 15), one firm's best plan at 8 firms is pace 4 with no safety and POACH and BLITZ alternating: its valuation over quarters 10 to 14 is about 2,100 against about 630 for a restrained firm (median of 100 seeds; reports/strategy-audit.md, section 1).</li>
+    <li><strong>The room copies the leaders.</strong> An observer of the October 2026 classes reported that teams copied the firms at the top of the board (reports/observer-feedback-2026-10-12.md). This was seen in live classes; whether a given room does it depends on the room.</li>
+  </ul>
+
+  <h2>True statements you can rely on</h2>
+  <p>Each comes from the spec, params.ts or a committed report. "Depends on the room" marks a measured result, not a guarantee.</p>
+  <ul>
+    <li><strong>Equal is compliant.</strong> Meeting a pact's minimum safety exactly, or playing exactly its maximum pace, keeps the pact (spec §5.3).</li>
+    <li><strong>A slow firm does not go bankrupt in a calm room.</strong> In a scratch run (8 firms, 14 quarters, 60 seeds) a firm at pace 1 never became insolvent while its rivals played pace 2 (observer report, section 3). Never tell the room that playing slowly leads to bankruptcy: it is false.</li>
+    <li><strong>After a moratorium most firms become insolvent,</strong> and the slowest firm keeps the most value (same report). Depends on the room.</li>
+    <li><strong>No strategy is best in every room.</strong> The best plan depends on what the other firms do (strategy audit, section 1). In a room where every firm races, every strategy finishes near or below zero.</li>
+    <li><strong>A restrained room never reaches the moratorium.</strong> Every firm at pace 2 and safety 15 does not reach it even over 30 quarters (RUNBOOK §4).</li>
+    <li><strong>One firm alone rarely triggers it at 6 firms or more:</strong> 2.4% of sessions by quarter 14 at 6 firms, none at 8; 80 to 91% at 4 firms (strategy audit, section 4). That is why you need at least 6 firms.</li>
+    <li><strong>Breaking a pact pays, even after fines.</strong> At 8 firms with automatic audits at 0.25, a firm that breaks a pace-2 pact at pace 4 with BLITZ ends at about 1,450 after fines, against about 630 for one that keeps it (strategy audit, section 3).</li>
+    <li><strong>Every trust loss comes from the firms.</strong> There are no market-wide shocks. Each incident is drawn for one firm from its own pace, safety and cards (spec §6.3 step 5).</li>
+  </ul>
+</section>
+
+<!-- ─────────────────── Part 2: how the model works ─────────────────── -->
+<section class="part">
+  <div class="part-head"><span class="n">2</span><h1>How the model works</h1></div>
+  <p>This part explains the market in plain English, so you can answer questions accurately. Pages 2A can be said aloud: they repeat the briefing. Pages 2B carry the header "FACILITATOR ONLY · DO NOT READ ALOUD": they describe hidden rules and give numbers the briefing deliberately leaves out. All numbers are from <code>src/engine/params.ts</code> and spec §6.</p>
+
+  <h2>2A · The market chain (safe to say)</h2>
+  <p>The briefing deck explains it as a chain, read left to right: <strong>public trust</strong> sets the size of <strong>market revenue</strong>, which is divided by <strong>your share</strong>, which builds cash for your <strong>valuation</strong>. Profit each quarter is revenue minus costs. Costs come from pace, safety spend and any card.</p>
+  <table>
+    <tr><th style="width: 22%;">Term</th><th>What it means on screen</th></tr>
+    <tr><td>Public trust</td><td>A reading from 0 to 100 on the projector (TRUST). Every session starts at 72.</td></tr>
+    <tr><td>Market (MKT)</td><td>The total revenue on offer to all firms this quarter. It rises and falls with trust.</td></tr>
+    <tr><td>Share</td><td>A firm's part of the market. Capability earns share; pace builds capability.</td></tr>
+    <tr><td>Cash</td><td>Starts at 100. Profit is added each quarter; every cost and fine is taken off.</td></tr>
+    <tr><td>Valuation (VALUE)</td><td>Cash plus capability, priced by the market. The board ranks by it.</td></tr>
+    <tr><td>Public exposure</td><td>On the phone's decision ticket: LOW, MED, HIGH or SEVERE. It rises with pace and falls with safety spend.</td></tr>
+    <tr><td>AUTO</td><td>A firm that did not commit keeps last quarter's pace and safety, plays no card, and shows AUTO. In quarter 1 that is Standard pace and safety 10.</td></tr>
+  </table>
+
+  <h3>The three decisions</h3>
+  <ul>
+    <li><strong>PACE</strong>: 1 Cautious, 2 Standard, 3 Aggressive or 4 Breakneck. Faster builds capability faster and costs more.</li>
+    <li><strong>SAFETY</strong>: 0 to 30, a share of the reference budget. It costs money and lowers exposure and incident risk.</li>
+    <li><strong>CARD</strong>: one optional action. The same card cannot be played in two quarters running. NONE (no card) is always allowed.</li>
+  </ul>
+
+  <h3>Insolvency</h3>
+  <p>A firm whose cash falls too far below zero becomes insolvent: it is held at Cautious pace and cannot play cards. It stays on the board, tagged INSOLV. Insolvency does not end.</p>
+</section>
+
+<section class="quiet">
+  <h2 style="break-before: page;">2B · The numbers behind the chain (do not read aloud)</h2>
+  <table>
+    <tr><th style="width: 24%;">Quantity</th><th>How it is computed each quarter</th></tr>
+    <tr><td>Trust draw</td><td>Each firm draws 0.125, 0.25, 1.2 or 1.4 trust points at paces 1 to 4. Safety cuts that by up to 35% at safety 30. RUSH multiplies it by 1.5. The total is scaled by 8/N, so the room's average behaviour matters, not its size.</td></tr>
+    <tr><td>Trust recovery</td><td>0.13 × T × (1 − T/100). At trust 72 that is about 2.6 points a quarter. After a moratorium it is a quarter of that.</td></tr>
+    <tr><td>Incidents</td><td>Each firm has a chance of an incident from its pace (2%, 5%, 15% or 30%), cut by up to 70% at safety 30. PUBLISH halves the firm's own chance, RUSH multiplies it by 1.5, and each SHARE card multiplies every firm's chance by 0.75. An incident costs every firm trust (1.5 × 8/N) and costs the firm itself 15% of that quarter's revenue.</td></tr>
+    <tr><td>Market</td><td>100 × N × (T/100)<sup>1.4</sup>. Lower trust means a smaller market for everyone.</td></tr>
+    <tr><td>Share</td><td>Capability squared, divided by the sum over all firms. BLITZ multiplies capability by 1.2 for that quarter's share only.</td></tr>
+    <tr><td>Costs</td><td>Compute 12, 20, 32 or 48 by pace; safety 1 per point; the card's cost.</td></tr>
+    <tr><td>Valuation</td><td>Cash + 3 × capability × T/100. After a moratorium the capability part keeps only 15% of its value.</td></tr>
+    <tr><td>Insolvency</td><td>Cash below −100.</td></tr>
+  </table>
+
+  <h3>The hidden level and the moratorium</h3>
+  <p>Every session draws a hidden trust level between 30 and 40. Nobody sees it; you can see it on the console only while you hold the TAU button. The first time trust falls below it, the Office of Frontier Systems (OFS) imposes a moratorium:</p>
+  <ul>
+    <li>trust drops a further 10 points at once</li>
+    <li>every firm keeps only 60% of any positive cash</li>
+    <li>the market falls to 15% of its size for the rest of the session</li>
+    <li>trust recovers at a quarter of its normal rate</li>
+    <li>capability keeps only 15% of its value.</li>
+  </ul>
+  <p>The wire carries the only use of the word collapse before the results: "OFS imposes moratorium on frontier deployments; markets collapse". The session continues after it; most firms then lose money every quarter.</p>
+  <p>When to expect it (Session 17 calibration; RUNBOOK §4): every firm racing, around quarter 5; half the firms racing, around quarter 10; a room like the October 2026 classes, by quarter 14 in about half of sessions at 4 to 20 firms; every firm restrained, never.</p>
+
+  <h3>The six cards</h3>
+  <p>The conduct ledger (results panel 5) counts each card for the market (▲) or against it (▼).</p>
+  <table>
+    <tr><th style="width: 12%;">Card</th><th class="num" style="width: 7%;">Cost</th><th>Real effect</th><th style="width: 14%;">Ledger</th></tr>
+    <tr><td>POACH</td><td class="num">15</td><td>The firm gains 3 capability; the target firm loses 3 (not below 10). Needs a target; not the same target two quarters running.</td><td>▼ against; counts as rivalry taken</td></tr>
+    <tr><td>PUBLISH</td><td class="num">10</td><td>Trust +0.25 × 8/N. Halves the firm's own incident chance this quarter. On panel 5 it also earns a research credit (display only, never money).</td><td>▲ for</td></tr>
+    <tr><td>LOBBY</td><td class="num">10</td><td>Waives any pact fine detected this quarter (the breach is still published). Trust −0.5, not scaled by firm count.</td><td>▼ against</td></tr>
+    <tr><td>BLITZ</td><td class="num">15</td><td>Capability counts 1.2 times in this quarter's share.</td><td>▼ against; rivalry taken</td></tr>
+    <tr><td>SHARE</td><td class="num">15</td><td>Every firm's incident chance this quarter, the player's own included, × 0.75; several SHARE cards multiply again.</td><td>▲ for</td></tr>
+    <tr><td>RUSH</td><td class="num">0</td><td>+4 capability, kept. This quarter the firm's trust draw and its incident chance are each 1.5 times as high.</td><td>▼ against; rivalry taken</td></tr>
+  </table>
+  <p>NONE costs nothing and is always allowed. An insolvent firm's card is dropped, with a notice on its phone.</p>
+
+  <h3>Pacts, audits, fines and LOBBY</h3>
+  <ul>
+    <li><strong>Pacts.</strong> Any firm may propose one while a quarter is open or during a summit. Terms are a maximum pace, a minimum safety, or both. Meeting a term exactly is compliant. Firms join and leave from the PACTS tab; joining and leaving appear on the wire. A pact with fewer than 2 members after 2 quarters dissolves.</li>
+    <li><strong>Breaches</strong> are recorded privately each quarter for every member that breaks a term. Nobody sees them until an audit.</li>
+    <li><strong>Audits.</strong> You start one with F6 (Shift+F); each active pact is also audited automatically with the probability set on <code>#/new</code> (0.25 suggested). An audit examines up to the last 3 unaudited quarters and publishes what it finds.</li>
+    <li><strong>Fines</strong> are a share of the firm's cash, at least 10: 10% for the first detected breach, 25% for the second, 40% for the third, and the third expels the firm from the pact. A detected breach shows a BREACH tag on the board for 2 quarters. LOBBY in the quarter of detection waives the fine but not the publication.</li>
+    <li><strong>Undetected breaches</strong> are revealed only on results panel 6.</li>
+  </ul>
+
+  <h3>Disclosure</h3>
+  <p>F7 (Shift+D) switches disclosure on or off at any phase. While it is on, each resolution publishes every firm's pace, safety and exposure, and the board adds PACE, SAFETY and EXPOSURE columns (SAFE and EXPO in lit-room mode). Incident lines then name the firm's pace, safety and incident risk. Switching it produces a wire headline ("Assembly passes frontier disclosure rule" or "Disclosure rule suspended"). The mimic-leader bot copies the leader's pace only while disclosure is on.</p>
+</section>
+
+<!-- ─────────────────── Part 3: before class ─────────────────── -->
+<section class="part">
+  <div class="part-head"><span class="n">3</span><h1>Before class</h1></div>
+  <h2>Checklist</h2>
+  <p>Do this the day before, then again 15 minutes before class.</p>
+  <ul>
+    <li><strong>Database rules.</strong> If a merged pull request said the rules changed, paste <code>database.rules.json</code> into the Firebase console (Realtime Database, Rules tab) and press Publish (RUNBOOK §1, step 5). The app refuses newer features until you do.</li>
+    <li><strong>Facilitator account.</strong> Sign in at <code>#/new</code>. If the page says the account is not on the facilitator allowlist, follow RUNBOOK §1, step 4.</li>
+    <li><strong>Projector laptop.</strong> Open https://mxtdnl.github.io/frontier/. Set the display to 1280×720 or 1920×1080, browser zoom 100%, browser full-screen (F11 belongs to the browser, not the app).</li>
+    <li><strong>Second device for the console</strong> (<code>#/control/…</code>): your own laptop, signed in with the same account. Never show it on the projector.</li>
+    <li><strong>Optional third screen</strong> for the wire log (<code>#/wire/…</code>), or a second tab on the console laptop.</li>
+    <li><strong>Phones.</strong> Check that a phone on the room Wi-Fi opens the landing page. Any device that will play as a firm must not be signed in as the facilitator: use a private window.</li>
+    <li><strong>Firm count: at least 6.</strong> With 4 or 5 firms one firm racing can trigger the moratorium alone. Add bot firms on <code>#/new</code> to reach 6, and with fewer than 8 firms use a fixed 14-quarter end.</li>
+    <li><strong>The end rule.</strong> Decide it and write it down; the app never tells participants.</li>
+    <li><strong>The briefing deck</strong> (section 4.2), opened on the projector laptop.</li>
+    <li><strong>A rehearsal with bot firms</strong> (below), at least once on the same laptop and projector.</li>
+  </ul>
+
+  <h2>Every setting on <code>#/new</code></h2>
+  <figure><img src="img/new.png" alt="The #/new page with mode, timer, end mode, disclosure, audit, display, seed and bot firm settings."><figcaption>#/new: the settings, then Create session. Here a fixed 14-quarter end, a fixed seed and ten bot firms.</figcaption></figure>
+  <table>
+    <tr><th style="width: 24%;">Setting</th><th>What it does</th><th style="width: 22%;">Suggested</th></tr>
+    <tr><td>Mode</td><td>Team mode: 2 to 16 firms, 1 to 5 devices each. Multiplayer mode: 2 to 50 firms, one person each. Cannot be changed later.</td><td>Team for teams of 3 to 5</td></tr>
+    <tr><td>Round timer (s)</td><td>Time to decide each quarter. You can add or remove 30 s during play, or pause.</td><td>120</td></tr>
+    <tr><td>Auto-resolve at deadline</td><td>Resolves the quarter by itself when the timer ends. Off means you press F9.</td><td>Off for a first class</td></tr>
+    <tr><td>End mode</td><td>Random within a range (hidden end between two quarters), Fixed quarter, or Manual (until you press END, or quarter 30).</td><td>Fixed, 14; or random 10 to 14 with 8 or more firms</td></tr>
+    <tr><td>Disclosure at start</td><td>Shows every firm's pace, safety and exposure from quarter 1.</td><td>Off</td></tr>
+    <tr><td>Automatic audit probability</td><td>Chance that each pact is audited by itself each quarter.</td><td>0.25</td></tr>
+    <tr><td>Reveal TAU line on results screen</td><td>Draws the hidden level on the results trust trace.</td><td>Off unless you plan to discuss it</td></tr>
+    <tr><td>Lit-room display mode</td><td>Larger type, stronger rules and secondary text for a bright room.</td><td>As needed</td></tr>
+    <tr><td>Seed</td><td>Random, or a fixed number to replay the same market (same hidden level and incident luck).</td><td>Random; fixed for rehearsal</td></tr>
+    <tr><td>Bot firms</td><td>Computer-run firms, tagged BOT, with a policy each: cautious (pace 1, safety 20), standard (pace 2, safety 10), greedy (pace 3 or 4, safety 5, BLITZ when allowed) or mimic-leader (copies the leader's pace when disclosure is on). "Add 10 mixed" adds ten. Bots count towards the firm limit and always commit.</td><td>Enough to reach 6 firms</td></tr>
+  </table>
+
+  <h2>Rehearsal with bot firms</h2>
+  <ol>
+    <li>Sign in at <code>#/new</code>. Set Round timer 30, Auto-resolve on, Fixed quarter 6, "Fixed, for rehearsal" seed 7.</li>
+    <li>Add six bot firms with different policies. Press Create session.</li>
+    <li>On your phone, in a private tab, open the site, type the code and found a test firm.</li>
+    <li>On the laptop press F9 (briefing), then F9 (quarter 1). Commit on the phone. Try F8 (summit), F7 (disclosure) and F6 (audit, after proposing a pact on the phone).</li>
+    <li>Open the console's WIRE LOG link and look at a QUARTER BRIEF.</li>
+    <li>When the session ends, press F9 through the seven results panels. On the console download both exports, then DELETE SESSION.</li>
+  </ol>
+  <p>Check that the countdown matches on laptop and phone, that the board is readable from the back of the room, and that the results panels fit the screen.</p>
+</section>
+
+<!-- ─────────────────── Part 4: running the session ─────────────────── -->
+<section class="part">
+  <div class="part-head"><span class="n">4</span><h1>Running the session, step by step</h1></div>
+  <p>The order of a session: create it, present the briefing deck, open the lobby so firms form, show the app's briefing screen, run the quarters, end, then step through the results and debrief. The F-keys work on the projector page (<code>#/screen/…</code>) and on the console; every F-key has a Shift+letter alternative for keyboards that need Fn (key map in part 6).</p>
+
+  <h2>4.1 Create the session and open the console</h2>
+  <ol>
+    <li>On the projector laptop, create the session at <code>#/new</code>. The projector page (<code>#/screen/…</code>) opens on the lobby with the join code, a QR code and the address.</li>
+    <li>On your own laptop open <code>#/control/…</code> with the same session id (replace <code>screen</code> with <code>control</code> in the address), or follow the CONTROL link on the wire page.</li>
+    <li>Switch the projector to the briefing deck for now.</li>
+  </ol>
+  <figure><img src="img/control.png" alt="The facilitator console with routine, session flow and irreversible control groups, the session panel and the firms table."><figcaption>#/control: ROUTINE (timer), SESSION FLOW (F6 to F9) and IRREVERSIBLE (END, TAU) groups; the NEXT line names the key to press next. FIRMS lists every firm with its commit status. END and TAU show the hidden values only while held.</figcaption></figure>
+
+  <h2>4.2 The briefing deck (about 15 minutes)</h2>
+  <p>The participant briefing deck is <code>standalone/2026-10-frontier-briefing.html</code> in the <code>mxtdnl/slides</code> repository. Present it full-screen on the projector before anyone joins. Its slides, in order:</p>
+  <ol>
+    <li>Welcome: "Running a frontier AI firm". Phones away until the last slide.</li>
+    <li>Claim tally: "Speed to market matters more to a firm's value than safety spend." Agree, Disagree or Unsure, by show of hands; keys 1 to 3 add a vote, Shift subtracts, r shows the follow-up line. Do not discuss it now. The tally is saved in the browser; bring it back in the debrief.</li>
+    <li>Outcomes, then the session map.</li>
+    <li>The market chain: public trust sets the size of market revenue, which is divided by each firm's share, which builds cash for valuation.</li>
+    <li>The three decisions; the phone DESK; pace side by side (ask the room to predict each row, then press r).</li>
+    <li>The cards; one quarter in four steps (decide, commit, reveal, next quarter).</li>
+    <li>Check: "What if your firm does not commit?" (answer: it keeps last quarter's pace and safety, plays no card, and shows AUTO).</li>
+    <li>The projector board; the result on the phone; pacts; joining; close ("Phones out").</li>
+  </ol>
+  <p class="warn">The deck predates Session 17. It lists only four cards: add SHARE ("Give every firm your safety tooling") and RUSH ("Ship early. More capability, more exposure and incident risk") aloud on the card slide, or use the app's briefing screen, which lists all six. It also lacks the spending and insolvency lines; read them from the app's briefing screen (4.4).</p>
+  <div class="dont">Anything about what the session teaches. The deck and its speaker notes are written so that nothing hints at the lesson. Keep to them.</div>
+
+  <h2 style="break-before: page;">4.3 The lobby</h2>
+  <figure><img src="img/lobby.png" alt="The projector lobby with the join code, QR code and a list of firms."><figcaption>The lobby: the four-letter code, a QR code and the firms formed so far. BOT marks computer-run firms.</figcaption></figure>
+  <ul>
+    <li>Switch the projector from the deck to the lobby. Teams scan the QR code or type the code at the landing page. One person founds the firm (name, ticker, PIN); teammates join with the PIN. In multiplayer mode each person founds their own firm.</li>
+    <li>Wait until every team shows on the board. On the console, a firm whose PRESENCE reads <em>none</em> has no device: press REMOVE twice within 3 seconds (lobby only).</li>
+    <li>When every team has formed, press LOCK JOINS (DANGER panel). REOPEN JOINS undoes it while still in the lobby.</li>
+  </ul>
+  <div class="say">"Found one firm per team. Keep the PIN inside your team. If a phone dies, rejoin with the PIN."</div>
+
+  <h2>4.4 The app's briefing screen</h2>
+  <p>Press <span class="k">F9</span> (or <span class="k">Shift+A</span>). Firm creation locks: nobody can found or join a firm after this point. The projector shows the market rules, the controls and all six cards; the phones show the same market lines. Read the MARKET column aloud, including the three spending and insolvency lines.</p>
+  <figure><img src="img/briefing.png" alt="The projector briefing screen with the market rules, commits, controls and six cards."><figcaption>The briefing screen: MARKET and COMMITS on the left, CONTROLS and the six CARDS on the right.</figcaption></figure>
+  <div class="say">The lines on the screen, word for word. If asked what to aim for: "Maximise your firm's valuation."</div>
+  <div class="dont">"Protect trust", "work together", "don't race", or any hint about a level trust must not fall below. Do not say how many quarters there are.</div>
+
+  <h2 style="break-before: page;">4.5 Each quarter</h2>
+  <ol>
+    <li><strong>Open.</strong> Press <span class="k">F9</span> (or <span class="k">Shift+A</span>). The timer starts on every screen; it runs on the server clock, so phones with wrong clocks still agree.</li>
+    <li><strong>Decide and commit.</strong> Teams set pace, safety and a card on the phone DESK and press COMMIT. They can change and recommit until the timer ends; the last commit counts.</li>
+    <li><strong>Watch the COMMITTED count</strong> in the top bar and the tick column on the board. The console's FIRMS table shows who has not committed (SHOW NOT COMMITTED).</li>
+    <li><strong>Resolve.</strong> Press <span class="k">F9</span>, or let auto-resolve do it at the deadline. Firms that did not commit take their defaults and show AUTO.</li>
+    <li><strong>Reveal.</strong> The board animates once: numbers roll, rows move, and if trust fell by 5 or more the trust figure inverts once. The status line summarises the quarter. Phones switch to the result card.</li>
+    <li><strong>Next.</strong> Press <span class="k">F9</span> to open the next quarter.</li>
+  </ol>
+  <div class="phones">
+    <figure><img src="img/phone-desk.png" alt="Phone DESK with pace, safety and card controls and the decision ticket above COMMIT."><figcaption>Phone DESK: PACE, SAFETY, CARD, then the decision ticket (estimated cost and exposure) above COMMIT.</figcaption></figure>
+    <figure><img src="img/phone-result.png" alt="Phone result card after a quarter."><figcaption>The result card at the reveal: one sentence, then the figures and notices.</figcaption></figure>
+  </div>
+  <figure><img src="img/board-open.png" alt="The projector board during an open quarter with the countdown and committed ticks."><figcaption>The board while a quarter is open: countdown and COMMITTED count in the top bar, a tick per committed firm, AUTO and BOT tags.</figcaption></figure>
+
+  <h3>Reading the reveal and the INCIDENTS block</h3>
+  <p>When the reveal ends, the right-hand panel lists the quarter's incidents in place of the trust chart: each firm hit, its headline, the effect ("trust −1.0 · HRTH revenue −15% this quarter") and the cause. With disclosure off the cause is only "Incident risk rises with pace and falls with safety spend."; with disclosure on it names the firm's pace, safety and incident risk. The firm's row carries a red INCID tag until the next quarter resolves. Type <code>INCID</code> on the projector for every incident of the session.</p>
+  <figure><img src="img/reveal-incidents.png" alt="The projector after a reveal, with the INCIDENTS block in the public trust panel."><figcaption>A reveal with one incident. The wire ticker at the bottom carries the headlines.</figcaption></figure>
+  <div class="say">The facts on screen: "Trust fell 3.1 to 65.1. HRTH had an incident." Read the status line and the headlines.</div>
+  <div class="dont">"That was bad luck", or "that was HRTH's fault". Incidents come from each firm's own pace, safety and cards; let the room work that out later.</div>
+
+  <h3>The wire</h3>
+  <p>The ticker on the projector carries 2 to 4 headlines per quarter, plus pact and disclosure events. Headlines name firms for incidents, cards, rank changes, breaches and insolvency; the cap leaves some events out, and the wire log lists those under NOT ON THE WIRE. Pace 4 is reported by name only while disclosure is on ("Unnamed lab accelerates release schedule, sources say" otherwise).</p>
+
+  <h2 style="break-before: page;">4.6 The wire log and the QUARTER BRIEF (second screen)</h2>
+  <p>Open the <strong>WIRE LOG</strong> link at the top of the console (a new tab; address <code>#/wire/…</code> with the same session id). Put it on a second screen or tab that the room cannot see. It lists every wire entry by quarter. Use ◄ ► or the arrow keys to change quarter, type a quarter number and press GO, or press ALL. COPY puts the selected quarter on the clipboard as plain text for the debrief.</p>
+  <figure><img src="img/wire-brief.png" alt="The wire log for one quarter with the QUARTER BRIEF at the top."><figcaption>#/wire for one quarter: the QUARTER BRIEF, the wire entries, then NOT ON THE WIRE (events the headlines left out).</figcaption></figure>
+  <p>The <strong>QUARTER BRIEF</strong> sits at the top of every resolved quarter. It is for you only and never appears on the projector or a phone. It shows, even while disclosure is off:</p>
+  <ul>
+    <li><strong>Where the trust change came from:</strong> recovery, the firms' draw, incidents (with the firms), PUBLISH and LOBBY (with the firms), and the moratorium drop in its quarter. The parts add up to the change.</li>
+    <li><strong>The three largest draws:</strong> each firm's draw with its rank on the board, pace and safety.</li>
+    <li><strong>The top half and the bottom half of the board:</strong> the cards each half played, marked ▲ (for the market) or ▼ (against it), and any breaches an audit found.</li>
+    <li>The closing line: every trust loss came from the firms' own pace, safety, cards and incidents.</li>
+  </ul>
+  <p>Use it to see the story of the session as it builds: which firms at the top are drawing the most trust, and whether the rest of the board starts to copy them. Keep it to yourself during play; it becomes debrief material once the results open.</p>
+  <div class="dont">Reading the QUARTER BRIEF to the room during play. Its pace, safety and card lists are private while disclosure is off, and its conduct marks give the lesson away.</div>
+
+  <h2 style="break-before: page;">4.7 Summits, pacts, audits, disclosure and pauses</h2>
+  <h3>Summit (F8 or Shift+S)</h3>
+  <p>Press <span class="k">F8</span> during an open quarter or a reveal. The timer pauses, decisions are refused, and every phone opens its PACTS tab under one summit banner. Firms propose, join and leave pacts. Press <span class="k">F8</span> again to return. Suggested use (a judgement, not a measured result): once trust has visibly fallen for a few quarters, or after the first breach is published, for 2 to 4 minutes.</p>
+  <div class="phones">
+    <figure><img src="img/phone-pact-preview.png" alt="Phone pact form with the terms preview above SIGN."><figcaption>Proposing a pact. No term is ticked when the form opens; the line above SIGN shows exactly what will be signed.</figcaption></figure>
+    <figure><img src="img/phone-ticket-notice.png" alt="Phone DESK with a notice on the ticket that Breakneck breaks PACT-A."><figcaption>A member that sets Breakneck sees "▼ Breaks PACT-A: pace 2 or lower." on its ticket. It can still commit.</figcaption></figure>
+  </div>
+  <figure><img src="img/summit.png" alt="The projector during a summit."><figcaption>The projector during a summit.</figcaption></figure>
+  <div class="say">"The industry summit is open. Firms may propose, join or leave pacts now."</div>
+  <div class="dont">Telling firms to sign, or what terms to choose. The decision to agree, and to keep or break the agreement, is the room's.</div>
+
+  <h3>Audit (F6 or Shift+F)</h3>
+  <p>Press <span class="k">F6</span>, then the number of the pact. The audit runs when the quarter resolves and checks up to the last 3 unaudited quarters. A breach is published on the wire, fined and tagged BREACH on the board; a clean audit is published too. Automatic audits run at the probability you set. Suggested use: when the QUARTER BRIEF shows a member racing past its pact's terms, or to show the room that monitoring exists; not every quarter, so the room still has to choose.</p>
+
+  <h3>Disclosure (F7 or Shift+D)</h3>
+  <p>Press <span class="k">F7</span> to publish every firm's pace, safety and exposure from the next resolution, with columns on the board. Turning disclosure on for a few quarters in the middle of a session (for example quarters 4 to 9) gives the debrief a before and after: did firms change when their decisions became visible?</p>
+  <figure><img src="img/reveal-disclosure.png" alt="The projector board with disclosure on, showing PACE, SAFETY and EXPOSURE columns."><figcaption>Disclosure on: PACE, SAFETY and EXPOSURE columns on the board.</figcaption></figure>
+
+  <h3>Timer and pause</h3>
+  <p>On the console: −30 s and +30 s change the deadline, Pause stops the timer, Resume restarts it. Pause for a question, a technical problem, or to let a team finish founding.</p>
+
+  <h3>The phone tabs</h3>
+  <div class="phones">
+    <figure><img src="img/phone-pacts.png" alt="Phone PACTS tab with the pact, its terms and members."><figcaption>PACTS: terms read "pace ≤ 2" or "safety ≥ 15%"; members; JOIN or LEAVE.</figcaption></figure>
+    <figure><img src="img/phone-book.png" alt="Phone BOOK tab with the firm's valuation against the field."><figcaption>BOOK: the firm's valuation against every other firm, with its rank and P&amp;L history.</figcaption></figure>
+  </div>
+
+  <h2 style="break-before: page;">4.8 What to say, and what not to say, phase by phase</h2>
+  <table>
+    <tr><th style="width: 15%;">Phase</th><th style="width: 42%;">Say</th><th>Do not say</th></tr>
+    <tr><td>Deck and lobby</td><td>The deck's script. "Found one firm per team."</td><td>Anything about what the session teaches; how many quarters.</td></tr>
+    <tr><td>Briefing</td><td>The briefing lines, word for word. "Maximise your firm's valuation."</td><td>"Protect trust", "work together", "don't race"; any level or limit.</td></tr>
+    <tr><td>Open quarter</td><td>Time left; how many firms have committed; "you can change until the timer ends".</td><td>Advice on pace, safety or cards.</td></tr>
+    <tr><td>Reveal</td><td>The status line and the headlines; who moved up; trust's new value.</td><td>"Bad luck", "that was reckless", "you're ruining it".</td></tr>
+    <tr><td>Summit</td><td>"Pacts are open." The pact rules if asked: terms, audits, fines.</td><td>Which terms to sign; that pacts are the answer.</td></tr>
+    <tr><td>Moratorium</td><td>The headline. "The market is now much smaller. The session continues."</td><td>"You crossed the threshold." Who caused it.</td></tr>
+    <tr><td>Results</td><td>Everything: the lesson, the words, the QUARTER BRIEF notes.</td><td>Blame aimed at named students; keep it on firms and decisions.</td></tr>
+  </table>
+  <p>Questions you may get, with true answers that give nothing away:</p>
+  <ul>
+    <li>"Does safety matter?" — "It lowers your exposure and incident risk. It costs money."</li>
+    <li>"Will we go bankrupt if we go slow?" — "A firm becomes insolvent only if its cash falls too far below zero." (Slow firms do not, in a calm room.)</li>
+    <li>"How many quarters?" — "The session ends when it ends."</li>
+    <li>"Why did everyone lose money?" — "Total market revenue tracks public trust."</li>
+  </ul>
+
+  <h3>Ending</h3>
+  <p>The session ends by itself at the end quarter (fixed or hidden), or after quarter 30 in manual mode. To end early press <span class="k">F10</span> (or <span class="k">Shift+E</span>) twice within 3 seconds; a single press only arms it. Ending during an open quarter discards that quarter. Then press <span class="k">F9</span> to open the results. On the console, download both exports (history and DATA lines) before you delete anything.</p>
+</section>
+
+<!-- ─────────────────── Part 5: results ─────────────────── -->
+<section class="part">
+  <div class="part-head"><span class="n">5</span><h1>Ending and the results</h1></div>
+  <p>Allow 20 to 30 minutes. On the projector, <span class="k">F9</span> steps forward and <span class="k">Esc</span> steps back; the step is saved, so a reload returns to the same panel. Every panel opens with one bold sentence written from the session's data. Read it out, then ask the room. Participants see their own results card on their phones. From here on you may name the lesson.</p>
+  <p>The screenshots below come from the staged practice session: 12 firms, 14 quarters, the moratorium in quarter 13.</p>
+
+  <h2>Panel 1 · FINAL BOARD</h2>
+  <figure><img src="img/results-1.png" alt="Results panel 1, final board."><figcaption>Each firm from its peak (hollow square) to its final valuation (solid square), on one axis that includes zero.</figcaption></figure>
+  <div class="say">"Who finished first? Who peaked early, and what happened after?" This is the ranking the room has been chasing.</div>
+
+  <h2 style="break-before: page;">Panel 2 · TRUST TRACE</h2>
+  <figure><img src="img/results-2.png" alt="Results panel 2, trust trace."><figcaption>Trust quarter by quarter; red squares mark quarters that lost 5 or more; the moratorium quarter is labelled. The hidden level is drawn only if "Reveal TAU line" was on.</figcaption></figure>
+  <div class="say">"When did you first notice trust falling? What did your firm change?" Point at the steepest drops; the wire log's QUARTER BRIEF for those quarters says which firms drew most.</div>
+
+  <h2>Panel 3 · COUNTERFACTUAL</h2>
+  <figure><img src="img/results-3.png" alt="Results panel 3, counterfactual."><figcaption>INDUSTRY VALUE (actual), ALTERNATIVE (every firm at pace 2, safety 15, no cards, same luck) and VALUE LOST; the two trust paths with the gap hatched; each firm against the alternative.</figcaption></figure>
+  <div class="say">"This is the same room, the same luck, with every firm restrained. Could any single firm have prevented the difference?"</div>
+
+  <h2 style="break-before: page;">Panel 4 · ATTRIBUTION</h2>
+  <figure><img src="img/results-4.png" alt="Results panel 4, attribution."><figcaption>Each firm's share of the trust damage (left, red) against its share of the value (right).</figcaption></figure>
+  <div class="say">"Compare your share of the damage with your share of the value." This is the fairness conversation: the cost was shared, the gains were not.</div>
+
+  <h2>Panel 5 · NET CONTRIBUTION: the turning point</h2>
+  <figure><img src="img/results-5.png" alt="Results panel 5, net contribution, with a slope chart from rank by valuation to rank by net contribution."><figcaption>Left: each firm's rank by valuation, joined to its rank by net contribution; moves of 3 places or more are thick. Right: valuation, market effect (▲ or ▼), research credit (not money), rivalry taken, and the net contribution; under each firm its conduct ledger.</figcaption></figure>
+  <p>Net contribution re-ranks firms by what they did for the whole market, not only for themselves: final valuation, plus or minus what the firm's decisions did to every firm's revenue through trust (against pace 2, safety 15, no card), plus a research credit for each PUBLISH card, minus value taken from rivals with BLITZ, POACH and RUSH. The moratorium's cost is charged to the firms that drew trust down before it.</p>
+  <p>This is where the board turns around. In the staged session the valuation leader, GLYN, falls from 1st to 8th, and ARCN, 10th by valuation after 14 restrained quarters, rises to 1st. In the four October 2026 live rooms the valuation leader fell to between 5th and 9th (docs/SESSIONS.md, Session 18). It depends on the room: in a calm room with no moratorium an aggressive firm can still rank high (observer report, section 3, finding 4).</p>
+  <div class="say">"Ranked by value created for the whole market, where does your firm fall? Is that outcome fair, and who should pay?" Ask the valuation leader first.</div>
+
+  <h2 style="break-before: page;">Panel 6 · PACT RECORD</h2>
+  <figure><img src="img/results-6.png" alt="Results panel 6, pact record."><figcaption>Each pact's terms and members, detected and undetected breaches (now revealed), and a strip of quarter cells per firm.</figcaption></figure>
+  <div class="say">"Which pacts held and which broke? Was the difference monitoring, sanctions or trust?"</div>
+
+  <h2>Panel 7 · DEBRIEF</h2>
+  <figure><img src="img/results-7.png" alt="Results panel 7, the five debrief prompts."><figcaption>The five prompts (spec §15.5).</figcaption></figure>
+
+  <h2 style="break-before: page;">The five debrief prompts, and the answers to draw out</h2>
+  <p class="note">No record of what live rooms answered is kept in the repository. The answers below are what the session's own data and model support; use the panels to get the room there.</p>
+  <ol>
+    <li><strong>When did your firm first notice trust falling, and what did you change?</strong><br>Draw out: one firm's draw is about 1/N of the total and the fall builds over many quarters, so it is easy to notice late; and slowing down alone costs a firm share while rivals keep racing. Panel 2 shows when trust fell; the QUARTER BRIEF shows who drew most.</li>
+    <li><strong>Which pacts held and which broke? Was the difference monitoring, sanctions or trust?</strong><br>Draw out: a pact without audits is cheap to break (panel 6 shows undetected breaches); fines narrow the gain from breaking but, at the default settings, do not remove it. Monitoring, disclosure and graduated sanctions are Ostrom's design principles.</li>
+    <li><strong>Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay?</strong><br>Draw out: check on panel 4 whether the firms with the largest share of the damage also hold a large share of the value, and on panel 5 how the ranking changes when the shared cost is counted. A cost that falls on others is a negative externality.</li>
+    <li><strong>Would disclosure from quarter 1 have changed your decisions? Why?</strong><br>Draw out: whether firms behaved differently while their pace and safety were visible; compare quarters with disclosure on and off on the wire log.</li>
+    <li><strong>Where does this pattern appear in the real AI industry, and which of Ostrom's design principles would you add to the market?</strong><br>Draw out: racing to deploy, voluntary safety commitments, third-party audits and disclosure rules; clear boundaries, monitoring, graduated sanctions and rules the participants help make.</li>
+  </ol>
+  <p>Return to the opening claim tally from the deck ("Speed to market matters more to a firm's value than safety spend."): did the room's view change?</p>
+</section>
+
+<!-- ─────────────────── Part 6: troubleshooting and keys ─────────────────── -->
+<section class="part">
+  <div class="part-head"><span class="n">6</span><h1>Troubleshooting and the key map</h1></div>
+  <h2>If something goes wrong (RUNBOOK §5)</h2>
+  <table>
+    <tr><th style="width: 38%;">What you see</th><th>What to do</th></tr>
+    <tr><td>The projector page was refreshed or the laptop slept</td><td>Reload and sign in if asked. The quarter, countdown and ticks come back from the database. Nothing is lost.</td></tr>
+    <tr><td>Two windows open for the same session</td><td>Safe. F9 in both resolves a quarter once; the second press is refused.</td></tr>
+    <tr><td>Console says "Resolution incomplete — retry"</td><td>Press Retry resolution once. Nothing was written, so nothing is half-saved.</td></tr>
+    <tr><td>Results do not appear after the session ends</td><td>The console shows "Results are not written yet". Press Retry results and check the connection.</td></tr>
+    <tr><td>A team says "Joining is closed"</td><td>Joining closes at the briefing. A team that missed the lobby cannot be added; a device already in a firm can always reconnect.</td></tr>
+    <tr><td>A phone shows "Offline. Reconnecting automatically."</td><td>It reconnects by itself; the last commit is kept.</td></tr>
+    <tr><td>A phone clock is wrong</td><td>Not a problem: the countdown uses the server clock.</td></tr>
+    <tr><td>A team did not commit in time</td><td>It receives its defaults, marked AUTO, and the quarter proceeds.</td></tr>
+    <tr><td>You pressed END by mistake</td><td>One press only arms it for 3 seconds. A second press ends the session and cannot be undone.</td></tr>
+    <tr><td>An unknown firm or device appears in the lobby</td><td>Press REMOVE on that firm, ask the team to found it again with a new PIN, then press LOCK JOINS.</td></tr>
+    <tr><td>More firms than the mode allows, so F9 refuses to start</td><td>REMOVE the extra firms, starting with those whose PRESENCE reads none.</td></tr>
+    <tr><td>Multiplayer: someone's phone died</td><td>On another phone: type the code, Rejoin your firm with its PIN, pick the ticker, enter the PIN.</td></tr>
+    <tr><td>"Another device is joining this firm. Wait a few seconds and try again."</td><td>Teammates joined in the same second. Press Join the firm again; LOCK JOINS once every team has formed.</td></tr>
+    <tr><td>"Anonymous sign-in is switched off for this project"</td><td>Enable Anonymous sign-in in the Firebase console (RUNBOOK §1, step 2).</td></tr>
+    <tr><td>A key press shows "Working on the last key. Press again in a moment."</td><td>The previous action is still finishing. Wait a second and press again.</td></tr>
+    <tr><td>Anything else</td><td>Reload the page. If a quarter is stuck in RESOLVING, use Retry.</td></tr>
+  </table>
+  <p>Never ask a participant to read out a hidden value. The projector and phones never show the hidden level, the end quarter or unaudited breaches.</p>
+
+  <h2 style="break-before: page;">The key map</h2>
+  <p>On the projector page and the console. Every F-key has a Shift+letter alternative. F1, F5, F11 and F12 are never used by the app, so the browser keeps them.</p>
+  <table>
+    <tr><th style="width: 10%;">Key</th><th style="width: 16%;">Alternative</th><th>Action</th></tr>
+    <tr><td><span class="k">F2</span></td><td><span class="k">Shift+B</span></td><td>Board</td></tr>
+    <tr><td><span class="k">F3</span></td><td><span class="k">Shift+T</span></td><td>Trust history</td></tr>
+    <tr><td><span class="k">F4</span></td><td><span class="k">Shift+P</span></td><td>Pacts</td></tr>
+    <tr><td><span class="k">F6</span></td><td><span class="k">Shift+F</span></td><td>Audit a pact (then the pact's number)</td></tr>
+    <tr><td><span class="k">F7</span></td><td><span class="k">Shift+D</span></td><td>Disclosure on or off</td></tr>
+    <tr><td><span class="k">F8</span></td><td><span class="k">Shift+S</span></td><td>Summit in or out</td></tr>
+    <tr><td><span class="k">F9</span></td><td><span class="k">Shift+A</span></td><td>Advance: lobby → briefing → quarter → resolve → reveal → next quarter; after the end, opens and steps the results</td></tr>
+    <tr><td><span class="k">F10</span></td><td><span class="k">Shift+E</span></td><td>End the session (press twice within 3 s)</td></tr>
+    <tr><td><span class="k">Esc</span></td><td></td><td>Back to the board; on the results, one panel back</td></tr>
+  </table>
+  <h3>Projector commands</h3>
+  <p>Start typing on the projector and the command line appears in the top bar; press Enter.</p>
+  <table>
+    <tr><th style="width: 20%;">Command</th><th>Shows</th></tr>
+    <tr><td><code>BOARD</code></td><td>The board</td></tr>
+    <tr><td><code>TRST</code></td><td>Trust history</td></tr>
+    <tr><td><code>PACT</code></td><td>The pact table</td></tr>
+    <tr><td><code>WIRE</code></td><td>The wire headlines</td></tr>
+    <tr><td><code>FIRM &lt;TICKER&gt;</code></td><td>One firm's history</td></tr>
+    <tr><td><code>FIRMS</code></td><td>One small chart per firm on the same scale</td></tr>
+    <tr><td><code>RANKS</code></td><td>Every firm's rank by quarter</td></tr>
+    <tr><td><code>INCID</code></td><td>Every incident of the session</td></tr>
+    <tr><td><code>HELP</code></td><td>The commands and keys</td></tr>
+  </table>
+  <h3>Pages (routes)</h3>
+  <table>
+    <tr><th style="width: 28%;">Address</th><th style="width: 18%;">Who</th><th>Purpose</th></tr>
+    <tr><td><code>#/</code></td><td>Anyone</td><td>Landing page: type the code, or Facilitator sign-in</td></tr>
+    <tr><td><code>#/j/:code</code></td><td>Participants</td><td>Join: found or join a firm</td></tr>
+    <tr><td><code>#/play/:gameId</code></td><td>Participants</td><td>The phone: DESK, BOOK, PACTS, WIRE</td></tr>
+    <tr><td><code>#/screen/:gameId</code></td><td>Facilitator</td><td>The projector board, with the keys</td></tr>
+    <tr><td><code>#/control/:gameId</code></td><td>Facilitator</td><td>Private console: timer, firms, pacts, hidden values, exports</td></tr>
+    <tr><td><code>#/results/:gameId</code></td><td>Everyone in the session</td><td>Results: the seven panels on the projector; each firm's own card on its phone</td></tr>
+    <tr><td><code>#/new</code></td><td>Facilitator</td><td>Create a session</td></tr>
+    <tr><td><code>#/wire/:gameId</code></td><td>Facilitator</td><td>The wire log by quarter, with the QUARTER BRIEF and NOT ON THE WIRE</td></tr>
+  </table>
+</section>
+
+<!-- ─────────────────── Part 7: quick reference (last page) ─────────────────── -->
+<section class="ref">
+  <div class="part-head"><span class="n">7</span><h1>Quick reference</h1></div>
+  <div class="cols">
+    <div>
+      <h2>Run order</h2>
+      <ol>
+        <li><code>#/new</code>: settings, at least 6 firms (add bots), Create session.</li>
+        <li>Console on your laptop: <code>#/control/…</code>. Wire log in a second tab.</li>
+        <li>Briefing deck, about 15 minutes. Add SHARE and RUSH aloud.</li>
+        <li>Lobby: firms found and join. Remove empty firms. LOCK JOINS.</li>
+        <li><span class="k">F9</span> briefing screen: read the MARKET lines.</li>
+        <li>Each quarter: <span class="k">F9</span> open, watch COMMITTED, <span class="k">F9</span> resolve, read the reveal, <span class="k">F9</span> next.</li>
+        <li>As needed: <span class="k">F8</span> summit, <span class="k">F6</span> audit, <span class="k">F7</span> disclosure, console Pause.</li>
+        <li>End: automatic, or <span class="k">F10</span> twice.</li>
+        <li>Download both exports on the console.</li>
+        <li><span class="k">F9</span> through the seven results panels; panel 5 is the turning point; panel 7 the debrief.</li>
+      </ol>
+      <h2>Never say before the results</h2>
+      <p><strong>commons, tragedy, sustainable, sustainability, cooperate, cooperation, collective, shared resource, tipping point, threshold, collapse, game, player, score, win, level</strong></p>
+      <p>Never say the goal is public trust. Never hint at a hidden level or the number of quarters. Never call conduct good or bad. The aim, if asked: "Maximise your firm's valuation."</p>
+    </div>
+    <div>
+      <h2>Keys</h2>
+      <table>
+        <tr><th>Key</th><th>Alt</th><th>Action</th></tr>
+        <tr><td>F2</td><td>Shift+B</td><td>Board</td></tr>
+        <tr><td>F3</td><td>Shift+T</td><td>Trust</td></tr>
+        <tr><td>F4</td><td>Shift+P</td><td>Pacts</td></tr>
+        <tr><td>F6</td><td>Shift+F</td><td>Audit, then pact number</td></tr>
+        <tr><td>F7</td><td>Shift+D</td><td>Disclosure</td></tr>
+        <tr><td>F8</td><td>Shift+S</td><td>Summit</td></tr>
+        <tr><td>F9</td><td>Shift+A</td><td>Advance</td></tr>
+        <tr><td>F10</td><td>Shift+E</td><td>End (twice)</td></tr>
+        <tr><td>Esc</td><td></td><td>Board; results back</td></tr>
+      </table>
+      <p>Commands: BOARD, TRST, PACT, WIRE, FIRM &lt;TICKER&gt;, FIRMS, RANKS, INCID, HELP.</p>
+      <h2>Cards</h2>
+      <p>▼ POACH · ▲ PUBLISH · ▼ LOBBY · ▼ BLITZ · ▲ SHARE · ▼ RUSH · NONE</p>
+      <h2>If stuck</h2>
+      <p>Reload the page: nothing is lost. RESOLVING stuck: Retry on the console. Results missing: Retry results.</p>
+      <h2>Results panels</h2>
+      <p>1 FINAL BOARD · 2 TRUST TRACE · 3 COUNTERFACTUAL · 4 ATTRIBUTION · 5 NET CONTRIBUTION · 6 PACT RECORD · 7 DEBRIEF</p>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
