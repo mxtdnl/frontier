@@ -1271,3 +1271,82 @@ A room like the four live classes (observed-human room), moratorium by quarter 1
 - The briefing deck in `mxtdnl/slides` lists four cards; SHARE and RUSH are missing.
 
 **Tests:** not run. No code changed.
+
+## 2026-10-12 — Session 19: facilitator clarity and the facilitator guide
+
+**Owner decisions (2026-10-12)**
+1. **Briefing wording (Part B):** the three proposed lines, as written.
+2. **Pact form default (Part A):** no term ticked when the form opens.
+3. **Facilitator guide (Part E):** the PDF and its source are committed to `docs/facilitator-guide/`. They are never part of the GitHub Pages build and never linked from the app.
+
+**Done**
+- **Part A, pact terms on the phone** (commit `phone: pact form opens with no term ticked…`):
+  - The propose form opens with no term ticked. Typing a minimum safety ticks only the safety term, so a "safety 25" pact has no pace term. With no pace term, no pace segment shows as selected (`Segmented4` now accepts no value).
+  - A preview above SIGN: "You are signing: pace 2 or lower · safety 25 or higher".
+  - The decision ticket shows one line per breached pact, for example "▼ Breaks PACT-A: pace 2 or lower." It names only the broken term and is built with the engine's `breaches()`. It covers only active pacts the firm is still a member of, and it never blocks COMMIT.
+  - Spec §5.3 and §14.3.
+- **Part B, briefing** (commit `briefing: add the spending and insolvency lines`):
+  - The three owner lines are in `briefing.ts`, so they appear on the projector and on the phone's briefing.
+  - In lit-room mode, briefing paragraphs now sit half a line apart. Spec §6.6.
+- **Part C, QUARTER BRIEF** (commit `wire: add the facilitator-only QUARTER BRIEF`):
+  - `src/engine/trust.ts` adds `trustBreakdown` and `breakdownSum`.
+  - `src/screens/Wire/brief.ts` builds the four sentences.
+  - On `#/wire`, the brief sits at the top of every resolved quarter, and COPY includes it.
+  - Spec §14.2.
+- **Part D, teaching notes** (commit `runbook: add teaching notes for facilitators`): a new first section in `docs/RUNBOOK.md`. Every claim names its source (spec, `params.ts` or a committed report), and room-dependent results are marked as such.
+- **Part E, facilitator guide** (commit `guide: add the facilitator guide (PDF) and its build`):
+  - Source: `docs/facilitator-guide/guide.html`.
+  - PDF: `docs/facilitator-guide/FRONTIER-facilitator-guide.pdf`, 33 pages, 2.2 MB.
+  - Screenshots: 22 images in `img/`.
+  - Build: `npm run guide:shots` captures the screenshots (emulators, seed 11, ten in-app bot firms and two scripted phone firms QRRY and TLWN, 14 quarters, moratorium in quarter 13). `npm run guide:pdf` renders the PDF.
+  - Sources read: the briefing deck in `mxtdnl/slides` (`standalone/2026-10-frontier-briefing.html` and its `.brief.md`), cloned read-only to `../slides` and not changed. The guide follows the deck's order and wording.
+  - The runbook §10 points to the guide.
+
+**Tests**
+- `npm run typecheck` passes. `lint:copy` and `lint:design` pass. `npm run build` succeeds.
+- `npm test`: 694 passed (was 643).
+  - New files: `tests/engine/trust.test.ts` (13: each term, clamps at 0 and 100, the moratorium quarter, a drop smaller than BACKLASH, R_eff after the moratorium, quarter 1 from T0, and a property test over 60 seeds and 1,200 quarters); `tests/ui/quarter-brief.test.ts` (10); `tests/ui/guide.test.ts` (11).
+  - Additions to existing files: `pacts-model` +7 (default, preview, notices: equality, several pacts, former member, no pacts); engine `pacts` +2 (an equality boundary test, and a safety-only pact); `hidden-paths` +7 (the brief is never reached from the projector, the phone or the results); `wire-log` +1 (COPY).
+- `npm run test:rules`: 166 passed (unchanged).
+- `test:e2e`: 340 checks pass (was 324). New:
+  - the pact preview and the ticket notice at 360×640, with 44 px targets
+  - equality gives no notice
+  - Done in view
+  - the briefing lines, and the briefing fit at both sizes, standard and lit-room.
+  - Screenshots: `shots/e2e-play-pact-preview-360x640.png`, `shots/e2e-play-pact-notice-360x640.png`, `shots/e2e-briefing-lit-*.png`.
+- `test:e2e:rehearsal`: 220 checks pass (was 204). Every one of the 14 quarters on `#/wire` has a QUARTER BRIEF whose terms sum to the stored dT within 1e-9. Neither the projector nor the phone ever shows it.
+- `test:e2e:wire`: 25 checks pass (was 22). There is a brief for each of the 30 quarters at 50 firms. ALL still renders in about 0.2 s, and COPY carries the brief.
+- `npm run guide:pdf` passes: no network request, no missing image, the font loaded, 33 pages (range 25–45), 2.17 MB.
+- **Visual check of the guide.**
+  - All 33 pages of the first render were checked at 90 dpi, two pages per image.
+  - Three defects were found and fixed:
+    - the quick reference's 10th list item was clipped to "0."
+    - the card table's cost column touched the effect column
+    - the console and wire screenshots had wide black margins.
+  - After the fixes, pages 6, 11, 18 and 33 of the final render were rechecked at 90 dpi, and all 33 pages at about 65 dpi, four to a sheet. No clipped or overlapping text was found.
+- **Failures during the session (fixed):**
+  - Lit-room briefing clipped at both sizes. The CONTROLS panel, which did not change in this session, was clipped too, so the six-card list already overflowed in lit-room mode before Session 19.
+  - My first ticket-notice e2e measured the card sheet's Done before scrolling. Done sits at the end of the sheet's own scroll, as in the Session 17 check.
+  - One trust test drew no incident because a SHARE card cut the forced incident risk.
+  - The first screenshot run lost its submit helper when the phone page left the harness.
+- **Observation:** the rehearsal's panel 5 headline differed between two runs of the same app code today. The first gave "BTAG falls from 1st to 9th … moratorium cost 433"; the second "… 1st to 8th … 389". The rehearsal's bot clients run on real timers, so the stored session can vary slightly. Every check compares against the stored results, so both runs pass. This variation existed before this session.
+
+**Spec deviations**
+- **Moratorium term (Part C).** The brief shows the drop actually applied: −BACKLASH, or less when trust was already below BACKLASH (the engine applies max(0, T − BACKLASH)). The session text says −BACKLASH; the actual drop is what makes the terms sum to dT. The clamp term is labelled "floor at 0" or "ceiling at 100".
+- **Term precision.** Terms under 1 show two decimals without a trailing zero (PUBLISH +0.25, LOBBY −0.5); the rest show one decimal.
+- **Breaches in the board halves** sit with the breaching firm's rank in the audit quarter, even when the breach itself was in an earlier quarter of the audit window.
+- **Insolvent firms.** The ticket notice uses the pace the engine will apply, Cautious, so an insolvent member never sees a pace notice.
+- **Debrief answers (Part E).** The session asked for "the answers the room usually reaches". The repository holds no record of what live rooms answered. The guide gives the answers the session's data and model support, and says so on the page.
+- **Guide page colour.** The page is unfilled white paper; every colour used is from `tokens.css` (a test checks this). ▲ ▼ ◄ ► are not in the self-hosted latin subset of IBM Plex Mono and render in a fallback font, as they do in the app.
+- **Guide render test.** The page-count and missing-image checks run in `npm run guide:pdf`, not in `npm test`: the GitHub Pages workflow runs `npm test` without Chromium. `npm test` checks the committed PDF's page count and size, that every image exists, and that the guide is never linked from the app.
+
+**Open issues**
+- **The briefing deck in `mxtdnl/slides`** still lists four cards (no SHARE or RUSH) and lacks the three new lines. The owner must update it; this session did not edit that repository. The guide tells facilitators to add the missing items aloud until then.
+- **The guide does not update itself.** After a UI change, run `npm run guide:shots` and then `npm run guide:pdf`. Tests catch a missing card, route or key in the guide, but not an outdated screenshot.
+- **"The room copies the leaders"** rests on one observer's report. The guide and runbook mark it as an observation, not a property of the model.
+- **The section 4 recommendations** in the observer report remain unscheduled: the net-contribution diagnostic, rivalry over the remaining quarters, and the passive firm.
+
+**Next steps**
+- Owner: merge, then on the live site open a pact on a phone (no term ticked; preview; ticket notice) and open WIRE LOG during a rehearsal to see the QUARTER BRIEF.
+- Owner: update the slides deck (six cards and the three new briefing lines).
+- Owner: read the facilitator guide before the next class.
