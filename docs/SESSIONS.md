@@ -755,3 +755,157 @@ Run after Session 17. Read:
   - what the owner should look at on the live site.
 
 **Commits.** Commit each part separately, in the order A, B, C.
+
+---
+
+# Observer feedback (Session 19)
+
+Added on 2026-10-12. An observer of the live sessions sent feedback; it is in `reports/observer-feedback-2026-10-12.md` with a triage against the spec and Sessions 17–18. Session 19 builds the accepted items. That report's section 2 lists what will not be built, and why. Its section 4 lists recommendations on the NET CONTRIBUTION method that need owner decisions; they are not part of Session 19.
+
+## Session 19 — Facilitator clarity and the facilitator guide (model: Opus 5.5)
+
+Read:
+- `reports/observer-feedback-2026-10-12.md` (all of it)
+- docs/spec.md §1, §5.3, §6.3, §6.6, §6.7, §9, §10, §14.2, §14.3, §14.5, §15 and §16
+- docs/RUNBOOK.md (all of it)
+- the Session 17 and 18 entries in docs/PROGRESS.md.
+
+**Why.**
+- **Pacts.** A live firm believed that meeting a pact's minimum safety exactly was a breach. The engine already treats "equal" as compliant (`src/engine/pacts.ts`). The likely cause is the pact form: it opens with "Maximum pace 2" ticked, and typing a minimum safety leaves it ticked, so a "safety 25" pact also caps pace at 2.
+- **Spending.** Participants did not feel that cash spent mattered. Every unit of cash spent is a unit of valuation, but the briefing does not say so.
+- **Narrative.** The facilitator could not tell, quarter by quarter, where the fall in trust came from or which firms on the board caused it.
+- **Facilitators new to FRONTIER** have only the runbook. They need to know what the session is built to teach, what they must not say before the results screen, and how to run each step.
+
+**Not in this session** (decided 2026-10-12; reasons in the report, section 2):
+- no change to the projector ticker or to headline selection
+- no per-firm reputation and no change to BLITZ, POACH or LOBBY effects
+- no market-wide incidents
+- no briefing claim that a slow firm goes bankrupt; it is false in the current model
+- no change to the NET CONTRIBUTION method (report, section 4).
+
+**Owner decisions.** Ask them one at a time, in this order, before presenting the plan.
+1. **Briefing wording (Part B).** Proposed lines, to add after "Valuation reflects cash plus capability, priced by the market.":
+   - "Every cost comes out of cash, and cash counts in full in your valuation."
+   - "A firm whose cash falls too far below zero becomes insolvent: it is held at Cautious pace and cannot play cards."
+   - "A firm that falls behind on capability loses market share."
+2. **Pact form default (Part A).** Recommended: no term ticked when the form opens, so a firm chooses each term it signs. The alternative is to keep "Maximum pace 2" ticked and rely on the terms preview.
+3. **Where the facilitator guide lives (Part E).** Recommended: commit the PDF and its source to `docs/facilitator-guide/`. Like `docs/spec.md`, it names the lesson, so anyone who can read the repository can read it. It is never part of the GitHub Pages build (`dist/`) and never linked from the app.
+
+### Part A — Pact terms on the phone
+
+1. **Spec:** §5.3 and §14.3.
+2. **Pact form** (`src/screens/Play/PactsTab.tsx`, `pacts.ts`):
+   - the default terms as owner decision 2 sets them
+   - above SIGN, a terms preview built with `termsText`: "You are signing: pace 2 or lower · safety 25 or higher".
+3. **Decision ticket** (`src/screens/Play/Desk.tsx`): when the pace and safety on the ticket would break the terms of any active pact the firm belongs to, show one notice line per pact, for example "Breaks PACT-A: pace 2 or lower." Use the engine's `breaches()`, so the phone and the resolution can never disagree.
+   - The notice does not block COMMIT. Breaking a pact stays the firm's choice.
+   - It is not shown for a pact the firm has left or been expelled from.
+   - No colour alone: the line carries ▼ and the text.
+4. **Tests:**
+   - engine: a firm whose safety equals the pact minimum, or whose pace equals the pact maximum, is compliant (an explicit boundary test in `tests/engine/pacts.test.ts`)
+   - the notice builder: equality gives no notice; several pacts; a former member; no pacts
+   - e2e: the preview and the notice at 360×640, with 44 px targets and Done in view; screenshots.
+
+### Part B — Spending in the briefing
+
+1. **Spec:** §6.6 and §14.5, with the owner's wording from decision 1.
+2. `src/screens/Screen/briefing.ts`. The briefing stays one screen with no numbers that reveal parameters. Check that it fits at 1280×720 and 1920×1080, and in lit-room mode.
+3. `lint:copy` passes.
+4. **The briefing deck** in the `mxtdnl/slides` repository (`standalone/2026-10-frontier-briefing.html`) is outside this repository. It still lists four cards (no SHARE or RUSH) and lacks these lines. Note it in the pull request as a manual follow-up for the owner. Do not edit that repository.
+
+### Part C — QUARTER BRIEF on the facilitator wire screen
+
+1. **Spec:** §14.2. A facilitator-only block at the top of each quarter on `#/wire`, for resolved quarters. Never rendered on `#/screen`, `#/play` or `#/results`.
+2. **Engine:** a pure function `trustBreakdown` in `src/engine/` that splits the quarter's trust change into the §6.3 step 6 and step 7 terms, from the stored history and the previous quarter's T (T0 before quarter 1):
+   - recovery: R_eff × T × (1 − T/100), with R_eff as at the start of the quarter
+   - draw: −Σ draw
+   - incidents: −INC_TRUST × 8/N per incident
+   - PUBLISH: +PUBLISH_TRUST × 8/N per card
+   - LOBBY: −LOBBY_TRUST per card
+   - clamp: the amount removed by clamping T to [0, 100], when not zero
+   - moratorium: −BACKLASH, in the moratorium quarter.
+   
+   The terms must sum to the stored dT within 1e-9.
+3. **Block content** (`src/screens/Wire/`), in plain sentences, for example:
+   - "Trust ▼5.4 to 51.3. Recovery +3.2 · draw −6.8 · incidents −1.5 (BTC) · PUBLISH +0.25 (ARCN) · LOBBY −0.5 (HUMN)."
+   - "Largest draws: HUMN 1.4 (1st, pace 4 · safety 0) · BTC 1.1 (3rd, pace 3 · safety 5) · ARCN 1.0 (2nd, pace 3 · safety 15)." Top 3 by draw, with the firm's rank on the board after the quarter.
+   - "Top half: ▼ POACH HUMN · ▼ RUSH BTC · ▲ PUBLISH ARCN. Bottom half: ▲ SHARE KOVA." Cards grouped by board half (top half = rank ≤ ceil(N/2)), each marked with its §10 conduct ledger side. Breaches found by audit this quarter are added, with ▼.
+   - "Every trust loss this quarter came from firms' own pace, safety, cards and incidents." Always true in the model; it answers the "was it chance?" question.
+4. **Privacy.** The block uses engine history (pace, safety, draw and cards while disclosure is off). It sits behind the facilitator gate like NOT ON THE WIRE, and the import-graph test covers it. It never shows τ or the end round.
+5. **COPY** includes the block.
+6. **Tests:**
+   - `trustBreakdown`: each term on its own; a quarter with every term; clamping at 0 and at 100; the moratorium quarter; quarters after the moratorium (R_eff); quarter 1 from T0; a property test that the terms sum to dT over random seeds
+   - the block builder: board halves with odd N; ties in draw; no cards; disclosure off still shows pace and safety (facilitator only)
+   - the import-graph test: the projector, phone and results bundles never import the block
+   - e2e: the block on `#/wire` in the rehearsal, with 50 firms × 30 quarters still responsive (`test:e2e:wire`).
+
+### Part D — Teaching notes in the runbook
+
+1. A new section at the top of `docs/RUNBOOK.md`, "What the session teaches (facilitators only)":
+   - the four learning objectives (§1), in plain English
+   - what the room is told (a competitive business simulation, the briefing lines) against what it is built to show (private gains, a shared cost)
+   - what not to say before the results screen: the §15.3 words, and that the goal is public trust. A warned room plays differently.
+   - why aggressive firms lead the board, and why the room copies them
+   - true statements a facilitator can rely on, from `reports/observer-feedback-2026-10-12.md` section 3 and `reports/strategy-audit.md`. For example: a slow firm does not go bankrupt in a calm room; after a moratorium most firms become insolvent.
+   - how the results panels turn the board around, panel by panel.
+2. Every claim must match the spec, `params.ts` or a committed report. Where a claim depends on the room, say so.
+
+### Part E — Facilitator guide (PDF), last
+
+A separate PDF for facilitators: a detailed walkthrough for someone running FRONTIER for the first time.
+
+1. **Source material:**
+   - this repository: docs/spec.md, docs/RUNBOOK.md (with Part D), the key map, `reports/`
+   - the participant briefing deck in the `mxtdnl/slides` repository. It is public; clone it read-only with `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 https://github.com/mxtdnl/slides ../slides`. Read `standalone/2026-10-frontier-briefing.html` (slides and speaker notes) and its `.brief.md`. Use its order and its plain explanations of the market chain, the three decisions, the phone and the projector, so the guide and the briefing agree.
+   - Do not copy the deck's screenshots. They predate Session 17 (four cards). Capture new ones.
+2. **Screenshots:** capture from a staged session against the emulators: fixed seed, bot firms, fictional tickers. Use a new script `scripts/guide-shots.ts`, or the existing e2e screenshots where they show the right state. Cover:
+   - `#/new`
+   - the lobby
+   - the briefing
+   - the board while a quarter is open
+   - the reveal with the INCIDENTS block
+   - the phone DESK, the decision ticket with a pact notice, the result card, BOOK and PACTS
+   - `#/control`
+   - `#/wire` with the QUARTER BRIEF
+   - each of the seven results panels.
+3. **Contents,** in this order:
+   1. What FRONTIER is and what it teaches (Part D, expanded). The rule about what never to say before the results screen comes first, on its own page.
+   2. How the model works, in plain English: trust, market, share, cash and valuation; private gains and the shared cost; incidents; the moratorium; each of the six cards with its real effect and its place on the conduct ledger; pacts, audits, fines and LOBBY; disclosure. Mark the pages that must not be read aloud.
+   3. Before class: a checklist covering devices, the firm count (at least 6; add bot firms), the end mode, the database rules, every `#/new` setting explained, and a rehearsal with bot firms.
+   4. Running the session, step by step with screenshots:
+      - the lobby
+      - the briefing, with how to present the slides deck and the app's briefing screen
+      - each quarter: open, the timer, the COMMITTED count, resolve, the reveal, incidents, the wire
+      - using `#/wire` and the QUARTER BRIEF on a second screen to point out what leading firms did
+      - audits (F6), disclosure (F7), summits and pauses, with when to use each
+      - what to say and what not to say in each phase.
+   5. Ending and the results: each of the seven panels, what it shows, what to say, and the NET CONTRIBUTION re-ranking as the turning point. The five debrief prompts, with the answers the room usually reaches.
+   6. Troubleshooting (RUNBOOK §5) and the full key map, with the Shift+letter alternative for every F-key.
+   7. A one-page quick reference as the last page: the run order, the keys, and the words not to say.
+4. **Build:**
+   - source `docs/facilitator-guide/guide.html` (print CSS, A4, IBM Plex Mono from @fontsource, colours from `src/ui/tokens.css` on a light page, square corners, 1 px rules)
+   - `npm run guide:pdf` renders it with Playwright's Chromium (`/opt/pw-browsers/chromium`) to `docs/facilitator-guide/FRONTIER-facilitator-guide.pdf`
+   - no network fetches at render time; images are local files; the PDF stays under 10 MB.
+5. **The design and copy rules** (§15–§16) apply, except that the guide may name the lesson and use the §15.3 words: it is facilitator-only. The §15.2 words stay banned. Keep `lint:copy` scoped to `src/screens` and `src/ui`, and run the §15.2 list over `guide.html` with a test.
+6. **Tests:**
+   - every card in `CARDS`, every route in §3 and every key in the key map appears in `guide.html`. The guide must not go stale the way the deck's card list did.
+   - the render script produces a PDF of the expected page count range, with no missing images (fail on any failed image request)
+   - visual check: open each page's render at 100% and check that no text is clipped or overlaps; list the pages checked in PROGRESS.
+7. **Pull request:** attach no screenshots of the guide; say where the PDF is and how to download it from GitHub (exact clicks: the file, then the download button).
+
+**Tests (whole session).** `npm run typecheck`, `npm test`, `npm run test:rules`, `lint:copy`, `lint:design`, `npm run build`, `test:e2e`, `test:e2e:rehearsal` and `test:e2e:wire` all pass.
+
+**Acceptance.**
+- **Part A.** A pact signed as "safety 25" alone has no pace term. A firm at safety 25 sees no notice and records no breach.
+- **Part B.** The briefing carries the owner's lines and fits one screen at both sizes.
+- **Part C.** In the rehearsal, every resolved quarter on `#/wire` shows a QUARTER BRIEF whose terms add up to the quarter's trust change. Nothing from it reaches the projector or phones.
+- **Part D.** The runbook opens with the teaching notes.
+- **Part E.** `docs/facilitator-guide/FRONTIER-facilitator-guide.pdf` exists, is rebuilt by `npm run guide:pdf`, and passes its tests.
+- **Pull request.** States, in plain English:
+  - what changed on the phone for pacts
+  - the new briefing lines
+  - how to open the QUARTER BRIEF (exact URL and clicks)
+  - where the facilitator guide is and how to download it
+  - that the briefing deck in the slides repository needs updating (six cards and the new lines).
+
+**Commits.** Commit each part separately, in the order A, B, C, D, E.
