@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { Pact } from '../../src/engine';
 import { RevealCard } from '../../src/screens/Play/Panels';
 import { cardNoticeText, resultNotices, wireItems } from '../../src/screens/Play/model';
-import { DEFAULT_TERMS_FORM, canPropose, pactAction, sortPacts, termsFromForm, termsText } from '../../src/screens/Play/pacts';
+import { DEFAULT_TERMS_FORM, canPropose, pactAction, pactNotices, sortPacts, termsFromForm, termsPreview, termsText } from '../../src/screens/Play/pacts';
 import type { RoundNode, WireNode } from '../../src/firebase/schema';
 
 const pact = (over: Partial<Pact> = {}): Pact => ({
@@ -14,7 +14,7 @@ const pact = (over: Partial<Pact> = {}): Pact => ({
 describe('propose form', () => {
   it('requires a maximum pace, a minimum safety, or both', () => {
     expect(termsFromForm({ ...DEFAULT_TERMS_FORM, limitPace: false, limitSafety: false }).ok).toBe(false);
-    expect(termsFromForm(DEFAULT_TERMS_FORM)).toEqual({ ok: true, terms: { maxPace: 2, minSafety: null } });
+    expect(termsFromForm({ ...DEFAULT_TERMS_FORM, limitPace: true })).toEqual({ ok: true, terms: { maxPace: 2, minSafety: null } });
     expect(termsFromForm({ limitPace: false, maxPace: 2, limitSafety: true, minSafety: '12' })).toEqual({ ok: true, terms: { maxPace: null, minSafety: 12 } });
     expect(termsFromForm({ limitPace: true, maxPace: 3, limitSafety: true, minSafety: '0' })).toEqual({ ok: true, terms: { maxPace: 3, minSafety: 0 } });
   });
@@ -33,6 +33,55 @@ describe('propose form', () => {
   it('allows proposals only while a quarter is open or in a summit', () => {
     expect(['open', 'summit'].every((p) => canPropose(p as never))).toBe(true);
     for (const p of ['lobby', 'briefing', 'resolving', 'reveal', 'ended']) expect(canPropose(p as never)).toBe(false);
+  });
+});
+
+describe('pact form default and preview (Session 19)', () => {
+  it('opens with no term ticked, so nothing can be signed until the firm chooses a term', () => {
+    expect(DEFAULT_TERMS_FORM.limitPace).toBe(false);
+    expect(DEFAULT_TERMS_FORM.limitSafety).toBe(false);
+    expect(termsFromForm(DEFAULT_TERMS_FORM).ok).toBe(false);
+    expect(termsPreview(DEFAULT_TERMS_FORM)).toBeNull();
+  });
+
+  it('a firm that types only a minimum safety signs a safety-only pact', () => {
+    const f = { ...DEFAULT_TERMS_FORM, limitSafety: true, minSafety: '25' };
+    expect(termsFromForm(f)).toEqual({ ok: true, terms: { maxPace: null, minSafety: 25 } });
+    expect(termsPreview(f)).toBe('You are signing: safety 25 or higher');
+  });
+
+  it('previews both terms, and nothing while the safety value is invalid', () => {
+    expect(termsPreview({ limitPace: true, maxPace: 2, limitSafety: true, minSafety: '25' })).toBe('You are signing: pace 2 or lower · safety 25 or higher');
+    expect(termsPreview({ limitPace: true, maxPace: 2, limitSafety: true, minSafety: '31' })).toBeNull();
+  });
+});
+
+describe('decision ticket pact notices (Session 19)', () => {
+  const both = pact({ id: 'p1', name: 'PACT-A', terms: { maxPace: 2, minSafety: 25 }, members: { a: 1, b: 1 } });
+  const safe = pact({ id: 'p2', name: 'PACT-B', terms: { maxPace: null, minSafety: 15 }, members: { a: 2 }, createdRound: 2 });
+
+  it('gives no notice at equality with either term', () => {
+    expect(pactNotices({ p1: both }, 'a', 2, 25)).toEqual([]);
+    expect(pactNotices({ p2: safe }, 'a', 4, 15)).toEqual([]);
+  });
+
+  it('names only the broken term, one line per pact, in pact order', () => {
+    expect(pactNotices({ p1: both }, 'a', 3, 25)).toEqual([{ pactId: 'p1', text: 'Breaks PACT-A: pace 2 or lower.' }]);
+    expect(pactNotices({ p1: both }, 'a', 2, 24)).toEqual([{ pactId: 'p1', text: 'Breaks PACT-A: safety 25 or higher.' }]);
+    expect(pactNotices({ p2: safe, p1: both }, 'a', 3, 10)).toEqual([
+      { pactId: 'p1', text: 'Breaks PACT-A: pace 2 or lower · safety 25 or higher.' },
+      { pactId: 'p2', text: 'Breaks PACT-B: safety 15 or higher.' },
+    ]);
+  });
+
+  it('gives no notice for a pact the firm left, was expelled from, or never joined, nor for a dissolved pact', () => {
+    // A firm that leaves or is expelled is removed from members (engine auditPact, api leavePact).
+    expect(pactNotices({ p1: both }, 'c', 4, 0)).toEqual([]);
+    expect(pactNotices({ p1: { ...both, status: 'dissolved' } }, 'a', 4, 0)).toEqual([]);
+  });
+
+  it('gives no notice when there are no pacts', () => {
+    expect(pactNotices({}, 'a', 4, 0)).toEqual([]);
   });
 });
 

@@ -1,7 +1,7 @@
 /**
  * Pure helpers for the PACTS tab (spec §5.3, §9.1). No Firebase and no React.
  */
-import type { Pace, Pact, PactTerms } from '../../engine';
+import { breaches, type Pace, type Pact, type PactTerms } from '../../engine';
 import type { Phase } from '../../firebase/schema';
 
 export interface TermsForm {
@@ -12,7 +12,8 @@ export interface TermsForm {
   minSafety: string;
 }
 
-export const DEFAULT_TERMS_FORM: TermsForm = { limitPace: true, maxPace: 2, limitSafety: false, minSafety: '15' };
+/** No term is ticked when the form opens: a firm chooses each term it signs (owner decision, Session 19). */
+export const DEFAULT_TERMS_FORM: TermsForm = { limitPace: false, maxPace: 2, limitSafety: false, minSafety: '15' };
 
 export type TermsResult = { ok: true; terms: PactTerms } | { ok: false; message: string };
 
@@ -44,6 +45,34 @@ export function termsText(t: PactTerms): string {
   if (t.maxPace !== null) parts.push(`pace ${t.maxPace} or lower`);
   if (t.minSafety !== null) parts.push(`safety ${t.minSafety} or higher`);
   return parts.join(' · ') || '–';
+}
+
+/** The line above SIGN (spec §5.3, §14.3): exactly the terms the firm would sign, or null while the form is invalid. */
+export function termsPreview(f: TermsForm): string | null {
+  const r = termsFromForm(f);
+  return r.ok ? `You are signing: ${termsText(r.terms)}` : null;
+}
+
+export interface PactNotice {
+  pactId: string;
+  text: string;
+}
+
+/**
+ * Decision ticket notices (spec §14.3, Session 19): one per active pact the firm belongs to whose terms the draft would
+ * break. Uses the engine's `breaches()`, so the phone and the resolution agree; equality is compliant. A firm that left
+ * or was expelled is no longer in `members` and gets no notice. Pass the pace the engine will apply (1 when insolvent).
+ */
+export function pactNotices(pacts: Record<string, Pact>, firmId: string, pace: Pace, safety: number): PactNotice[] {
+  return sortPacts(pacts)
+    .filter((pact) => pact.status === 'active' && firmId in pact.members && breaches(pact.terms, pace, safety))
+    .map((pact) => {
+      const broken: PactTerms = {
+        maxPace: pact.terms.maxPace !== null && pace > pact.terms.maxPace ? pact.terms.maxPace : null,
+        minSafety: pact.terms.minSafety !== null && safety < pact.terms.minSafety ? pact.terms.minSafety : null,
+      };
+      return { pactId: pact.id, text: `Breaks ${pact.name}: ${termsText(broken)}.` };
+    });
 }
 
 /** Active pacts first, then by creation order. */

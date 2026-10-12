@@ -1561,6 +1561,15 @@ legend {
   padding-left: 1ch;
   border-left: 2px solid var(--rule);
 }
+/* Pact form: the terms a firm is about to sign (Session 19). */
+.pact-preview {
+  padding-left: 1ch;
+  border-left: 2px solid var(--signal-dim);
+}
+/* Decision ticket: a draft that would break a pact the firm belongs to. Carries ▼ and the text, never colour alone. */
+.ticket-pact {
+  color: var(--down);
+}
 
 /* ---------- Result sentence, notices with a left rule, three-step strip ---------- */
 .result-sentence {

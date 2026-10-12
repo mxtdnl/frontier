@@ -4,6 +4,7 @@ import type { DecisionNode } from '../../firebase/schema';
 import { BRIEFING_LINES } from '../Screen/briefing';
 import { CardPicker, CommitButton, GlyphCheck, Panel, Segmented4, SafetySlider } from '../../ui/components';
 import { fmt, fmtTime } from '../../ui/format';
+import type { PactNotice } from './pacts';
 import { CARD_INFO, EXPOSURE_STEPS, PACE_OPTIONS, canCommit, commitBar, deskFigures, exposureStep, sameDraft, type Draft, type PlayView } from './model';
 
 interface Target {
@@ -26,6 +27,8 @@ interface Props {
   sending: boolean;
   offline: boolean;
   error: string;
+  /** Pacts the draft would break (spec §14.3, Session 19). Shown on the ticket; they never block COMMIT. */
+  pactNotices: ReadonlyArray<PactNotice>;
   onCommit: () => void;
 }
 
@@ -133,6 +136,12 @@ export function Desk(p: Props) {
             <span className="dim">Public exposure</span>
             <ExposureMeter label={exposure} />
           </div>
+          {p.pactNotices.map((n) => (
+            <p key={n.pactId} className="ticket-pact" data-pact-notice={n.pactId}>
+              <span aria-hidden="true">▼ </span>
+              {n.text}
+            </p>
+          ))}
         </section>
         {showButton ? (
           <CommitButton

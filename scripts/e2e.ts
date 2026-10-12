@@ -636,8 +636,28 @@ async function participantScenario(
   await snapPlay(A, 'play-summit');
 
   // Pacts (Session 6): propose from the phone, join from the desktop, audit and disclose from the projector.
-  await A.getByRole('button', { name: 'PROPOSE A PACT' }).click();
-  await A.getByRole('button', { name: 'SIGN PACT-A' }).click();
+  // Session 19: the form opens with no term ticked and previews the terms above SIGN, at 360×640.
+  {
+    const base = A.viewportSize() ?? { width: 390, height: 844 };
+    await A.setViewportSize({ width: 360, height: 640 });
+    await A.getByRole('button', { name: 'PROPOSE A PACT' }).click();
+    check(!(await A.getByRole('checkbox', { name: 'Maximum pace' }).isChecked()) && !(await A.getByRole('checkbox', { name: 'Minimum safety spend' }).isChecked()), 'the pact form opens with no term ticked');
+    check(/No term chosen/.test(await A.locator('[data-pact-preview]').innerText()), 'with no term ticked the preview says so');
+    await A.locator('#pact-safety').fill('25');
+    check((await A.locator('[data-pact-preview]').innerText()).trim() === 'You are signing: safety 25 or higher', 'typing a minimum safety previews a safety-only pact');
+    await A.getByRole('checkbox', { name: 'Maximum pace' }).check();
+    check((await A.locator('[data-pact-preview]').innerText()).trim() === 'You are signing: pace 2 or lower · safety 25 or higher', 'ticking a maximum pace adds it to the preview');
+    await A.getByRole('checkbox', { name: 'Minimum safety spend' }).uncheck();
+    check((await A.locator('[data-pact-preview]').innerText()).trim() === 'You are signing: pace 2 or lower', 'the preview shows exactly the ticked terms');
+    const sign = A.getByRole('button', { name: 'SIGN PACT-A' });
+    await sign.scrollIntoViewIfNeeded();
+    const pv = await A.locator('[data-pact-preview]').boundingBox();
+    const sb = await sign.boundingBox();
+    check(pv !== null && sb !== null && pv.y + pv.height <= sb.y && pv.y >= 0 && sb.y + sb.height <= 640 && sb.height >= 44, 'at 360×640 the preview sits above SIGN, both in view, with a 44 px target');
+    await shot(A, 'play-pact-preview');
+    await sign.click();
+    await A.setViewportSize(base);
+  }
   await waitText(A, /PACT-A[\s\S]*Terms\s+pace\s+2/, 'a pact is proposed from the phone during the summit');
   check((await A.locator('[data-pact-terms]').first().getAttribute('aria-label')) === 'pace ≤ 2', 'pact terms read pace ≤ 2');
   check((await A.getByText('Summit in session. Propose, join or leave pacts now.').count()) === 0, 'the summit shows one notice, not two');
@@ -651,7 +671,6 @@ async function participantScenario(
   await A.getByRole('tab', { name: 'PACTS' }).click();
   // Another pact attempt without terms is refused with an explanation.
   await A.getByRole('button', { name: 'PROPOSE A PACT' }).click();
-  await A.getByRole('checkbox', { name: 'Maximum pace' }).uncheck();
   await A.getByRole('button', { name: /SIGN PACT-B/ }).click();
   await waitText(A, /Set a maximum pace, a minimum safety spend, or both/, 'a pact with no terms is explained');
   await A.getByRole('button', { name: 'CANCEL' }).click();
@@ -670,6 +689,29 @@ async function participantScenario(
   check((await A.locator('[data-commit-status="locked"]').count()) === 1 && (await A.locator('.desk-foot .btn-signal').count()) === 0, 'the desk is locked during the summit');
   await key(fac, 'F8');
   await waitText(A, /^(?![\s\S]*Industry summit in session)[\s\S]*T-\d\d:\d\d/, 'leaving the summit clears the banner and restores the countdown', 15_000);
+  // Session 19: the ticket warns that Breakneck breaks PACT-A (pace 2 or lower), at 360×640; it does not block COMMIT.
+  {
+    const base = A.viewportSize() ?? { width: 390, height: 844 };
+    await A.setViewportSize({ width: 360, height: 640 });
+    await A.waitForTimeout(150);
+    const note = A.locator('[data-ticket] .ticket-pact');
+    check((await note.count()) === 1 && (await note.innerText()).trim() === '▼ Breaks PACT-A: pace 2 or lower.', 'the ticket shows one ▼ notice: Breaks PACT-A: pace 2 or lower.');
+    const nb = await note.boundingBox();
+    const cb = await A.locator('.desk-foot .btn-signal').boundingBox();
+    check(nb !== null && cb !== null && nb.y >= 0 && cb.y + cb.height <= 640 && cb.height >= 44, 'at 360×640 the notice and COMMIT are in view, COMMIT a 44 px target');
+    check(await A.locator('.desk-foot .btn-signal').isEnabled(), 'the notice does not block COMMIT');
+    await shot(A, 'play-pact-notice');
+    await A.getByRole('radio', { name: /Standard/ }).click();
+    check((await note.count()) === 0, 'pace 2, equal to the maximum, shows no notice');
+    await A.getByRole('radio', { name: /Breakneck/ }).click();
+    await A.getByRole('button', { name: /^Card:/ }).click();
+    // Done sits at the end of the sheet's own scroll (as in the Session 17 check above).
+    await A.getByRole('button', { name: 'Done' }).scrollIntoViewIfNeeded();
+    const done = await A.getByRole('button', { name: 'Done' }).boundingBox();
+    check(done !== null && done.y >= 0 && done.y + done.height <= 640 && done.height >= 44, 'at 360×640 with a pact notice the card sheet Done scrolls into view with a 44 px target');
+    await A.getByRole('button', { name: 'Done' }).click();
+    await A.setViewportSize(base);
+  }
   await A.getByRole('button', { name: /^Card:/ }).click();
   await A.getByRole('radio', { name: /POACH/ }).click();
   await A.getByRole('button', { name: 'Done' }).click({ force: true, trial: true }).catch(() => undefined);
