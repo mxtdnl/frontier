@@ -1249,3 +1249,25 @@ A room like the four live classes (observed-human room), moratorium by quarter 1
 **Next steps**
 - Owner: merge, then run a short rehearsal with bot firms on the live site and look at the incidents block, the WIRE LOG tab and results panel 5.
 - In the next live class, note whether the room reads the NET CONTRIBUTION headline as intended.
+
+## 2026-10-12 — Observer feedback triaged; Session 19 added (no code or parameter change)
+
+**Done**
+- Triaged an observer's feedback on the live sessions: `reports/observer-feedback-2026-10-12.md`. It holds the feedback verbatim, what Sessions 17–18 already built, what Session 19 will build, what will not be built and why, and a scratch simulation that checks the feedback's claims.
+- Added Session 19 to docs/SESSIONS.md:
+  - pact terms on the phone
+  - spending lines in the briefing
+  - a facilitator-only QUARTER BRIEF on `#/wire`
+  - teaching notes in the runbook
+  - a facilitator guide as a PDF, drawing on the participant briefing deck in the `mxtdnl/slides` repository.
+
+**Findings**
+- **Pacts.** "Equal to the minimum safety" is already compliant (`src/engine/pacts.ts`). The reported breach was most likely the pace limit the pact form ticks by default.
+- **Slow firms.** A slow firm does not go bankrupt in a calm room. After a moratorium most firms become insolvent, and the slowest keeps the most value.
+- **NET CONTRIBUTION.** In a calm room (scratch run, 8 firms, 60 seeds), an aggressive firm using POACH, RUSH or BLITZ can still beat its rivals on net contribution, because rivalry taken counts each POACH or RUSH as a one-off capability value. A passive firm at pace 1 with high safety and PUBLISH tops net contribution.
+
+**Open issues (owner decisions)**
+- The three recommendations in the report's section 4: a net-contribution diagnostic in `tools/audit-strategies.ts`, rivalry valued over the remaining quarters, and the passive firm. None is scheduled.
+- The briefing deck in `mxtdnl/slides` lists four cards; SHARE and RUSH are missing.
+
+**Tests:** not run. No code changed.
