@@ -29,7 +29,7 @@ By the end of the session, students should be able to:
 ### What the room is told, and what the session is built to show
 
 **What the room is told.** FRONTIER is a competitive business simulation. Each firm runs an AI company and is ranked by valuation. The briefing says only true things (spec §6.6):
-- Total market revenue tracks public trust.
+- Trust sets each quarter’s revenue. Value counts cash already banked. (Session 20; it replaced "Total market revenue tracks public trust.")
 - Trust recovers when pressure eases.
 - Pace builds capability faster, and capability wins market share.
 - Safety spend costs money and lowers public exposure and incident risk.
@@ -70,13 +70,12 @@ Every statement below comes from the spec, `params.ts` or a committed report. St
 
 ### How the results panels turn the board around
 
-1. **FINAL BOARD.** The ranking the room has been chasing, by valuation, with each firm's peak. Leaders who peaked early show the largest drops.
-2. **TRUST TRACE.** Trust quarter by quarter. Red squares mark quarters that lost 5 or more points, and the moratorium is marked if it happened. The room sees that its own decisions moved the line.
-3. **COUNTERFACTUAL.** The same room replayed with every firm at pace 2 and safety 15, with the same luck. The VALUE LOST figure is what the race cost the whole industry.
-4. **ATTRIBUTION.** Each firm's share of the trust damage against its share of the value. Ask whether the firms with the largest share of the damage also kept the largest share of the value.
-5. **NET CONTRIBUTION.** This is the turning point. Firms are re-ranked by what they added to the whole market: valuation, plus or minus what their decisions did to trust, plus a research credit for PUBLISH, minus value taken from rivals. In the four October 2026 live rooms, the valuation leader fell to between 5th and 9th (`docs/SESSIONS.md`, Session 18). Depends on the room: in a calm room with no moratorium, an aggressive firm can still rank high (`reports/observer-feedback-2026-10-12.md`, section 3, finding 4).
-6. **PACT RECORD.** Breaches no audit caught are revealed. The room sees how much the pacts relied on monitoring.
-7. **DEBRIEF.** Five prompts. From here on you may name the lesson and use every word listed above.
+1. **COUNTERFACTUAL.** The same room replayed with every firm at pace 2 and safety 15, with the same luck. The VALUE LOST figure is what the race cost the whole industry. The trust chart marks the moratorium if it happened.
+2. **ATTRIBUTION.** Each firm's share of the trust damage against its share of the value. Ask whether the firms with the largest share of the damage also kept the largest share of the value.
+3. **NET CONTRIBUTION.** This is the turning point. The chart shows only the movers: each firm's rank by valuation joined to its rank by net contribution, with the firm 1st by net contribution in amber. Firms are re-ranked by what they added to the whole market: valuation, plus or minus what their decisions did to trust, plus a research credit for PUBLISH, minus value taken from rivals. In the four October 2026 live rooms, the valuation leader fell to between 5th and 9th (`docs/SESSIONS.md`, Session 18). Depends on the room: in a calm room with no moratorium, an aggressive firm can still rank high (`reports/observer-feedback-2026-10-12.md`, section 3, finding 4).
+4. **CONDUCT.** The figures behind panel 3 and each firm's conduct ledger: the panel for pointing out the harmful decisions.
+5. **PACT RECORD.** Breaches no audit caught are revealed. The room sees how much the pacts relied on monitoring.
+6. **DEBRIEF.** Five prompts. From here on you may name the lesson and use every word listed above.
 
 ---
 
@@ -99,7 +98,7 @@ Do this the day before, then again 15 minutes before class.
 - [ ] Second device for the console: your own laptop or phone, signed in with the same account.
 - [ ] Phone on the room Wi-Fi opens the site and reaches the landing page.
 - [ ] Decide the settings (section 3) and write the end rule down. The app never shows participants how many quarters there are.
-- [ ] Keep the debrief prompts (section 7) ready. They appear on results panel 7.
+- [ ] Keep the debrief prompts (section 7) ready. They appear on results panel 6.
 - [ ] Browser: use a private window or a different browser for any device that will play as a firm. A browser signed in as the facilitator cannot also be a participant.
 
 ## 3. Create a session
@@ -115,7 +114,7 @@ Do this the day before, then again 15 minutes before class.
 | End mode | *Random within a range*: hidden end between the two numbers. *Fixed quarter*: you choose the end. *Manual*: runs until you press END, or quarter 30. | Random, 10 to 14 |
 | Disclosure at start | Shows each firm's pace, safety and exposure on the board from the start. | Off |
 | Automatic audit probability | Chance each pact is audited by itself each quarter. | 0.25 |
-| Reveal TAU line on results screen | Draws the hidden collapse line on the trust trace at the end. | Off until the debrief decision |
+| Reveal TAU line on results screen | Draws the hidden collapse line on the COUNTERFACTUAL trust chart at the end. | Off until the debrief decision |
 | Lit-room display mode | Slightly larger type and stronger rules and secondary text, for a bright room. | As needed |
 | Seed | Random, or a fixed number to replay the same market. | Random |
 | Bot firms | Computer-run firms (labelled BOT) for small classes and rehearsal. **Add 10 mixed** adds ten at once with mixed policies. Bots count towards the mode's firm limit. | 0 to 4 |
@@ -155,7 +154,9 @@ Do this the day before, then again 15 minutes before class.
 
 **Board pages (above 16 firms).** The board shows 10 firms at a time and turns to the next page every 8 seconds; the heading reads `PAGE 2/5`. Above the page, the leader and the firm that moved most (3 places or more) stay pinned. Rotation holds for 30 seconds after you press any key, and while you type a command. Each reveal starts on page 1. Use `FIRM <TICKER>` for any one firm's history.
 
-**Firm performance (Session 13).** Across the top of the board, the VALUE SHARE strip shows each firm's share of the total value of firms above zero; the caption counts firms below zero. Each row shows MOVE (places gained ▲ or lost ▼ since last quarter), a valuation bar from zero (red to the left when below zero) and, when there is room, a TREND line of the last 14 quarters on one scale for every firm. With disclosure on the trend line is left out to make room. Type `FIRMS` for one small chart per firm on the same scale (pages of 16 above 16 firms, turning every 8 seconds), and `RANKS` for every firm's rank by quarter with the leader in amber and the biggest faller in red. Esc returns to the board.
+**Firm performance (Session 13).** Each row shows MOVE (places gained ▲ or lost ▼ since last quarter), a valuation bar from zero (red to the left when below zero) and, when there is room, a TREND line of the last 14 quarters on one scale for every firm. With disclosure on the trend line is left out to make room. Type `FIRMS` for one small chart per firm on the same scale (pages of 16 above 16 firms, turning every 8 seconds), and `RANKS` for every firm's rank by quarter with the leader in amber and the biggest faller in red. Esc returns to the board.
+
+**Trust panel and wire (Session 20).** Beside the board, under the trust chart, MARKET is this quarter's revenue pool and INDUSTRY VALUE the total of every firm's valuation, each with its change since last quarter. Values count cash already banked, so INDUSTRY VALUE can rise while trust and MARKET fall. The ticker at the foot of the board carries only the latest quarter's headlines and the pact and disclosure news since. **Shift+W** (or `WIRE`) shows every headline of the session on the projector, newest quarter first; Esc returns to the board.
 
 **Summit.** Press **F8** during an open quarter or a reveal. The timer pauses and decisions are refused ("Industry summit in session"). Teams can propose, join and leave pacts. Press **F8** again to return.
 
@@ -189,6 +190,7 @@ Do this the day before, then again 15 minutes before class.
 | F2 | Shift+B | Board |
 | F3 | Shift+T | Trust history |
 | F4 | Shift+P | Pacts |
+| – | Shift+W | Wire: every headline of the session, newest quarter first (Session 20; no F-key is free) |
 | F6 | Shift+F | Audit a pact |
 | F7 | Shift+D | Disclosure on or off |
 | F8 | Shift+S | Summit in or out |
@@ -254,22 +256,21 @@ Never ask a participant to read out a hidden value. The projector and the partic
 
 Allow 20 to 30 minutes. On the projector, press **F9** to step forward and **Esc** to step back. The step is saved, so a reload returns to the same panel.
 
-Every panel opens with one bold sentence that states its main point, written from the session's data (for example "Trust fell from 72.0 to 45.6 over 14 quarters."). Read it out, then ask the room to discuss.
+Every panel opens with one bold sentence that states its main point, written from the session's data (for example "Ranked by value created for the whole market, GLYN falls from 1st to 8th and ARCN rises from 10th to 1st."). Read it out, then ask the room to discuss.
 
 With about 20 firms or more, two panels hold a list that scrolls inside the panel (the heading and the axis stay in view):
-- **FINAL BOARD**: every firm in rank order.
 - **COUNTERFACTUAL**: the per-firm comparison on the right.
+- **CONDUCT**: the per-firm figures and ledgers.
 - Scroll with the mouse wheel or trackpad, or with **↓ ↑**, **Page Down**, **Page Up**, **Home** and **End**. F9 and Esc still move between panels.
 - **ATTRIBUTION**: above 24 firms, the 12 firms with the largest share of the damage, then one **OTHERS** line that adds up the rest.
-- **NET CONTRIBUTION**: above 24 firms, the 12 firms whose rank changed most, then one **OTHERS** line that adds up the rest; the slope chart on the left always shows every firm.
+- **CONDUCT**: above 24 firms, the 12 firms whose rank changed most, then one **OTHERS** line that adds up the rest. The NET CONTRIBUTION slope chart always shows every firm.
 
-1. **FINAL BOARD.** Who finished first? Each firm has a line from its peak (hollow square) to its final valuation (solid square); red squares finished below zero. Ask which teams peaked early.
-2. **TRUST TRACE.** Point at the labelled MORATORIUM line if there was one, and at the red squares (quarters that lost 5 or more trust). If you want the hidden threshold shown (a dashed red line with a hatched band below it), it must have been switched on at creation.
-3. **COUNTERFACTUAL.** Three figures: the industry's actual value, the ALTERNATIVE (every firm at pace 2, safety 15) and the VALUE LOST between them. If the industry finished below zero, no percentage is shown. The hatched area on the chart is the trust lost. Ask whether any single firm could have prevented it.
-4. **ATTRIBUTION.** Each firm's share of the damage (red, to the left) against its share of the value (amber, to the right). If no firm finished above zero, the right side says so. This is the fairness conversation.
-5. **NET CONTRIBUTION.** The firms re-ranked by the value they created for the whole market, not only for themselves. On the left, a line runs from each firm's rank by valuation to its rank by net contribution; firms that moved 3 places or more are thick (green ▲ rose, red ▼ fell). On the right, each firm's net contribution is built up on one axis: its valuation (blue), plus or minus what its decisions did to every firm's revenue through trust, against pace 2 and safety 15 with no cards (green ▲ or red ▼), plus a research credit for each PUBLISH card (amber outline, labelled "not money": it never changed anyone's cash), minus the value it took from rivals with BLITZ, POACH and RUSH (red outline). A moratorium's cost is charged to the firms that had drawn trust down before it. Under each firm, its conduct: ▲ what it did for the market, ▼ what it did against it. Ask the firm that led on valuation where it now sits, and why.
-6. **PACT RECORD.** Violations that no audit caught are now shown. Under the table, each pact has a row of quarter cells per firm: a solid red cell is a breach an audit found, a red outline is a breach no audit found, a dim dot is a quarter that kept the terms, and a blank cell is a quarter in which the firm was not bound (before it joined, after it left or was expelled, or after the pact dissolved). Firms that left are marked "former". Ask what the pacts did and did not achieve.
-7. **DEBRIEF.** Five prompts, shown on screen:
+1. **COUNTERFACTUAL.** Three figures: the industry's actual value, the ALTERNATIVE (every firm at pace 2, safety 15) and the VALUE LOST between them. If the industry finished below zero, no percentage is shown. The hatched area on the chart is the trust lost; the moratorium quarter is labelled. If you want the hidden threshold shown (a dashed red line with a hatched band below it), it must have been switched on at creation. Ask when firms first noticed trust falling, and whether any single firm could have prevented it.
+2. **ATTRIBUTION.** Each firm's share of the damage (red, to the left) against its share of the value (amber, to the right). If no firm finished above zero, the right side says so. This is the fairness conversation.
+3. **NET CONTRIBUTION.** The firms re-ranked by the value they created for the whole market, not only for themselves. A line runs from each firm's rank by valuation to its rank by net contribution; the 30% of firms that rose most are thick green ▲ and the 30% that fell most thick red ▼, and the firm 1st by net contribution is amber, labelled "top net contribution". Ask the firm that led on valuation where it now sits.
+4. **CONDUCT.** Each firm's net contribution is built up on one axis: its valuation (blue), plus or minus what its decisions did to every firm's revenue through trust, against pace 2 and safety 15 with no cards (green ▲ or red ▼), plus a research credit for each PUBLISH card (amber outline, labelled "not money": it never changed anyone's cash), minus the value it took from rivals with BLITZ, POACH and RUSH (red outline). A moratorium's cost is charged to the firms that had drawn trust down before it. Under each firm, its conduct: ▲ what it did for the market, ▼ what it did against it. The headline names the firm whose market effect did the most harm and the one that did the most for the market. Point at the ▼ entries and ask why each firm made those decisions.
+5. **PACT RECORD.** Violations that no audit caught are now shown. Under the table, each pact has a row of quarter cells per firm: a solid red cell is a breach an audit found, a red outline is a breach no audit found, a dim dot is a quarter that kept the terms, and a blank cell is a quarter in which the firm was not bound (before it joined, after it left or was expelled, or after the pact dissolved). Firms that left are marked "former". Ask what the pacts did and did not achieve.
+6. **DEBRIEF.** Five prompts, shown on screen:
    1. When did your firm first notice trust falling, and what did you change?
    2. Which pacts held and which broke? Was the difference monitoring, sanctions or trust?
    3. Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay?
@@ -288,7 +289,7 @@ The computers in the cloud cannot reach the live database, so a live rehearsal u
 4. Press **Create session**. On your phone, in a private browser tab, open the site, type the code and found a firm named Test Works with ticker TEST.
 5. On the laptop press **F9** (briefing), **F9** (quarter 1). Commit a decision on the phone. Watch the board: all bots count as committed.
 6. During a quarter, press **F8** (summit) and back, **F7** (disclosure) and **F6** (audit) once you have proposed a pact on the phone's PACTS tab.
-7. Let auto-resolve run through the quarters. When the session ends, press **F9** to step through the seven results panels and check the card on the phone.
+7. Let auto-resolve run through the quarters. When the session ends, press **F9** to step through the six results panels and check the card on the phone.
 8. On the console download both exports, then **DELETE SESSION**.
 
 What to check: the countdown is the same on laptop and phone; the board is readable from the back of the room; your phone's result card appears at each reveal; the results panels fit the screen.

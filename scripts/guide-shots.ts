@@ -197,17 +197,17 @@ await runWithStack(async (browser) => {
   }
   check(incidentShot, 'a reveal with the INCIDENTS block was captured');
 
-  // ── End and the seven results panels ───────────────────────────────────────
+  // ── End and the six results panels ─────────────────────────────────────────
   await key('F9');
   await waitText(fac, /ENDED/, 'F9 after the final quarter ends the session', 15_000, '.scr');
   for (let i = 0; i < 40 && (await adminGet<unknown>(`games/${g}/results`)) === null; i++) await fac.waitForTimeout(500);
   await fac.goto(`${BASE}#/results/${g}`);
-  await waitText(fac, /FINAL BOARD/, 'the results open', 15_000, '.scr');
+  await waitText(fac, /COUNTERFACTUAL/, 'the results open', 15_000, '.scr');
   await fac.waitForTimeout(800);
   await save(fac, 'results-1');
-  for (let n = 2; n <= 7; n++) {
+  for (let n = 2; n <= 6; n++) {
     await key('F9');
-    await waitText(fac, new RegExp(`${n}/7`), `F9 steps to results panel ${n}`, 15_000, '.scr');
+    await waitText(fac, new RegExp(`${n}/6`), `F9 steps to results panel ${n}`, 15_000, '.scr');
     await fac.waitForTimeout(800);
     await save(fac, `results-${n}`);
   }

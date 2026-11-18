@@ -7,7 +7,7 @@ export { DataTable, type Column } from './DataTable';
 export { Delta } from './Delta';
 export { LineChart, type ChartSeries, type ChartTone } from './LineChart';
 export { HBar } from './HBar';
-export { ShareStrip, ValueBar, TrendLine, CommitMark, RankMove } from './FirmPerformance';
+export { ValueBar, TrendLine, CommitMark, RankMove } from './FirmPerformance';
 export { Ticker } from './Ticker';
 export { Segmented4, type SegOption } from './Segmented4';
 export { SafetySlider } from './SafetySlider';

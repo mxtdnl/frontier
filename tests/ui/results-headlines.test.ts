@@ -4,13 +4,12 @@ import { findViolations } from '../../scripts/lib/copy-rules';
 import {
   DEBRIEF_HEADLINE,
   attributionHeadline,
+  conductHeadline,
   contributionHeadline,
   counterfactualHeadline,
-  finalBoardHeadline,
   ownResultSentence,
   pactHeadline,
   panelHeadline,
-  trustHeadline,
 } from '../../src/screens/Results/headlines';
 
 type FirmSpec = { ticker: string; valuation: number; peak: number; draw?: number };
@@ -65,71 +64,6 @@ function results(firms: FirmSpec[], opts: { trust?: number[]; start?: number; co
 function pact(detected: number, undetected: number, status: PactFinal['status'] = 'active'): PactFinal {
   return { pactId: 'p', name: 'PACT-A', terms: { maxPace: 2, minSafety: null }, status, createdRound: 1, members: [], detected, undetected, perFirm: {}, quarters: {} };
 }
-
-describe('FINAL BOARD headline', () => {
-  it('matches the spec example', () => {
-    const firms: FirmSpec[] = [
-      { ticker: 'AAAA', valuation: 50, peak: 50 },
-      ...Array.from({ length: 6 }, (_, i) => ({ ticker: `B${i}XX`, valuation: 10 + i, peak: 40 })),
-      { ticker: 'CCCC', valuation: -5, peak: 30 },
-      { ticker: 'DDDD', valuation: -20, peak: 30 },
-    ];
-    expect(finalBoardHeadline(results(firms))).toBe('8 of 9 firms finished below their peak. 2 finished below zero.');
-  });
-
-  it('every firm at its peak, none below zero', () => {
-    expect(finalBoardHeadline(results([{ ticker: 'AAAA', valuation: 10, peak: 10 }, { ticker: 'BBBB', valuation: 5, peak: 5.04 }]))).toBe(
-      'Every firm finished at its peak. None finished below zero.',
-    );
-  });
-
-  it('all below their peak and all below zero', () => {
-    expect(finalBoardHeadline(results([{ ticker: 'AAAA', valuation: -1, peak: 10 }, { ticker: 'BBBB', valuation: -2, peak: 5 }]))).toBe(
-      'Both firms finished below their peak. Both finished below zero.',
-    );
-  });
-
-  it('all of three firms below their peak and below zero', () => {
-    expect(
-      finalBoardHeadline(results([{ ticker: 'AAAA', valuation: -1, peak: 10 }, { ticker: 'BBBB', valuation: -2, peak: 5 }, { ticker: 'CCCC', valuation: -3, peak: 5 }])),
-    ).toBe('All 3 firms finished below their peak. All 3 finished below zero.');
-  });
-
-  it('one firm below its peak', () => {
-    expect(finalBoardHeadline(results([{ ticker: 'AAAA', valuation: 1, peak: 10 }, { ticker: 'BBBB', valuation: 5, peak: 5 }, { ticker: 'CCCC', valuation: 2, peak: 2 }]))).toBe(
-      '1 of 3 firms finished below its peak. None finished below zero.',
-    );
-  });
-
-  it('a value that displays as 0.0 is not below zero', () => {
-    expect(finalBoardHeadline(results([{ ticker: 'AAAA', valuation: -0.01, peak: 0 }, { ticker: 'BBBB', valuation: 5, peak: 5 }]))).toBe(
-      'Every firm finished at its peak. None finished below zero.',
-    );
-  });
-});
-
-describe('TRUST TRACE headline', () => {
-  it('fell, with no moratorium', () => {
-    expect(trustHeadline(results([{ ticker: 'AAAA', valuation: 1, peak: 1 }], { start: 72, trust: Array.from({ length: 14 }, (_, i) => 70 - i * 1.8 - 0.2) }))).toBe(
-      'Trust fell from 72.0 to 46.4 over 14 quarters.',
-    );
-  });
-
-  it('adds the moratorium quarter', () => {
-    expect(trustHeadline(results([{ ticker: 'AAAA', valuation: 1, peak: 1 }], { start: 72, trust: [60, 50, 30, 20, 15, 10], collapse: 6 }))).toBe(
-      'Trust fell from 72.0 to 10.0 over 6 quarters. The moratorium began in Q2 Y2.',
-    );
-  });
-
-  it('rose, held, and one quarter', () => {
-    expect(trustHeadline(results([{ ticker: 'AAAA', valuation: 1, peak: 1 }], { start: 60, trust: [61, 64.5] }))).toBe('Trust rose from 60.0 to 64.5 over 2 quarters.');
-    expect(trustHeadline(results([{ ticker: 'AAAA', valuation: 1, peak: 1 }], { start: 60, trust: [60.02] }))).toBe('Trust held at 60.0 over 1 quarter.');
-  });
-
-  it('no quarter resolved', () => {
-    expect(trustHeadline(results([{ ticker: 'AAAA', valuation: 1, peak: 1 }], { trust: [] }))).toBe('No quarter was resolved.');
-  });
-});
 
 describe('COUNTERFACTUAL headline', () => {
   const two = (a: number, b: number) => [{ ticker: 'AAAA', valuation: a, peak: Math.max(a, 1) }, { ticker: 'BBBB', valuation: b, peak: Math.max(b, 1) }];
@@ -256,19 +190,18 @@ describe('panel order and copy', () => {
   );
 
   it('one headline per panel, debrief fixed', () => {
-    expect([0, 1, 2, 3, 4, 5].map((i) => panelHeadline(r, i))).toEqual([
-      finalBoardHeadline(r),
-      trustHeadline(r),
+    expect([0, 1, 2, 3, 4].map((i) => panelHeadline(r, i))).toEqual([
       counterfactualHeadline(r),
       attributionHeadline(r),
       contributionHeadline(r),
+      conductHeadline(r),
       pactHeadline(r),
     ]);
-    expect(panelHeadline(r, 6)).toBe(DEBRIEF_HEADLINE);
+    expect(panelHeadline(r, 5)).toBe(DEBRIEF_HEADLINE);
   });
 
   it('every headline passes the copy rules, including the stricter projector rules', () => {
-    const all = [0, 1, 2, 3, 4, 5, 6].map((i) => panelHeadline(r, i));
+    const all = [0, 1, 2, 3, 4, 5].map((i) => panelHeadline(r, i));
     all.push(ownResultSentence({ rank: 2, valuation: 87.5, peakValuation: 100 }, 9));
     for (const line of all) {
       expect(findViolations(line, { allowNonTelegraphing: false }), line).toEqual([]);

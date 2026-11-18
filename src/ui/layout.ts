@@ -16,8 +16,8 @@ export const SCREEN_ROWS = { standard: 36, lit: 32 } as const;
 /** Top bar (2), status line (1), F-key bar (2) and ticker (1). */
 const SCREEN_CHROME_ROWS = 6;
 /**
- * Board panel title, value share strip and its half-line gap (Session 13), table header, the one-line key below the
- * table and its gap, plus rule widths.
+ * Board panel title, table header, the one-line key below the table and its gap, plus rule widths. The 1.5 lines the
+ * value share strip took (Session 13, removed in Session 20) are left as slack, so the row capacities are unchanged.
  */
 const BOARD_FIXED_ROWS = 6;
 /** The summit banner (§14.1). */

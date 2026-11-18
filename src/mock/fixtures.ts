@@ -99,7 +99,7 @@ export const MORATORIUM_HEADLINE = 'OFS imposes moratorium on frontier deploymen
 
 export const BRIEFING_LINES = {
   market: [
-    'Total market revenue tracks public trust.',
+    'Trust sets each quarter’s revenue. Value counts cash already banked.',
     'Trust recovers when pressure eases.',
     'Pace builds capability faster. Capability earns market share.',
     'Safety spend costs money. It lowers public exposure and incident risk.',

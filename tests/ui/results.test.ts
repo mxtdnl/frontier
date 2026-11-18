@@ -4,11 +4,11 @@ import { findViolations } from '../../scripts/lib/copy-rules';
 import { describe, expect, it } from 'vitest';
 import { PARAMS, buildResults, nextPactName, resolveRound, type EngineState, type Pact } from '../../src/engine';
 import { fromResults } from '../../src/firebase/schema';
-import { fmt, fmtShare, quarterLabel } from '../../src/ui/format';
+import { fmt, fmtShare } from '../../src/ui/format';
 import { OwnResultsCard } from '../../src/screens/Results/OwnResultsCard';
-import { Attribution, Counterfactual, Debrief, FinalBoard, NetContribution, PactRecord, TrustTrace, noPactLines } from '../../src/screens/Results/Results';
+import { Attribution, Conduct, Counterfactual, Debrief, NetContribution, PactRecord, noPactLines } from '../../src/screens/Results/Results';
 import { DEBRIEF_HEADLINE, ownResultSentence, panelHeadline } from '../../src/screens/Results/headlines';
-import { attributionRows, attributionView, counterfactualTrustSeries, finalBoardRows, headlineFigures, pactLines, pactStripRows, rankedFirms, trustSeries } from '../../src/screens/Results/model';
+import { attributionRows, attributionView, counterfactualTrustSeries, headlineFigures, pactLines, pactStripRows, rankedFirms, trustSeries } from '../../src/screens/Results/model';
 import type { FinalResults } from '../../src/engine';
 import { storeAndRead } from '../firebase/rtdb';
 import { dec, game } from '../engine/helpers';
@@ -102,18 +102,6 @@ describe('negative totals (spec §10, owner decision 5)', () => {
     expect(out).not.toContain('VALUE LOST');
   });
 
-  it('negative final valuations are still drawn on the final board, in red, against a zero line', () => {
-    const r = shifted(base, -10_000);
-    const rows = finalBoardRows(r);
-    expect(rows.every((x) => x.final < 0)).toBe(true);
-    const out = html(createElement(FinalBoard, { r }));
-    expect(out.match(/data-mark="final"/g)).toHaveLength(rows.length);
-    expect(out.match(/class="lc-f-down" data-mark="final"/g)).toHaveLength(rows.length);
-    expect(out).toContain('class="lc-zero"');
-    expect(out).toContain('FINAL BELOW ZERO');
-    for (const x of rows) expect(out).toContain(fmt(x.final));
-  });
-
   it('when no firm finishes above zero, the value side says so instead of 0.0% bars', () => {
     const r = shifted(base, -10_000);
     const { rows, anyPositive } = attributionRows(r);
@@ -134,50 +122,22 @@ describe('negative totals (spec §10, owner decision 5)', () => {
 });
 
 describe('results panels', () => {
-  it('final board shows every firm with its final value, a peak and a final mark, and the drop from peak', () => {
-    const r = read(false);
-    const out = html(createElement(FinalBoard, { r }));
-    const rows = finalBoardRows(r);
-    for (const x of rows) {
-      expect(out).toContain(`>${x.ticker}<`);
-      expect(out).toContain(fmt(x.final));
-      expect(out).toContain(x.fromPeak > -0.05 ? 'at peak' : `▼${fmt(-x.fromPeak)}`);
-    }
-    expect(out.match(/data-mark="peak"/g)).toHaveLength(rows.length);
-    expect(out.match(/data-mark="final"/g)).toHaveLength(rows.length);
-  });
-
-  it('final board rows follow the engine rank and never show a drop above zero', () => {
-    const rows = finalBoardRows(read(false));
-    expect(rows.map((x) => x.rank)).toEqual(rows.map((_, i) => i + 1));
-    expect(rows.every((x) => x.fromPeak <= 0)).toBe(true);
-  });
-
-  it('trust trace draws the τ line and hatched band only when τ is published', () => {
-    const off = html(createElement(TrustTrace, { r: read(false) }));
-    const on = html(createElement(TrustTrace, { r: read(true) }));
+  it('counterfactual draws the τ line and hatched band only when τ is published (moved from TRUST TRACE, Session 20)', () => {
+    const off = html(createElement(Counterfactual, { r: read(false) }));
+    const on = html(createElement(Counterfactual, { r: read(true) }));
     expect(off).not.toContain('τ');
     expect(off).not.toContain('class="lc-ref"');
     expect(on).toContain(`τ ${fmt(state.tau)} · a moratorium starts below this line`);
     expect(on).toContain('class="lc-ref"');
-    expect(on).toMatch(/<rect[^>]*fill="url\(#c[^"]*-hd\)"/);
   });
 
-  it('trust trace labels the moratorium quarter on the chart', () => {
-    const r = read(false);
-    const out = html(createElement(TrustTrace, { r }));
-    if (r.collapseRound !== null) {
-      expect(out).toContain(`moratorium from ${quarterLabel(r.collapseRound)}`);
-      expect(out).toContain(`MORATORIUM ${quarterLabel(r.collapseRound)}`);
-      expect(out).toContain('class="lc-mark"');
-    } else expect(out).toContain('no moratorium');
-  });
-
-  it('a moratorium appears as a labelled vertical marker', () => {
+  it('counterfactual labels the moratorium quarter on the trust chart', () => {
     const r = { ...read(false), collapseRound: 3 };
-    const out = html(createElement(TrustTrace, { r }));
+    const out = html(createElement(Counterfactual, { r }));
     expect(out).toContain('class="lc-mark"');
     expect(out).toContain('MORATORIUM Q3 Y1');
+    const none = html(createElement(Counterfactual, { r: { ...read(false), collapseRound: null } }));
+    expect(none).not.toContain('class="lc-mark"');
   });
 
   it('counterfactual panel states the three headline figures and labels both lines on the chart', () => {
@@ -209,7 +169,7 @@ describe('results panels', () => {
 
   it('no panel uses the abbreviations SUST, ACT or DEPL', () => {
     const r = read(true);
-    for (const el of [FinalBoard, TrustTrace, Counterfactual, Attribution]) {
+    for (const el of [Counterfactual, Attribution, NetContribution, Conduct]) {
       const out = html(createElement(el, { r }));
       expect(out).not.toMatch(/\b(SUST|ACT|DEPL)\b/);
     }
@@ -245,13 +205,13 @@ describe('results panels', () => {
 
   it('every panel opens with its headline (§14.4)', () => {
     const r = read(false);
-    const panels = [FinalBoard, TrustTrace, Counterfactual, Attribution, NetContribution, PactRecord];
+    const panels = [Counterfactual, Attribution, NetContribution, Conduct, PactRecord];
     panels.forEach((el, i) => {
       const out = html(createElement(el, { r }));
       const m = /<p class="res-headline" data-headline="">([^<]*)<\/p>/.exec(out);
       expect(m?.[1]?.replace(/&#x27;/g, "'")).toBe(panelHeadline(r, i));
       // The headline comes before the chart or table.
-      expect(out.indexOf('data-headline')).toBeLessThan(Math.max(out.indexOf('<svg'), out.indexOf('<table'), out.indexOf('data-pact-strip')));
+      expect(out.indexOf('data-headline')).toBeLessThan(Math.max(out.indexOf('<svg'), out.indexOf('<table'), out.indexOf('data-pact-strip'), out.indexOf('data-res-scroll')));
     });
     expect(html(createElement(Debrief))).toContain(DEBRIEF_HEADLINE);
   });
@@ -361,14 +321,6 @@ describe('results at 50 firms (spec §14.4, Session 10)', () => {
   }
   const r50 = fromResults(storeAndRead(buildResults(play50(), { revealTau: false }))) as FinalResults;
   const marks = (h: string) => [...h.matchAll(/data-firm="([^"]+)"/g)].map((m) => m[1]);
-
-  it('draws every firm on one scrolling FINAL BOARD, in rank order, with the axis values kept in view', () => {
-    const h = html(createElement(FinalBoard, { r: r50 }));
-    expect(marks(h)).toEqual(rankedFirms(r50).map((f) => f.ticker));
-    expect(h).toContain('data-res-scroll');
-    expect(h).toContain('res-sticky-top');
-    expect(h).not.toContain('data-res-cols');
-  });
 
   it('keeps the figures and trust paths on COUNTERFACTUAL and scrolls the per-firm comparison', () => {
     const h = html(createElement(Counterfactual, { r: r50 }));

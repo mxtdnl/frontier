@@ -6,16 +6,18 @@ import {
   committedCount,
   joinUrl,
   leadersOf,
+  marketAndValue,
   previousTrust,
   revealInput,
   tagKey,
   tickerTone,
+  tickerWireItems,
   trustSeries,
   valuationSeries,
   wireItems,
   type ScreenData,
 } from '../../src/screens/Screen/model';
-import type { FirmNode, FirmPublicNode, PublicNode, RoundNode } from '../../src/firebase/schema';
+import type { FirmNode, FirmPublicNode, PublicNode, RoundNode, WireNode } from '../../src/firebase/schema';
 
 const firm = (ticker: string, createdAt: number, isBot = false): FirmNode => ({ name: `${ticker} Inc`, ticker, createdAt, order: 0, isBot, botPolicy: isBot ? 'standard' : null });
 const fp = (over: Partial<FirmPublicNode>): FirmPublicNode => ({
@@ -153,5 +155,54 @@ describe('board key strip (Session 12)', () => {
     expect(tagKey([['PACT-A']], false)).toEqual([{ tag: 'PACT-A', text: 'pact member' }]);
     const k = tagKey([['PACT-B'], ['PACT-A', 'BOT']], true);
     expect(k.map((x) => x.tag)).toEqual(['BOT', 'PACT-', '+N']);
+  });
+});
+
+describe('MARKET and INDUSTRY VALUE (Session 20)', () => {
+  const openMarket = (n: number) => PARAMS.M_PER_FIRM * n * Math.pow(PARAMS.T0 / PARAMS.TRUST_MAX, PARAMS.GAMMA);
+  it('before quarter 1 shows the opening values and no change', () => {
+    expect(marketAndValue({}, 4)).toEqual({ market: openMarket(4), marketDelta: null, value: INITIAL_VALUATION * 4, valueDelta: null });
+  });
+  it('quarter 1 is measured against the opening values', () => {
+    const r = { '1': { ...round(80, { a: { share: 0.5, profit: 2, valuation: 100, rank: 1 }, b: { share: 0.5, profit: 3, valuation: 95, rank: 2 } }), M: 150 } };
+    const mv = marketAndValue(r, 2);
+    expect(mv.market).toBe(150);
+    expect(mv.marketDelta).toBeCloseTo(150 - openMarket(2), 9);
+    expect(mv.value).toBe(195);
+    expect(mv.valueDelta).toBeCloseTo(195 - 2 * INITIAL_VALUATION, 9);
+  });
+  it('a shrinking market with rising total value reads ▼ and ▲', () => {
+    const d = data();
+    d.rounds['2'] = { ...(d.rounds['2'] as RoundNode), M: 80 };
+    const mv = marketAndValue(d.rounds, 2);
+    expect(mv.marketDelta).toBe(-20);
+    expect(mv.value).toBe(210);
+    expect(mv.valueDelta).toBe(15);
+  });
+  it('uses only public round results', () => {
+    expect(Object.keys(marketAndValue(data().rounds, 2)).sort()).toEqual(['market', 'marketDelta', 'value', 'valueDelta']);
+  });
+});
+
+describe('ticker: latest quarter only (Session 20)', () => {
+  const ev = (round: number, seq: number, text: string, at: number): WireNode => ({ at, round, seq, kind: 'pact-formed', text, pact: null, firm: null, joined: null });
+  const wire = {
+    w0: ev(0, -0.5, 'Pre', 1),
+    w1: ev(1, 1, 'Reveal one', 2),
+    w2: ev(2, 1.5, 'Open two', 3),
+    w3: ev(2, 2, 'Reveal two', 4),
+    w4: ev(3, 2.5, 'Open three', 5),
+  };
+  it('keeps the latest resolved quarter and the events since, newest first', () => {
+    expect(tickerWireItems(data().rounds, wire).map((h) => h.text)).toEqual(['Open three', 'Reveal two', 'Two', 'Three']);
+  });
+  it('drops every earlier quarter that the full log keeps', () => {
+    const all = wireItems(data().rounds, wire).map((h) => h.text);
+    expect(all).toContain('One');
+    expect(all).toContain('Pre');
+    expect(tickerWireItems(data().rounds, wire).map((h) => h.text)).not.toContain('One');
+  });
+  it('before quarter 1 resolves shows every event so far', () => {
+    expect(tickerWireItems({}, { w0: wire.w0 }).map((h) => h.text)).toEqual(['Pre']);
   });
 });

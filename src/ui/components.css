@@ -462,15 +462,6 @@
   stroke: var(--text);
   stroke-width: 1.5;
 }
-.lc .lc-row-line {
-  stroke-width: 2;
-}
-.lc .lc-row-line.is-signal {
-  stroke: var(--signal);
-}
-.lc .lc-row-line.is-down {
-  stroke: var(--down);
-}
 
 .hbar {
   display: grid;
@@ -1272,61 +1263,6 @@ legend {
 }
 
 /* ---------- Firm performance on the board (spec §14.1, Session 13) ---------- */
-/* One line plus half a line of space, so the board's two-line capacities are unchanged. */
-.share-strip {
-  display: flex;
-  align-items: stretch;
-  height: 1lh;
-  margin: 0.25lh 0;
-  white-space: nowrap;
-}
-.share-strip .ss-label {
-  flex: 0 0 12ch;
-  color: var(--dim);
-}
-.share-strip .ss-track {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  overflow: hidden;
-}
-.share-strip .ss-cap {
-  flex: 0 0 14ch;
-  text-align: right;
-  color: var(--down);
-}
-.share-strip .ss-none {
-  color: var(--dim);
-}
-/* Faded by rank by mixing with the panel colour; never below 64 %, so black text stays above 4.5:1. */
-.ss-seg {
-  flex: none;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--signal-ink);
-  border-left: 1px solid var(--base);
-}
-.ss-text {
-  margin-left: 0.5ch;
-}
-.ss-seg:first-child {
-  border-left: 0;
-}
-.ss-l0 {
-  background: var(--wire);
-}
-.ss-l1 {
-  background: color-mix(in srgb, var(--wire) 91%, var(--panel));
-}
-.ss-l2 {
-  background: color-mix(in srgb, var(--wire) 82%, var(--panel));
-}
-.ss-l3 {
-  background: color-mix(in srgb, var(--wire) 73%, var(--panel));
-}
-.ss-l4 {
-  background: color-mix(in srgb, var(--wire) 64%, var(--panel));
-}
 .neg-c {
   color: var(--down);
 }
@@ -1792,12 +1728,10 @@ legend {
   stroke: var(--down);
   stroke-width: 3;
 }
-.nc-grid {
-  flex: 1 1 0;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 41ch minmax(0, 1fr);
-  column-gap: 2ch;
+/* The firm ranked 1st by net contribution (Session 20). */
+.lc .sl-win {
+  stroke: var(--signal);
+  stroke-width: 4;
 }
 .nc-row {
   display: grid;
@@ -1810,13 +1744,10 @@ legend {
   display: flex;
   flex-direction: column;
 }
-/* Lit-room mode (130 columns): a narrower slope and figure columns leave the waterfall room. */
+/* Lit-room mode (130 columns): narrower figure columns leave the waterfall room. */
 /* Briefing (§14.5): in lit-room mode (larger type, 32 rows) paragraphs sit half a line apart so it stays one screen. */
 .lit-room .briefing-stack {
   gap: 0.5lh;
-}
-.lit-room .nc-grid {
-  grid-template-columns: 36ch minmax(0, 1fr);
 }
 .lit-room .nc-row {
   grid-template-columns: 7ch 7ch minmax(0, 1fr) 7ch 8ch 7ch 8ch 7ch;
@@ -1824,6 +1755,13 @@ legend {
 .nc-firm {
   padding: 0.15lh 0;
   border-bottom: var(--rule-w) solid var(--grid);
+}
+/* CONDUCT (Session 20) has the panel to itself: with few firms the rows share its height; with many they scroll. */
+.nc-list > .nc-firm {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .nc-ledger {
   padding-left: 15ch;

@@ -22,7 +22,6 @@ import {
   Tag,
   Ticker,
   TopBar,
-  ShareStrip,
   ValueBar,
   TrendLine,
   CommitMark,
@@ -30,7 +29,7 @@ import {
   FirmMultiples,
   RankChart,
 } from '../../ui/components';
-import { shareSegments, sharedDomain } from '../../ui/performance';
+import { sharedDomain } from '../../ui/performance';
 import { fmt, fmtShare } from '../../ui/format';
 import { useLitRoom } from '../../ui/litRoom';
 import { projectorKeys } from '../../ui/keys';
@@ -209,7 +208,6 @@ export function Kit() {
 
         <Panel title="FIRM PERFORMANCE ROW" bodyClassName="pad">
           <div className="stack">
-            <ShareStrip {...shareSegments([...sample.map((r) => ({ id: r.id, ticker: r.ticker, value: r.value })), { id: 'neg', ticker: 'NEG', value: -40 }])} trackCh={30} />
             {[...sample.slice(0, 3).map((r) => ({ t: r.ticker, v: r.value, h: r.history })), { t: 'NEG', v: -40, h: [60, 30, 5, -40] }].map((r) => (
               <div key={r.t} className="row" style={{ alignItems: 'center' }}>
                 <span style={{ width: '5ch' }}>{r.t}</span>

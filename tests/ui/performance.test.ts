@@ -10,8 +10,6 @@ import {
   rankByQuarter,
   rankMove,
   ranksHeadline,
-  segmentLabel,
-  shareSegments,
   sharedDomain,
   trendWindow,
   valuationHistory,
@@ -122,39 +120,6 @@ describe('BOOK sentence', () => {
     expect(bookSentence([4, 4], 9)).toBe('Rank 4 of 9. Same place as last quarter.');
     expect(bookSentence([4], 9)).toBe('Rank 4 of 9.');
     expect(bookSentence([], 9)).toBe('');
-  });
-});
-
-describe('share strip segments', () => {
-  const rows = [
-    { id: 'a', ticker: 'HUMN', value: 300 },
-    { id: 'b', ticker: 'BTC', value: 100 },
-    { id: 'c', ticker: 'ARC', value: -50 },
-    { id: 'd', ticker: 'DEX', value: 100 },
-    { id: 'e', ticker: 'ZERO', value: 0 },
-  ];
-
-  it('sums to 1 over the firms above zero, in value order with ties by ticker', () => {
-    const { segments, below } = shareSegments(rows);
-    expect(segments.map((s) => s.ticker)).toEqual(['HUMN', 'BTC', 'DEX']);
-    expect(segments.map((s) => s.share)).toEqual([0.6, 0.2, 0.2]);
-    expect(Math.abs(segments.reduce((s, x) => s + x.share, 0) - 1)).toBeLessThan(1e-9);
-    expect(below).toBe(1);
-  });
-
-  it('fades by rank in five steps', () => {
-    const many = Array.from({ length: 10 }, (_, i) => ({ id: `f${i}`, ticker: `T${i}`, value: 100 - i }));
-    expect(shareSegments(many).segments.map((s) => s.fade)).toEqual([0, 0, 1, 1, 2, 2, 3, 3, 4, 4]);
-  });
-
-  it('is empty when no firm is above zero', () => {
-    expect(shareSegments([{ id: 'a', ticker: 'A', value: -1 }])).toEqual({ segments: [], below: 1 });
-  });
-
-  it('labels only segments wide enough for ticker and percentage', () => {
-    expect(segmentLabel({ ticker: 'HUMN', share: 0.3 }, 60)).toBe('HUMN 30%');
-    expect(segmentLabel({ ticker: 'HUMN', share: 0.1 }, 60)).toBeNull();
-    expect(segmentLabel({ ticker: 'HUMN', share: 0.15 }, 60)).toBe('HUMN 15%');
   });
 });
 

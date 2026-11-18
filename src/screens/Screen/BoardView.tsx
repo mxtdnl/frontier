@@ -1,12 +1,12 @@
 import { PARAMS } from '../../engine';
-import { CommitMark, DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, RankMove, ShareStrip, Tag, TrendLine, ValueBar, type Column, type TagKind } from '../../ui/components';
+import { CommitMark, DataTable, Delta, GlyphCheck, LineChart, Panel, RankMove, Tag, TrendLine, ValueBar, type Column, type TagKind } from '../../ui/components';
 import { fmt, fmtInt, fmtShare, quarterLabel } from '../../ui/format';
 import { GENERAL_CAUSE, incidentBlock, type IncidentLine } from '../../ui/incidents';
-import { BRIEFING_LINES } from './briefing';
-import { BOARD_W, boardCapacity, boardChartWidths, boardMode, boardPage, boardTagWidth, fitTags } from '../../ui/layout';
-import { shareSegments, sharedDomain, trendWindow } from '../../ui/performance';
+import { TRUST_EXPLAINER } from './briefing';
+import { boardCapacity, boardChartWidths, boardMode, boardPage, boardTagWidth, fitTags } from '../../ui/layout';
+import { sharedDomain, trendWindow } from '../../ui/performance';
 
-import { committedCount, marketCeiling, previousTrust, tagKey, trustSeries, type BoardRow, type ScreenData } from './model';
+import { committedCount, marketAndValue, previousTrust, tagKey, trustSeries, type BoardRow, type ScreenData } from './model';
 
 const TAG_KINDS: ReadonlyArray<string> = ['BOT', 'AUTO', 'BREACH', 'INCID', 'INSOLV'];
 
@@ -171,12 +171,6 @@ export function boardTagW(disclosure: boolean, lit: boolean): number {
 /** Places a firm moved at the last resolution (positive or negative). */
 const moveOf = (f: BoardRow): number => f.prevIndex - (f.rank - 1);
 
-/** Label and caption beside the share strip's segments (components.css `.share-strip`). */
-const STRIP_LABEL_W = 12;
-const STRIP_CAPTION_W = 14;
-/** Panel side padding. */
-const STRIP_INSET = 2;
-
 export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, banner = false }: BoardProps) {
   // §14.1: two-line rows while they fit (12 as standard), one-line rows to 16, then pages of 10 with up to 2 pinned rows.
   const cap = boardCapacity({ lit, banner });
@@ -193,12 +187,8 @@ export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, ba
     ...boardMnemonics(disclosure, lit),
     ...tagKey(fitted.map((t) => t.shown), fitted.some((t) => t.more > 0)),
   ];
-  // The strip and the scales cover every firm, not only the page shown.
-  const strip = shareSegments(rows.map((r) => ({ id: r.id, ticker: r.ticker, value: r.value })));
-  const trackCh = (lit ? BOARD_W.lit : BOARD_W.standard) - STRIP_INSET - STRIP_LABEL_W - (strip.below > 0 ? STRIP_CAPTION_W : 0);
   return (
     <Panel title="BOARD" right={mode === 'paged' ? `PAGE ${shown.page + 1}/${shown.pages} · ${cmt}` : cmt}>
-      <ShareStrip segments={strip.segments} below={strip.below} trackCh={trackCh} />
       <div data-board-mode={mode} data-board-page={shown.page + 1} data-board-pages={shown.pages} style={{ display: 'contents' }}>
         <DataTable
           caption={mode === 'paged' ? `Firm board, page ${shown.page + 1} of ${shown.pages}` : 'Firm board'}
@@ -267,6 +257,21 @@ interface TrustPanelProps {
   incidentMax?: number;
 }
 
+const FIG_LABEL_W = 15;
+
+/** One figure row under the trust chart: label, whole number, change since last quarter (▲/▼) and a dim note. */
+function FigureRow({ label, value, delta, note, attr }: { label: string; value: number; delta: number | null; note: string; attr: string }) {
+  // One line, values in the column the INCIDENTS and PACTS rows use: label 15ch, value 6ch, change 6ch, note.
+  return (
+    <div className="row" style={{ flexWrap: 'nowrap', whiteSpace: 'nowrap', overflow: 'hidden' }} data-figure={attr} data-figure-delta={delta === null ? '' : delta.toFixed(1)}>
+      <span className="dim" style={{ width: `${FIG_LABEL_W}ch`, flex: 'none' }}>{label}</span>
+      <span className="num" style={{ width: '6ch', flex: 'none', textAlign: 'left' }}>{fmtInt(value)}</span>
+      <span style={{ width: '6ch', flex: 'none' }}>{delta === null ? <span className="dim">–</span> : <Delta value={delta} digits={0} />}</span>
+      <span className="dim">{note}</span>
+    </div>
+  );
+}
+
 export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: TrustPanelProps) {
   const { pub, rounds } = data;
   const series = trustSeries(rounds);
@@ -276,10 +281,12 @@ export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: Tr
   const incidentCount = rounds[String(latest)]?.incidents ?? 0;
   const firmCount = Object.keys(data.firms).length;
   const activePacts = Object.values(data.pacts).filter((p) => p.status === 'active').length;
+  const mv = marketAndValue(rounds, firmCount);
   return (
     <Panel title="PUBLIC TRUST" bodyClassName="col">
       <div style={{ paddingTop: '0.5lh' }}>
-        <p className="dim">{BRIEFING_LINES.market[0]}</p>
+        {/* While the INCIDENTS block replaces the chart, the block needs this line's room (lit-room mode, Session 20). */}
+        {incidents.length === 0 ? <p className="dim" data-trust-explainer="">{TRUST_EXPLAINER}</p> : null}
         <div className="big signal" data-trust-numerals="" data-trust-delta={delta.toFixed(1)}>
           <span data-roll="" data-prev={reveal ? fmt(prev) : undefined}>{fmt(pub.T)}</span>
         </div>
@@ -301,10 +308,14 @@ export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: Tr
         </div>
       )}
       <div className="stack" style={{ margin: '1lh 0 0.5lh', gap: 0 }}>
-        <HBar label="MARKET" labelW={11} textW={8} value={pub.M} domain={[0, marketCeiling(firmCount)]} text={fmtInt(pub.M)} describe={`Market size ${fmtInt(pub.M)}`} />
-        <div className="row"><span className="dim" style={{ width: '11ch' }}>INCIDENTS</span><span>{incidentCount} this quarter</span></div>
-        <div className="row"><span className="dim" style={{ width: '11ch' }}>PACTS</span><span>{activePacts} active</span></div>
-        <div className="row"><span className="dim" style={{ width: '11ch' }}>DISCLOSURE</span><span>{pub.disclosure ? 'ON' : 'OFF'}</span></div>
+        <FigureRow label="MARKET" value={mv.market} delta={mv.marketDelta} note="this quarter" attr="market" />
+        <FigureRow label="INDUSTRY VALUE" value={mv.value} delta={mv.valueDelta} note="all firms" attr="value" />
+        {/* The INCIDENTS block lists every incident, so the count row would repeat it. */}
+        {incidents.length === 0 ? (
+          <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>INCIDENTS</span><span>{incidentCount} this quarter</span></div>
+        ) : null}
+        <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>PACTS</span><span>{activePacts} active</span></div>
+        <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>DISCLOSURE</span><span>{pub.disclosure ? 'ON' : 'OFF'}</span></div>
       </div>
     </Panel>
   );

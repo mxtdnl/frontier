@@ -263,7 +263,8 @@ They never see τ, endRound, other firms' cash, capability, pace or safety (unle
 
 ### 6.6 What the briefing tells participants (truthfully)
 
-- Total market revenue tracks public trust.
+- Trust sets each quarter’s revenue. Value counts cash already banked.
+  (Owner decision 2026-11-18, Session 20: replaces "Total market revenue tracks public trust.", which rooms read as contradicting rising valuations.)
 - Trust recovers when pressure eases.
 - Pace builds capability faster, and capability wins market share.
 - Safety spend costs money and lowers your public exposure and incident risk.
@@ -506,12 +507,12 @@ The layout is built on a monospace character grid (§16.2). Regions:
 ┌ TOP BAR (dark panel, 2 px amber rule): FRONTIER │ Q3 Y2 │ [OPEN] │ 6/8 COMMITTED │ DISCLOSURE OFF │    T-01:47 ┐
 ├ STATUS LINE: Q3 Y2 · Decisions open. Set pace, safety and a card, then commit. 01:47 left. ───────────────────┤
 ├ BOARD (left ~62%) ─────────────────────────────────┬ TRUST (right ~38%) ───────────────────────────────┤
-│ VALUE SHARE [HUMN 30% │ BTC 22% │ …]  2 below zero │ PUBLIC TRUST                                      │
-│ # MOVE FIRM SHARE PROFIT VALUE CHANGE ✓ bar trend  │ Total market revenue tracks public trust.         │
+│ # MOVE FIRM SHARE PROFIT VALUE CHANGE ✓ bar trend  │ PUBLIC TRUST                                      │
+│ rows…                                              │ Trust sets each quarter’s revenue. Value counts…  │
 │ rows… (BREACH / INCID / INSOLV / AUTO / BOT tags)  │ INCIDENTS block in place of the chart after reveal │
 │ [PACE SAFETY EXPOSURE columns if disclosure on]    │ 61.8  ▼6.3 since last quarter   (large numerals)  │
-│ key strip: only the tags on screen                 │ line chart + change strip │ MKT │ INCID │ PACTS │ DISCLOSURE │
-├ WIRE  Q3 Y2 ▼ incident headline · Q3 Y2 headline … (scrolling; static list if reduced motion) ───────────────┤
+│ key strip: only the tags on screen                 │ line chart + change strip │ MARKET │ INDUSTRY VALUE │ INCID │ PACTS │ DISCLOSURE │
+├ WIRE  Q3 Y2 ▼ incident headline · Q3 Y2 headline … (latest quarter only; static list if reduced motion) ─────┤
 └ F-KEY BAR: only the keys that act on this screen; the next expected action is the one solid key ──────────────┘
 ```
 
@@ -529,12 +530,12 @@ The results screen and the phone use the same bar (brand block, position or quar
 
 **F-key bar.** Key caps are outlined in `--signal-dim`. The next expected action is the one solid key (F9 in lobby, briefing, open, reveal and after the end; F8 during a summit; none while resolving). Keys that do nothing on the current screen are hidden: view keys while their view is showing or in lobby and briefing, F6 without an active pact or outside open, reveal and summit, F8 outside open, reveal and summit, F10 before quarter 1 and after the end, F7 after the end, F9 while resolving or in a summit. The results screen shows only F9 and F2.
 
-**Ticker.** A 2ch gap after the `WIRE` label; each item starts with its quarter; items are coloured by headline kind (`--down` with ▼ for incidents, breaches, insolvency and the moratorium; `--up` for clean audits; `--wire` otherwise).
+**Ticker.** Only the latest resolved quarter: its headlines, then the pact and disclosure events since it resolved (during its reveal and the next open quarter); before quarter 1 resolves, every event so far (owner decision 2026-11-18, Session 20). The full history is the `WIRE` view. A 2ch gap after the `WIRE` label; each item starts with its quarter; items are coloured by headline kind (`--down` with ▼ for incidents, breaches, insolvency and the moratorium; `--up` for clean audits; `--wire` otherwise).
 
 **Board readability.** Row rules in `--grid` and an alternate-row fill in `--raise`; panel titles in `--text` at weight 600; column headers in `--dim` on a `--raise` header row; full-word column headers where width allows (CHANGE, PACE, SAFETY, EXPOSURE). A key strip at the foot of the board explains only the tags and marks on screen: one line after a one-line gap, wrapping into the gap row when the entries need more (Session 13).
 
 **Firm performance on the board** (Session 13; owner approval 2026-10-03, UI audit section 06; column set by owner decision 2026-10-05).
-- **Value share strip** across the top of the board, one line plus half a line of space, so the two-line row capacities below are unchanged. Each firm with a valuation above zero gets a segment as wide as its share of the positive total, in rank order. Segments are `--wire`, faded by rank in five steps by mixing with `--panel` (never below 64 %, so the black text on them stays above 4.5:1), and separated by a 1 px `--base` gap. A segment wide enough to hold them shows the ticker and the whole percentage (`HUMN 30%`); narrower segments show nothing. Firms at or below zero have no segment; the caption at the right end counts the firms below zero ("2 below zero"). When no firm is above zero the strip reads "No firm above zero". The strip covers every firm, not only the page shown.
+- The value share strip (Session 13) was removed in Session 20 (owner decision 2026-11-18): rooms read its share of valuation as the SHARE column (market share). The two-line row capacities are unchanged; the 1.5 lines it took are slack.
 - **Rows**, in order: `#` rank; `MOVE`, places gained or lost since last quarter (▲ or ▼ with a number, `–` for none); `FIRM`; `SHARE`; `PROFIT`; `VALUE`; `CHANGE`; the commit mark (a solid `--up` box carrying a black ✓ when the firm has committed this quarter, a dim `–` otherwise; the header is a ✓ and the key strip explains it); a **valuation bar** drawn from a visible zero line on one scale shared by every firm (positive in `--wire` to the right, negative in `--down` to the left); a **trend line** of the last 14 quarters (opening value included while fewer have resolved) on one y-scale shared by every row, with a dim zero line, drawn in `--wire`, or `--down` when the latest value is below zero; then the tags.
 - **Widths** (ch). The fixed columns take 48 (3 + 5 + 7 + 7 + 8 + 8 + 8 + 2), plus 21 with disclosure on (PACE 5, SAFETY 7, EXPOSURE 9) or 16 with the mnemonics. At least 15 ch stay for tags (two tags) except in lit-room mode with disclosure on. What is left goes to the bar (6–12) and the trend line (8–14):
 
@@ -553,7 +554,7 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
   - `BOARD`
   - `TRST`: full-screen trust history
   - `PACT`: pact table with members and terms
-  - `WIRE`: full headline log
+  - `WIRE`: full headline log, every quarter, newest first, the quarter printed once at the head of its group, coloured by kind as on the ticker; it scrolls inside the panel. Also Shift+W (Session 20)
   - `FIRM <TICKER>`: a public firm profile with share and valuation history
   - `FIRMS`: small multiples of every firm's valuation (Session 13)
   - `RANKS`: rank by quarter for every firm (Session 13)
@@ -562,6 +563,7 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
 - Esc returns to the board.
 - F-keys mirror these.
 - Every F-key action also has a letter alternative, because laptops often need Fn: Shift+A advance, Shift+S summit, Shift+D disclosure, Shift+E end.
+- Shift+W opens `WIRE` (Session 20). It has no F-key, because F1, F5, F11 and F12 are never bound and the others are taken. The key bar shows it as `⇧W WIRE` after F4, hidden in lobby, briefing and while `WIRE` shows.
 - Never bind F5, F11 or F12.
 
 **Board rows by firm count** (Session 10; the projector is a fixed character grid, 150 × 36 or 130 × 32 in lit-room mode, so these hold at 1280×720 and 1920×1080 alike):
@@ -591,6 +593,8 @@ The trend for every firm is on the `FIRMS` view, which is never cut.
 **`RANKS` view** (Session 13). Rank by valuation for each resolved quarter as connected lines, rank 1 at the top. The rank for a quarter is the engine's rank (valuation, then the engine's own tie-break); where two firms would still tie the ticker decides, so the chart is deterministic. Two firms are highlighted automatically: the current leader in `--signal` and the firm with the largest fall from its best rank in `--down` (ties: the larger fall, then the ticker); both are drawn thicker with a square at each quarter. Every other firm is a thin `--rule` line. Labels sit at the line ends: the highlighted firms always (`HUMN 1st`, `BTC ▼3`), the others where they do not overlap. A headline sentence above the chart, e.g. "HUMN rose to 1st. BTC fell from 1st to 2nd." ("holds 1st" when the leader was already 1st; "No firm is below its best rank." when nothing fell). Rank axis labels: every rank up to 16 firms, then 1 and every 5th. One resolved quarter shows "1 quarter resolved" instead of lines.
 
 **Reveal state.** One orchestrated motion moment, described in §16.5.
+
+**Trust panel figures** (Session 20; owner decision 2026-11-18). Above the trust numerals, one dim line: "Trust sets each quarter’s revenue. Value counts cash already banked." (also on `TRST`). Under the chart, in place of the MARKET bar: `MARKET`, this quarter's revenue pool (`rounds/{r}/M`), and `INDUSTRY VALUE`, the sum of every firm's public valuation (`rounds/{r}/results`), each as a whole number with its change since the quarter before (▲/▼; quarter 1 against the opening values; `–` before quarter 1 resolves) and a dim note ("revenue this quarter", "all firms"). Both use public data only; no firm's cash is summed, as cash is private (§6.5).
 
 **Incidents** (Session 18; owner decisions 2026-10-10). When the reveal sequence ends, an `INCIDENTS` block appears instantly in the PUBLIC TRUST panel, in place of the trust chart, for the rest of the reveal; the chart returns when the next quarter opens. The board rows never move. The block is built from `rounds/{r}/incidentFirms`, so it never depends on the headline cap. Each incident, in firm creation order:
 - ▼, the ticker and the incident's wire headline (the first incident template when the cap left the incident out);
@@ -655,28 +659,28 @@ Scale rules (Session 10):
 
 ### 14.4 Results (`#/results`)
 
-On the projector the facilitator steps through seven panels with F9 (NET CONTRIBUTION added as panel 5 in Session 18):
+On the projector the facilitator steps through six panels with F9 (NET CONTRIBUTION added in Session 18; FINAL BOARD and TRUST TRACE removed and CONDUCT split from NET CONTRIBUTION in Session 20, owner decision 2026-11-18):
 
-1. **FINAL BOARD**: ranked by final valuation. A dumbbell per firm from peak (hollow square) to final (solid square) on one axis that includes zero; final value and drop from peak on the right; final values below zero in `--down` with a − sign.
-2. **TRUST TRACE**: full history as a `LineChart`. The collapse quarter is a labelled vertical marker. The τ line, with a hatched band below it, appears only if the "Reveal threshold" setting is on.
-3. **COUNTERFACTUAL**: three headline figures (INDUSTRY VALUE, ALTERNATIVE, VALUE LOST or VALUE ADDED, §10); actual and alternative trust paths, each labelled at its end, with the gap hatched; per-firm comparison on a zero-based axis (actual bar from zero, alternative as a marker).
-4. **ATTRIBUTION**: a butterfly chart per firm: share of damage extending left in `--down`, share of value extending right in `--signal`, ticker in the middle, values at the bar ends. Negative-total rule in §10.
+1. **COUNTERFACTUAL**: three headline figures (INDUSTRY VALUE, ALTERNATIVE, VALUE LOST or VALUE ADDED, §10); actual and alternative trust paths, each labelled at its end, with the gap hatched; the moratorium quarter as a labelled vertical marker; the τ line, with a hatched band below it, only if the "Reveal threshold" setting is on (moved from TRUST TRACE in Session 20); per-firm comparison on a zero-based axis (actual bar from zero, alternative as a marker).
+2. **ATTRIBUTION**: a butterfly chart per firm: share of damage extending left in `--down`, share of value extending right in `--signal`, ticker in the middle, values at the bar ends. Negative-total rule in §10.
+3. **NET CONTRIBUTION** (Session 18): value created for the whole market (§10).
+   - The headline, written from the data: "Ranked by value created for the whole market, HUMN falls from 1st to 8th and ARCN rises from 9th to 2nd." (the valuation leader's move, then the largest rise; "HUMN holds 1st and …" when the leader keeps 1st; "every firm keeps its place." when no rank changes). A second sentence when every net contribution is below zero, and one for the moratorium cost and how many firms it is charged to.
+   - Full width (Session 20): only the slope chart from rank by valuation to rank by net contribution. The 30% of firms with the largest rises are drawn thick in `--up` with ▲ and the move beside the label, and the 30% with the largest falls thick in `--down` with ▼ (round(N × 0.3) each side, at least 1; ties to the better rank by net contribution; a firm that did not move is never highlighted; owner decision 2026-11-18, replacing "3 places or more"); the rest are dim. The firm ranked 1st by net contribution is drawn thickest in `--signal`, labelled "1 ARCN ▲9 · top net contribution", and named in the panel heading ("1st by net contribution: ARCN · CONDUCT next"). Labels never overlap: the leader, then the largest moves, then the rest where they fit. The slope chart always shows every firm.
+4. **CONDUCT** (Session 20; the right side of NET CONTRIBUTION until then): what each firm did to the market, so the facilitator can point to the harmful decisions.
+   - The headline, written from the data: "BTAG did the most harm to the market: ▼433. ARCN did the most for it: ▲120." (lowest and highest market effect; ties by ticker; "No firm harmed the market." or "No firm added to the market." when none is below or above zero as displayed).
+   - Per firm in rank of net contribution: on one zero-based axis, a bar from 0 to the final valuation, then the market effect (▲ in `--up` or ▼ in `--down`), the research credit (an amber outline, labelled "research credit, not money", never merged into valuation), the rivalry taken (a red outline, shown with a − sign), and a square at the net contribution; the same figures as numbers; under each firm its conduct ledger, e.g. "▲ PUBLISH 6 · restraint 9  ▼ POACH 2 · BLITZ 3 · breaches 1".
+   - Many firms, as ATTRIBUTION: up to 24 firms every firm; above, the 12 firms whose rank changed most, then one `OTHERS` row with the sums of the rest as figures without bars (the axis serves the listed firms). The list scrolls inside the panel.
+5. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).
+6. **DEBRIEF**: the five prompts in §15.5.
 
 Series are labelled on the chart; no abbreviations (SUST, ACT, DEPL) or prose legends.
 
 **Many firms** (Session 10; owner decision 2026-10-04: one scrolling column, no columns or pages). F9 and Esc step whole panels as before.
-- FINAL BOARD: one column, one row per firm in rank order. When rows would fall below 1.2 lines (about 20 firms on the projector), rows stay 1.5 lines tall and the list scrolls inside the panel. The column heading with the axis values stays at the top and the key at the bottom; the key row ends with "N firms · arrow keys scroll".
 - COUNTERFACTUAL: the three figures and the trust paths stay as above; the per-firm comparison scrolls inside its column, with its heading and axis kept in view.
 - Scrolling: mouse wheel or trackpad, or the arrow keys, Page Up, Page Down, Home and End on the results page. Each panel opens at the top.
 - ATTRIBUTION: up to 24 firms, one row per firm. Above 24, the 12 firms with the largest share of damage, then one `OTHERS` row with the combined shares of the rest; the heading states how many firms it combines. The `OTHERS` row shows its two shares as figures without bars, below a rule, so the axis serves the listed firms.
+- CONDUCT: as above; its heading and axis stay in view while the list scrolls.
 - PACT RECORD: member lists follow the long-list rule (§14.1).
-5. **NET CONTRIBUTION** (Session 18): value created for the whole market (§10).
-   - The headline, written from the data: "Ranked by value created for the whole market, HUMN falls from 1st to 8th and ARCN rises from 9th to 2nd." (the valuation leader's move, then the largest rise; "HUMN holds 1st and …" when the leader keeps 1st; "every firm keeps its place." when no rank changes). A second sentence when every net contribution is below zero, and one for the moratorium cost and how many firms it is charged to.
-   - Left: a slope chart from rank by valuation to rank by net contribution. Firms that move 3 places or more are drawn thick, ▲ in `--up` or ▼ in `--down`, with the move beside the label; the rest are dim. Labels never overlap: the leader, then the largest moves, then the rest where they fit.
-   - Right, per firm in rank of net contribution: on one zero-based axis, a bar from 0 to the final valuation, then the market effect (▲ in `--up` or ▼ in `--down`), the research credit (an amber outline, labelled "research credit, not money", never merged into valuation), the rivalry taken (a red outline, shown with a − sign), and a square at the net contribution; the same figures as numbers; under each firm its conduct ledger, e.g. "▲ PUBLISH 6 · restraint 9  ▼ POACH 2 · BLITZ 3 · breaches 1".
-   - Many firms, as ATTRIBUTION: up to 24 firms every firm; above, the 12 firms whose rank changed most, then one `OTHERS` row with the sums of the rest as figures without bars (the axis serves the listed firms). The slope chart always shows every firm. The list scrolls like FINAL BOARD.
-6. **PACT RECORD**: terms, members, detected vs undetected violations (now revealed).
-7. **DEBRIEF**: the five prompts in §15.5.
 
 Participants see their own firm's card: final rank, valuation actual vs counterfactual, cumulative exposure share, undetected violations of their own, and (Session 18) their net contribution with its parts, their rank by net contribution, their research credit (labelled "not money") and their conduct ledger.
 
@@ -748,7 +752,7 @@ The results screen, including the NET CONTRIBUTION panel and its copy (Session 1
 
 Calibration builds will extend the bank to at least 40 templates in the same register.
 
-### 15.5 Debrief prompts (results panel 7)
+### 15.5 Debrief prompts (results panel 6)
 
 1. When did your firm first notice trust falling, and what did you change?
 2. Which pacts held and which broke? Was the difference monitoring, sanctions or trust?
@@ -818,7 +822,7 @@ Colours do not invert.
 
 ### 16.3 Components
 
-`TopBar`, `PhaseBlock`, `StatusLine`, `FKeyBar`, `CommandLine`, `Panel` (title row and 1 px rule border, no radius), `DataTable` (fixed ch columns, right-aligned numerics), `Delta` (sign, glyph and colour), `LineChart` (below), `ShareStrip`, `ValueBar`, `TrendLine`, `CommitMark`, `FirmMultiples`, `RankChart` (§14.1 firm performance, Session 13), `HBar` (drawn from a visible zero line; negative values extend left in `--down` with a − sign), `Ticker`, `Segmented4`, `SafetySlider` (track and block thumb), `CardPicker` (sheet), `CommitButton`, `Tag` (`BOT`, `AUTO`, `BREACH`, `INSOLV`, `PACT-A`), `PresenceDot`, `QR`, `Countdown`.
+`TopBar`, `PhaseBlock`, `StatusLine`, `FKeyBar`, `CommandLine`, `Panel` (title row and 1 px rule border, no radius), `DataTable` (fixed ch columns, right-aligned numerics), `Delta` (sign, glyph and colour), `LineChart` (below), `ValueBar`, `TrendLine`, `CommitMark`, `FirmMultiples`, `RankChart` (§14.1 firm performance, Session 13), `HBar` (drawn from a visible zero line; negative values extend left in `--down` with a − sign), `Ticker`, `Segmented4`, `SafetySlider` (track and block thumb), `CardPicker` (sheet), `CommitButton`, `Tag` (`BOT`, `AUTO`, `BREACH`, `INSOLV`, `PACT-A`), `PresenceDot`, `QR`, `Countdown`.
 
 All corners are square, except the device-like participant sheet edges, which are max 2 px.
 
@@ -831,7 +835,7 @@ All corners are square, except the device-like participant sheet edges, which ar
 - The y domain is either trust (always 0–100) or zero-based (always includes 0); never the min-to-max of the data.
 - A series with a single point shows the text "1 quarter resolved" instead of a line.
 - Optional (Session 13): context series drawn first as thin `--rule` lines without markers or tags, included in the y domain (phone BOOK); a dotted zero line.
-- τ is never passed to a chart on `#/screen` or `#/play`. It is drawn only on the results trust trace when the "Reveal threshold" setting is on.
+- τ is never passed to a chart on `#/screen` or `#/play`. It is drawn only on the results COUNTERFACTUAL trust chart when the "Reveal threshold" setting is on.
 
 ### 16.4 Forbidden
 

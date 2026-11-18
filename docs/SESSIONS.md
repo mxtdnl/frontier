@@ -909,3 +909,23 @@ A separate PDF for facilitators: a detailed walkthrough for someone running FRON
   - that the briefing deck in the slides repository needs updating (six cards and the new lines).
 
 **Commits.** Commit each part separately, in the order A, B, C, D, E.
+
+## Session 20 — Owner feedback from the room: board, wire and results (model: Opus 5.5)
+
+Read:
+- docs/spec.md §6.5, §6.6, §14.1, §14.4, §15.5 and §16
+- the Session 13 and 18 entries in docs/PROGRESS.md.
+
+**Why** (owner feedback 2026-11-18, from live rooms):
+- **Value share strip.** Rooms could not see why its percentages differed from the SHARE column below. The strip shows share of valuation; SHARE is market share.
+- **Trust line.** "Total market revenue tracks public trust" read as a contradiction while every firm's valuation rose and trust fell. Valuation is mostly cash already banked (§6.3 step 13); trust sets only each quarter's revenue (step 8).
+- **Wire.** The ticker mixed old quarters with the latest one, and the full log was reachable only by typing `WIRE`.
+- **Results.** FINAL BOARD and TRUST TRACE repeated what the room had already seen. NET CONTRIBUTION carried too much: the movers and the figures behind them.
+
+**Owner decisions (2026-11-18).**
+1. Remove the value share strip.
+2. Replace the trust line with "Trust sets each quarter’s revenue. Value counts cash already banked.", on the board, on `TRST` and as the first briefing line. Show MARKET and INDUSTRY VALUE with their changes under the trust chart. The owner suggested "total cash in circulation"; cash is private (§6.5), so the public sum of valuations is used instead.
+3. The ticker shows only the latest resolved quarter and the events since. Shift+W opens `WIRE` on the projector (no F-key is free).
+4. Results: remove FINAL BOARD and TRUST TRACE. NET CONTRIBUTION keeps only the slope chart, with the firm 1st by net contribution marked. A new CONDUCT panel holds the figures and ledgers. The τ line and moratorium marker move to the COUNTERFACTUAL trust chart.
+
+**Commits.** Board strip, trust panel, wire, results, docs; then the facilitator guide screenshots and PDF.

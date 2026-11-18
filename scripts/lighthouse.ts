@@ -110,7 +110,7 @@ await withDevServer(async () => {
     await audit('play: lobby');
 
     await key('F9');
-    await waitText(page, /Total market revenue tracks public trust/, 'the briefing shows');
+    await waitText(page, /Trust sets each quarter’s revenue/, 'the briefing shows');
     await audit('play: briefing');
     await key('F9');
     await waitText(page, /T-\d\d:\d\d/, 'quarter 1 opens on the desk');

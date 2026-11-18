@@ -2,19 +2,19 @@ import { COMMAND_HELP } from '../../ui/commands';
 import { DataTable, Delta, FirmMultiples, LineChart, Panel, QR, RankChart, Tag, type RankLine } from '../../ui/components';
 import { yDomain } from '../../ui/chart';
 import { fmt, fmtShare, quarterLabel } from '../../ui/format';
-import { KEY_BINDINGS } from '../../ui/keys';
+import { ALL_BINDINGS, keyWords } from '../../ui/keys';
 import { fillColumns, firmsGrid, firmsPage, lobbyColumns, tickerLine, truncateList } from '../../ui/layout';
 import { largestFaller, leaderOf, rankByQuarter, ranksHeadline, type FirmRef } from '../../ui/performance';
 import { allIncidents } from '../../ui/incidents';
-import { BRIEFING_LINES } from './briefing';
-import { boardRows, joinUrl, pactRows, previousTrust, trustSeries, valuationSeries, wireItems, type BoardRow, type PactRow, type ScreenData } from './model';
+import { BRIEFING_LINES, TRUST_EXPLAINER } from './briefing';
+import { boardRows, joinUrl, pactRows, previousTrust, tickerTone, trustSeries, valuationSeries, wireItems, type BoardRow, type PactRow, type ScreenData } from './model';
 
 export function TrustView({ data }: { data: ScreenData }) {
   const series = trustSeries(data.rounds);
   const delta = data.pub.round === 0 ? 0 : data.pub.T - previousTrust(data.rounds);
   return (
     <Panel title="TRST · PUBLIC TRUST HISTORY" bodyClassName="col">
-      <p className="dim" style={{ paddingTop: '0.5lh' }}>{BRIEFING_LINES.market[0]}</p>
+      <p className="dim" style={{ paddingTop: '0.5lh' }}>{TRUST_EXPLAINER}</p>
       <div className="row" style={{ alignItems: 'flex-end' }}>
         <div className="big signal" data-amber="trust">{fmt(data.pub.T)}</div>
         <div>
@@ -114,18 +114,29 @@ export function AuditView({ data, onQueue }: AuditViewProps) {
   );
 }
 
+/**
+ * `WIRE` (§14.1; Shift+W since Session 20): every headline and event of the session, newest quarter first, the quarter
+ * printed once at the head of its group, coloured by kind as on the ticker. The list scrolls inside the panel.
+ */
 export function WireView({ data }: { data: ScreenData }) {
-  const items = wireItems(data.rounds, data.wire).slice(0, 14);
+  const items = wireItems(data.rounds, data.wire);
   return (
-    <Panel title="WIRE · HEADLINE LOG" bodyClassName="pad">
+    <Panel title="WIRE · HEADLINE LOG" right={`${items.length} items · Esc returns to the board`} bodyClassName="pad incid-scroll">
       {items.length === 0 ? <p className="dim">No headlines yet.</p> : null}
-      <ul className="stack" style={{ listStyle: 'none', margin: 0, padding: 0, gap: 0 }}>
-        {items.map((h, i) => (
-          <li key={i} className="row" style={{ gap: '2ch' }}>
-            <span className="dim" style={{ width: '6ch' }}>{h.round > 0 ? quarterLabel(h.round) : 'PRE'}</span>
-            <span className="wire-c">{h.text}</span>
-          </li>
-        ))}
+      <ul className="stack" style={{ listStyle: 'none', margin: 0, padding: 0, gap: 0 }} data-wire-view="">
+        {items.map((h, i) => {
+          const first = i === 0 || items[i - 1]?.round !== h.round;
+          const tone = tickerTone(h.kind);
+          return (
+            <li key={i} className="row" style={{ gap: '2ch', marginTop: first && i > 0 ? '0.5lh' : undefined }} data-round={h.round}>
+              <span className="dim" style={{ width: '6ch', flex: 'none' }}>{first ? (h.round > 0 ? quarterLabel(h.round) : 'PRE') : ''}</span>
+              <span className={`t-${tone}`}>
+                {tone === 'down' ? '▼ ' : tone === 'up' ? '▲ ' : ''}
+                {h.text}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </Panel>
   );
@@ -256,9 +267,9 @@ export function HelpView() {
         </div>
         <div className="stack" style={{ gap: 0 }}>
           <span className="dim">KEYS</span>
-          {KEY_BINDINGS.map((b) => (
+          {ALL_BINDINGS.map((b) => (
             <div key={b.action} className="row">
-              <span style={{ width: '16ch' }} className="signal">{b.fKey} / Shift+{b.letter}</span>
+              <span style={{ width: '16ch' }} className="signal">{keyWords(b)}</span>
               <span>{b.label}</span>
             </div>
           ))}

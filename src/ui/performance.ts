@@ -169,41 +169,6 @@ export function barSpan(value: number, domain: readonly [number, number]): { zer
   return { zero, start: Math.min(zero, end), width: Math.abs(end - zero) };
 }
 
-// ── Value share strip (board) ─────────────────────────────────────────────────
-
-export interface ShareSegment {
-  id: string;
-  ticker: string;
-  /** Share of the positive total, 0–1. */
-  share: number;
-  /** Fade step by rank, 0 (brightest) to 4. */
-  fade: number;
-}
-
-export const SHARE_FADES = 5;
-
-/**
- * Market value share: firms above zero only, in value order (ties by ticker), each as its share of the positive
- * total. Firms below zero are counted, not drawn.
- */
-export function shareSegments(rows: ReadonlyArray<FirmRef & { value: number }>): { segments: ShareSegment[]; below: number } {
-  const pos = rows.filter((r) => r.value > 0).sort((a, b) => b.value - a.value || byTicker(a, b));
-  const total = pos.reduce((s, r) => s + r.value, 0);
-  const segments = pos.map((r, i) => ({
-    id: r.id,
-    ticker: r.ticker,
-    share: r.value / total,
-    fade: Math.min(SHARE_FADES - 1, Math.floor((i * SHARE_FADES) / pos.length)),
-  }));
-  return { segments, below: rows.filter((r) => r.value < 0).length };
-}
-
-/** "HUMN 30%" when the segment (`stripCh` wide in total) holds it with a character to spare; otherwise null. */
-export function segmentLabel(seg: Pick<ShareSegment, 'ticker' | 'share'>, stripCh: number): string | null {
-  const text = `${seg.ticker} ${Math.round(seg.share * 100)}%`;
-  return seg.share * stripCh >= text.length + 1 ? text : null;
-}
-
 // ── BOOK: against the field ───────────────────────────────────────────────────
 
 export interface Field {

@@ -1,7 +1,11 @@
 /** Briefing copy (spec §6.6, §14.5). Contains no numbers that reveal parameters. */
+/** The line above the trust figures on the board and TRST (Session 20). The briefing's first line. */
+export const TRUST_EXPLAINER = 'Trust sets each quarter’s revenue. Value counts cash already banked.';
+
 export const BRIEFING_LINES = {
   market: [
-    'Total market revenue tracks public trust.',
+    // Owner decision 2026-11-18 (Session 20): replaces "Total market revenue tracks public trust."
+    TRUST_EXPLAINER,
     'Trust recovers when pressure eases.',
     'Pace builds capability faster. Capability earns market share.',
     'Safety spend costs money. It lowers public exposure and incident risk.',

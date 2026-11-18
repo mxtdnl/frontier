@@ -1,4 +1,4 @@
-/** NET CONTRIBUTION panel (spec §14.4 panel 5, Session 18): the results model, the headline and the participant card. */
+/** NET CONTRIBUTION and CONDUCT panels (spec §14.4 panels 3 and 4; Sessions 18 and 20): the results model, the headline and the participant card. */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -6,9 +6,11 @@ import { findViolations } from '../../scripts/lib/copy-rules';
 import { PARAMS, buildResults, resolveRound, type ConductLedger, type Contribution, type EngineState, type FinalResults, type FirmContribution } from '../../src/engine';
 import { fromResults } from '../../src/firebase/schema';
 import { OwnResultsCard } from '../../src/screens/Results/OwnResultsCard';
-import { NetContribution } from '../../src/screens/Results/Results';
-import { contributionHeadline, panelHeadline } from '../../src/screens/Results/headlines';
-import { DEBRIEF_PROMPTS, RESULT_PANELS, contributionRows, contributionView, ledgerLine, waterfallPoints } from '../../src/screens/Results/model';
+import { Conduct, NetContribution } from '../../src/screens/Results/Results';
+import { conductHeadline, contributionHeadline, panelHeadline } from '../../src/screens/Results/headlines';
+import { RESULT_PANEL_COUNT } from '../../src/firebase/phases';
+import { fmt } from '../../src/ui/format';
+import { DEBRIEF_PROMPTS, RESULT_PANELS, contributionRows, slopeHighlightCount, contributionView, ledgerLine, waterfallPoints } from '../../src/screens/Results/model';
 import { storeAndRead } from '../firebase/rtdb';
 import { dec, game } from '../engine/helpers';
 
@@ -79,8 +81,9 @@ describe('the headline sentence', () => {
 });
 
 describe('the results model', () => {
-  it('is panel 5 of 7, before PACT RECORD and DEBRIEF, and the debrief refers to it', () => {
-    expect(RESULT_PANELS).toEqual(['FINAL BOARD', 'TRUST TRACE', 'COUNTERFACTUAL', 'ATTRIBUTION', 'NET CONTRIBUTION', 'PACT RECORD', 'DEBRIEF']);
+  it('is panel 3 of 6, followed by CONDUCT, PACT RECORD and DEBRIEF, and the debrief refers to it (Session 20)', () => {
+    expect(RESULT_PANELS).toEqual(['COUNTERFACTUAL', 'ATTRIBUTION', 'NET CONTRIBUTION', 'CONDUCT', 'PACT RECORD', 'DEBRIEF']);
+    expect(RESULT_PANEL_COUNT).toBe(RESULT_PANELS.length);
     expect(DEBRIEF_PROMPTS[2]).toBe(
       'Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay?',
     );
@@ -92,9 +95,23 @@ describe('the results model', () => {
     expect(ledgerLine(ledger())).toBe('▲ none  ▼ none');
   });
 
-  it('marks rank changes of 3 or more', () => {
+  it('marks the largest 30% of rises ▲ and of falls ▼ (Session 20)', () => {
     const rows = contributionRows(results([firm('a', 1, 4, 1), firm('b', 4, 1, 9), firm('c', 2, 3, 3), firm('d', 3, 2, 5)]));
+    // 4 firms: round(1.2) = 1 on each side.
     expect(rows.map((x) => [x.ticker, x.move, x.highlight])).toEqual([['B', 3, 'up'], ['D', 1, null], ['C', -1, null], ['A', -3, 'down']]);
+  });
+
+  it('highlights round(N × 0.3) firms on each side, at least 1, ties to the better net rank', () => {
+    expect([1, 4, 5, 10, 12, 50].map(slopeHighlightCount)).toEqual([1, 1, 2, 3, 4, 15]);
+    // 10 firms, ranks reversed: moves 9, 7, 5, 3, 1, −1, −3, −5, −7, −9; three each side.
+    const ten = Array.from({ length: 10 }, (_, i) => firm(`f${i}`, i + 1, 10 - i, 10 - i));
+    const rows = contributionRows(results(ten));
+    expect(rows.filter((x) => x.highlight === 'up').map((x) => x.move)).toEqual([9, 7, 5]);
+    expect(rows.filter((x) => x.highlight === 'down').map((x) => x.move)).toEqual([-5, -7, -9]);
+    expect(rows.filter((x) => x.highlight === null)).toHaveLength(4);
+    // A small move can be highlighted; no move is never highlighted.
+    const flat = contributionRows(results([firm('a', 1, 1, 3), firm('b', 2, 3, 1), firm('c', 3, 2, 2)]));
+    expect(flat.map((x) => [x.ticker, x.highlight])).toEqual([['A', null], ['C', 'up'], ['B', 'down']]);
   });
 
   it('runs the waterfall from 0 through valuation, market effect, credit and rivalry to net', () => {
@@ -142,14 +159,45 @@ describe('the panel and the participant card, from a played session', () => {
     expect(r.contribution).toEqual(buildResults(played(), { revealTau: false }).contribution);
   });
 
-  it('draws the slope chart and one figures row and ledger per firm, headline first', () => {
+  it('NET CONTRIBUTION draws only the slope chart, headline first, with no figures or ledgers (Session 20)', () => {
     const out = html(createElement(NetContribution, { r }));
     expect(out).toContain('data-chart="slope"');
     expect(out.indexOf('data-headline')).toBeLessThan(out.indexOf('<svg'));
+    expect(out).not.toContain('class="nc-firm"');
+    expect(out).not.toContain('data-ledger');
+    expect(text(createElement(NetContribution, { r }))).toContain(panelHeadline(r, 2));
+  });
+
+  it('NET CONTRIBUTION marks the firm ranked 1st by net contribution', () => {
+    const top = contributionRows(r).find((x) => x.rank === 1)!;
+    const out = html(createElement(NetContribution, { r }));
+    expect(out.match(/data-winner=""/g)).toHaveLength(1);
+    expect(out).toMatch(new RegExp(`data-firm="${top.ticker}"[^>]*data-winner=""`));
+    expect(out).toContain('sl-win');
+    expect(text(createElement(NetContribution, { r }))).toContain(`1st by net contribution: ${top.ticker}`);
+    expect(text(createElement(NetContribution, { r }))).toContain('top net contribution');
+  });
+
+  it('CONDUCT shows one figures row and ledger per firm, headline first', () => {
+    const out = html(createElement(Conduct, { r }));
+    expect(out).not.toContain('data-chart="slope"');
+    expect(out.indexOf('data-headline')).toBeLessThan(out.indexOf('data-res-scroll'));
     expect(out.match(/class="nc-firm" data-firm=/g)).toHaveLength(6);
     expect(out.match(/data-ledger=""/g)).toHaveLength(6);
     expect(out).toContain('research credit, not money');
-    expect(text(createElement(NetContribution, { r }))).toContain(panelHeadline(r, 4));
+    expect(text(createElement(Conduct, { r }))).toContain(panelHeadline(r, 3));
+  });
+
+  it('CONDUCT headline names the most harmful and the most helpful market effect', () => {
+    const firms = Object.values(r.contribution!.firms);
+    const worst = [...firms].sort((a, b) => a.marketEffect - b.marketEffect)[0]!;
+    const best = [...firms].sort((a, b) => b.marketEffect - a.marketEffect)[0]!;
+    const h = conductHeadline(r);
+    expect(worst.marketEffect).toBeLessThan(0);
+    expect(h).toContain(`${worst.ticker} did the most harm to the market: ▼${fmt(-worst.marketEffect, 0)}.`);
+    if (best.marketEffect > 0) expect(h).toContain(`${best.ticker} did the most for it: ▲${fmt(best.marketEffect, 0)}.`);
+    expect(findViolations(h, { allowNonTelegraphing: false })).toEqual([]);
+    expect(conductHeadline({ ...r, contribution: null })).toBe('Net contribution was not computed for this session.');
   });
 
   it('shows the participant their net contribution, rank, research credit and ledger', () => {

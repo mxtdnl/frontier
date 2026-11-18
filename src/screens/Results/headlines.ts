@@ -3,7 +3,7 @@
  * panel's main point can be read without the facilitator. Pure; copy follows §15.
  */
 import { PARAMS, type FinalResults, type FirmFinal } from '../../engine';
-import { fmt, fmtShare, quarterLabel } from '../../ui/format';
+import { fmt, fmtShare } from '../../ui/format';
 import { ordinal } from '../../ui/performance';
 
 /** A final valuation within this of the peak reads as "at peak", as on the dumbbell. */
@@ -21,37 +21,7 @@ const belowPeak = (f: Pick<FirmFinal, 'valuation' | 'peakValuation'>): boolean =
 /** Below zero as displayed (one decimal), so the sentence agrees with the red figures. */
 const belowZero = (v: number): boolean => fmt(v).startsWith('−');
 
-/** Panel 1: "8 of 9 firms finished below their peak. 2 finished below zero." */
-export function finalBoardHeadline(r: FinalResults): string {
-  const firms = Object.values(r.final);
-  const n = firms.length;
-  if (n === 0) return 'No firm took part.';
-  const below = firms.filter(belowPeak).length;
-  const neg = firms.filter((f) => belowZero(f.valuation)).length;
-  let first: string;
-  if (below === 0) first = n === 1 ? 'The firm finished at its peak.' : 'Every firm finished at its peak.';
-  else if (below === n && n > 1) first = `${n === 2 ? 'Both' : `All ${n}`} firms finished below their peak.`;
-  else first = `${below} of ${n} ${plural(n, 'firm', 'firms')} finished below ${plural(below, 'its', 'their')} peak.`;
-  let second: string;
-  if (neg === 0) second = 'None finished below zero.';
-  else if (neg === n && n > 1) second = `${n === 2 ? 'Both' : `All ${n}`} finished below zero.`;
-  else second = `${neg} finished below zero.`;
-  return `${first} ${second}`;
-}
-
-/** Panel 2: "Trust fell from 72.0 to 45.6 over 14 quarters." plus the moratorium quarter. */
-export function trustHeadline(r: FinalResults): string {
-  const q = r.trust.length;
-  if (q === 0) return 'No quarter was resolved.';
-  const from = fmt(r.startTrust);
-  const last = r.trust[q - 1] ?? r.startTrust;
-  const to = fmt(last);
-  const over = `over ${q} ${plural(q, 'quarter', 'quarters')}`;
-  const move = to === from ? `Trust held at ${to} ${over}.` : `Trust ${last < r.startTrust ? 'fell' : 'rose'} from ${from} to ${to} ${over}.`;
-  return r.collapseRound !== null ? `${move} The moratorium began in ${quarterLabel(r.collapseRound)}.` : move;
-}
-
-/** Panel 3: "Holding pace 2 and safety 15 would have left the industry worth 3.2× what it kept." */
+/** Panel 1: "Holding pace 2 and safety 15 would have left the industry worth 3.2× what it kept." */
 export function counterfactualHeadline(r: FinalResults, alt: { pace: number; safety: number } = PARAMS.BOT_SUSTAINABLE): string {
   const { actual, counterfactual: alternative } = r.industry;
   const holding = `pace ${alt.pace} and safety ${alt.safety}`;
@@ -67,7 +37,7 @@ export function counterfactualHeadline(r: FinalResults, alt: { pace: number; saf
   return `Holding ${holding} would have left the industry ${altText}; it finished at ${fmt(actual, 0)}.`;
 }
 
-/** Panel 4: "HUMN caused 24.8% of the damage and kept 29.9% of the value." Ties (as displayed) name every tied firm. */
+/** Panel 2: "HUMN caused 24.8% of the damage and kept 29.9% of the value." Ties (as displayed) name every tied firm. */
 export function attributionHeadline(r: FinalResults): string {
   const rows = r.attribution;
   const top = rows[0];
@@ -90,7 +60,7 @@ export function attributionHeadline(r: FinalResults): string {
 }
 
 /**
- * Panel 5 (Session 18): "Ranked by value created for the whole market, HUMN falls from 1st to 8th and ARCN rises from
+ * Panel 3 (Session 18): "Ranked by value created for the whole market, HUMN falls from 1st to 8th and ARCN rises from
  * 9th to 2nd." The valuation leader's move, then the largest rise; a sentence for every net contribution below zero and
  * for the moratorium cost.
  */
@@ -124,7 +94,26 @@ export function contributionHeadline(r: FinalResults): string {
   return out.join(' ');
 }
 
-/** Panel 6: "2 pacts formed. Members broke the terms 7 times; 4 breaches were never detected." */
+/**
+ * CONDUCT (panel 4, Session 20): the firm whose market effect did the most harm and the one that did the most for
+ * the market. "BTAG did the most harm to the market: ▼433. ARCN did the most for it: ▲120."
+ */
+export function conductHeadline(r: FinalResults): string {
+  const firms = Object.values(r.contribution?.firms ?? {});
+  if (firms.length === 0) return 'Net contribution was not computed for this session.';
+  const byTicker = (a: { ticker: string }, b: { ticker: string }): number => (a.ticker < b.ticker ? -1 : a.ticker > b.ticker ? 1 : 0);
+  const worst = [...firms].sort((a, b) => a.marketEffect - b.marketEffect || byTicker(a, b))[0];
+  const best = [...firms].sort((a, b) => b.marketEffect - a.marketEffect || byTicker(a, b))[0];
+  const shown = (v: number): string => fmt(Math.abs(v), 0);
+  const harm = worst && worst.marketEffect < 0 && shown(worst.marketEffect) !== '0' ? worst : null;
+  const help = best && best.marketEffect > 0 && shown(best.marketEffect) !== '0' ? best : null;
+  const out: string[] = [];
+  out.push(harm ? `${harm.ticker} did the most harm to the market: ▼${shown(harm.marketEffect)}.` : 'No firm harmed the market.');
+  out.push(help ? `${help.ticker} did the most for it: ▲${shown(help.marketEffect)}.` : 'No firm added to the market.');
+  return out.join(' ');
+}
+
+/** Panel 5: "2 pacts formed. Members broke the terms 7 times; 4 breaches were never detected." */
 export function pactHeadline(r: FinalResults): string {
   const n = r.pacts.length;
   if (n === 0) return 'No pacts were formed.';
@@ -141,23 +130,21 @@ export function pactHeadline(r: FinalResults): string {
   return `${formed} Members broke the terms ${times}; ${tail}.`;
 }
 
-/** Panel 7: no data to summarise; the prompts are the content. */
+/** Panel 6: no data to summarise; the prompts are the content. */
 export const DEBRIEF_HEADLINE = 'Five questions. Discuss each in your firm, then with the room.';
 
 /** The headline for results panel `step` (0-based, the order of RESULT_PANELS). */
 export function panelHeadline(r: FinalResults, step: number): string {
   switch (step) {
     case 0:
-      return finalBoardHeadline(r);
-    case 1:
-      return trustHeadline(r);
-    case 2:
       return counterfactualHeadline(r);
-    case 3:
+    case 1:
       return attributionHeadline(r);
-    case 4:
+    case 2:
       return contributionHeadline(r);
-    case 5:
+    case 3:
+      return conductHeadline(r);
+    case 4:
       return pactHeadline(r);
     default:
       return DEBRIEF_HEADLINE;
