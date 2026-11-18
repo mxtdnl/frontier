@@ -285,7 +285,8 @@ export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: Tr
   return (
     <Panel title="PUBLIC TRUST" bodyClassName="col">
       <div style={{ paddingTop: '0.5lh' }}>
-        <p className="dim" data-trust-explainer="">{TRUST_EXPLAINER}</p>
+        {/* While the INCIDENTS block replaces the chart, the block needs this line's room (lit-room mode, Session 20). */}
+        {incidents.length === 0 ? <p className="dim" data-trust-explainer="">{TRUST_EXPLAINER}</p> : null}
         <div className="big signal" data-trust-numerals="" data-trust-delta={delta.toFixed(1)}>
           <span data-roll="" data-prev={reveal ? fmt(prev) : undefined}>{fmt(pub.T)}</span>
         </div>
@@ -309,7 +310,10 @@ export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: Tr
       <div className="stack" style={{ margin: '1lh 0 0.5lh', gap: 0 }}>
         <FigureRow label="MARKET" value={mv.market} delta={mv.marketDelta} note="this quarter" attr="market" />
         <FigureRow label="INDUSTRY VALUE" value={mv.value} delta={mv.valueDelta} note="all firms" attr="value" />
-        <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>INCIDENTS</span><span>{incidentCount} this quarter</span></div>
+        {/* The INCIDENTS block lists every incident, so the count row would repeat it. */}
+        {incidents.length === 0 ? (
+          <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>INCIDENTS</span><span>{incidentCount} this quarter</span></div>
+        ) : null}
         <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>PACTS</span><span>{activePacts} active</span></div>
         <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>DISCLOSURE</span><span>{pub.disclosure ? 'ON' : 'OFF'}</span></div>
       </div>

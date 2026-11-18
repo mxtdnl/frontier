@@ -158,10 +158,16 @@ export function pactStripRows(r: FinalResults, pact: PactFinal): PactStripRow[] 
   return [...current, ...former].filter((row) => bound(row.cells));
 }
 
-// ── NET CONTRIBUTION (§14.4 panel 5, Session 18) ─────────────────────────────
+// ── NET CONTRIBUTION (§14.4 panel 3, Session 18) ─────────────────────────────
 
-/** A rank change of this many places or more is highlighted on the slope chart. */
-export const SLOPE_HIGHLIGHT = 3;
+/**
+ * Share of firms highlighted on each side of the slope chart (owner decision 2026-11-18, Session 20; was "3 places
+ * or more"): the largest rises in green ▲ and the largest falls in red ▼, Math.round(N × share) each, at least 1.
+ */
+export const SLOPE_HIGHLIGHT_SHARE = 0.3;
+
+/** Firms highlighted on each side for N firms. */
+export const slopeHighlightCount = (n: number): number => Math.max(1, Math.round(n * SLOPE_HIGHLIGHT_SHARE));
 
 export interface ContributionRow {
   firmId: string;
@@ -214,7 +220,7 @@ function contributionRow(c: FirmContribution): ContributionRow {
     valuationRank: c.valuationRank,
     rank: c.rank,
     move,
-    highlight: move >= SLOPE_HIGHLIGHT ? 'up' : move <= -SLOPE_HIGHLIGHT ? 'down' : null,
+    highlight: null,
     valuation: c.valuation,
     market: c.marketEffect,
     credit: c.researchCredit,
@@ -226,9 +232,14 @@ function contributionRow(c: FirmContribution): ContributionRow {
 
 /** Every firm by rank of net contribution. Empty for results written before Session 18. */
 export function contributionRows(r: FinalResults): ContributionRow[] {
-  return Object.values(r.contribution?.firms ?? {})
+  const rows = Object.values(r.contribution?.firms ?? {})
     .map(contributionRow)
     .sort((a, b) => a.rank - b.rank || (a.ticker < b.ticker ? -1 : 1));
+  // The largest rises and the largest falls, slopeHighlightCount(N) each; ties go to the better rank by net contribution.
+  const k = slopeHighlightCount(rows.length);
+  const up = new Set([...rows].filter((x) => x.move > 0).sort((a, b) => b.move - a.move || a.rank - b.rank).slice(0, k).map((x) => x.firmId));
+  const down = new Set([...rows].filter((x) => x.move < 0).sort((a, b) => a.move - b.move || a.rank - b.rank).slice(0, k).map((x) => x.firmId));
+  return rows.map((x) => ({ ...x, highlight: up.has(x.firmId) ? 'up' : down.has(x.firmId) ? 'down' : null }));
 }
 
 /**

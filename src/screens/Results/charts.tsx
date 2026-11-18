@@ -114,7 +114,7 @@ interface SlopeProps {
 
 /**
  * NET CONTRIBUTION slope chart (§14.4 panel 3; Session 18, full width since Session 20): rank by final valuation on the left, rank by net
- * contribution on the right. Firms that moved 3 places or more are drawn thick, ▲ in up and ▼ in down; the rest dim.
+ * contribution on the right. The 30% largest rises are drawn thick ▲ in up and the 30% largest falls ▼ in down (`contributionRows`); the rest dim.
  */
 export function Slope({ rows, winner = false }: SlopeProps) {
   const [ref, { w: W, h: H, fs }] = useChartSize<HTMLDivElement>();

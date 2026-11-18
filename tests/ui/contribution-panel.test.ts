@@ -10,7 +10,7 @@ import { Conduct, NetContribution } from '../../src/screens/Results/Results';
 import { conductHeadline, contributionHeadline, panelHeadline } from '../../src/screens/Results/headlines';
 import { RESULT_PANEL_COUNT } from '../../src/firebase/phases';
 import { fmt } from '../../src/ui/format';
-import { DEBRIEF_PROMPTS, RESULT_PANELS, contributionRows, contributionView, ledgerLine, waterfallPoints } from '../../src/screens/Results/model';
+import { DEBRIEF_PROMPTS, RESULT_PANELS, contributionRows, slopeHighlightCount, contributionView, ledgerLine, waterfallPoints } from '../../src/screens/Results/model';
 import { storeAndRead } from '../firebase/rtdb';
 import { dec, game } from '../engine/helpers';
 
@@ -95,9 +95,23 @@ describe('the results model', () => {
     expect(ledgerLine(ledger())).toBe('▲ none  ▼ none');
   });
 
-  it('marks rank changes of 3 or more', () => {
+  it('marks the largest 30% of rises ▲ and of falls ▼ (Session 20)', () => {
     const rows = contributionRows(results([firm('a', 1, 4, 1), firm('b', 4, 1, 9), firm('c', 2, 3, 3), firm('d', 3, 2, 5)]));
+    // 4 firms: round(1.2) = 1 on each side.
     expect(rows.map((x) => [x.ticker, x.move, x.highlight])).toEqual([['B', 3, 'up'], ['D', 1, null], ['C', -1, null], ['A', -3, 'down']]);
+  });
+
+  it('highlights round(N × 0.3) firms on each side, at least 1, ties to the better net rank', () => {
+    expect([1, 4, 5, 10, 12, 50].map(slopeHighlightCount)).toEqual([1, 1, 2, 3, 4, 15]);
+    // 10 firms, ranks reversed: moves 9, 7, 5, 3, 1, −1, −3, −5, −7, −9; three each side.
+    const ten = Array.from({ length: 10 }, (_, i) => firm(`f${i}`, i + 1, 10 - i, 10 - i));
+    const rows = contributionRows(results(ten));
+    expect(rows.filter((x) => x.highlight === 'up').map((x) => x.move)).toEqual([9, 7, 5]);
+    expect(rows.filter((x) => x.highlight === 'down').map((x) => x.move)).toEqual([-5, -7, -9]);
+    expect(rows.filter((x) => x.highlight === null)).toHaveLength(4);
+    // A small move can be highlighted; no move is never highlighted.
+    const flat = contributionRows(results([firm('a', 1, 1, 3), firm('b', 2, 3, 1), firm('c', 3, 2, 2)]));
+    expect(flat.map((x) => [x.ticker, x.highlight])).toEqual([['A', null], ['C', 'up'], ['B', 'down']]);
   });
 
   it('runs the waterfall from 0 through valuation, market effect, credit and rivalry to net', () => {
