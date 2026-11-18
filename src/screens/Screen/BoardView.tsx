@@ -261,12 +261,13 @@ const FIG_LABEL_W = 15;
 
 /** One figure row under the trust chart: label, whole number, change since last quarter (▲/▼) and a dim note. */
 function FigureRow({ label, value, delta, note, attr }: { label: string; value: number; delta: number | null; note: string; attr: string }) {
+  // One line, values in the column the INCIDENTS and PACTS rows use: label 15ch, value 6ch, change 6ch, note.
   return (
-    <div className="row" data-figure={attr} data-figure-delta={delta === null ? '' : delta.toFixed(1)}>
-      <span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>{label}</span>
-      <span className="num" style={{ width: '7ch', textAlign: 'right' }}>{fmtInt(value)}</span>
-      <span style={{ width: '8ch', textAlign: 'right' }}>{delta === null ? <span className="dim">–</span> : <Delta value={delta} digits={0} />}</span>
-      <span className="dim" style={{ marginLeft: '1ch' }}>{note}</span>
+    <div className="row" style={{ flexWrap: 'nowrap', whiteSpace: 'nowrap', overflow: 'hidden' }} data-figure={attr} data-figure-delta={delta === null ? '' : delta.toFixed(1)}>
+      <span className="dim" style={{ width: `${FIG_LABEL_W}ch`, flex: 'none' }}>{label}</span>
+      <span className="num" style={{ width: '6ch', flex: 'none', textAlign: 'left' }}>{fmtInt(value)}</span>
+      <span style={{ width: '6ch', flex: 'none' }}>{delta === null ? <span className="dim">–</span> : <Delta value={delta} digits={0} />}</span>
+      <span className="dim">{note}</span>
     </div>
   );
 }
@@ -306,7 +307,7 @@ export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: Tr
         </div>
       )}
       <div className="stack" style={{ margin: '1lh 0 0.5lh', gap: 0 }}>
-        <FigureRow label="MARKET" value={mv.market} delta={mv.marketDelta} note="revenue this quarter" attr="market" />
+        <FigureRow label="MARKET" value={mv.market} delta={mv.marketDelta} note="this quarter" attr="market" />
         <FigureRow label="INDUSTRY VALUE" value={mv.value} delta={mv.valueDelta} note="all firms" attr="value" />
         <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>INCIDENTS</span><span>{incidentCount} this quarter</span></div>
         <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>PACTS</span><span>{activePacts} active</span></div>

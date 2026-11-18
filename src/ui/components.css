@@ -1756,6 +1756,13 @@ legend {
   padding: 0.15lh 0;
   border-bottom: var(--rule-w) solid var(--grid);
 }
+/* CONDUCT (Session 20) has the panel to itself: with few firms the rows share its height; with many they scroll. */
+.nc-list > .nc-firm {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
 .nc-ledger {
   padding-left: 15ch;
   color: var(--dim);

@@ -845,7 +845,7 @@ async function participantScenario(
   await snapProjector(fac, 'results-1');
   const panels: Array<[number, RegExp, string]> = [
     [2, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE[\s\S]*SHARE OF VALUE/, 'ATTRIBUTION'],
-    [3, /NET CONTRIBUTION[\s\S]*Ranked by value created for the whole market[\s\S]*1st by net contribution/, 'NET CONTRIBUTION'],
+    [3, /NET CONTRIBUTION[\s\S]*1st by net contribution[\s\S]*Ranked by value created for the whole market[\s\S]*top net contribution/, 'NET CONTRIBUTION'],
     [4, /CONDUCT[\s\S]*research credit, not money/, 'CONDUCT'],
     [5, /PACT RECORD/, 'PACT RECORD'],
     [6, /DEBRIEF[\s\S]*Ranked by net contribution[\s\S]*Ostrom/, 'DEBRIEF'],
