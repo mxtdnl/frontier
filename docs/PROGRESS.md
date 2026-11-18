@@ -1350,3 +1350,66 @@ A room like the four live classes (observed-human room), moratorium by quarter 1
 - Owner: merge, then on the live site open a pact on a phone (no term ticked; preview; ticket notice) and open WIRE LOG during a rehearsal to see the QUARTER BRIEF.
 - Owner: update the slides deck (six cards and the three new briefing lines).
 - Owner: read the facilitator guide before the next class.
+
+## 2026-11-18 — Session 20: owner feedback from the room (board, wire, results)
+
+**Owner decisions (2026-11-18)**
+1. Remove the board's VALUE SHARE strip.
+2. Replace "Total market revenue tracks public trust." with "Trust sets each quarter’s revenue. Value counts cash already banked." on the board, on `TRST` and as the first briefing line. Show MARKET and INDUSTRY VALUE, each with its change, under the trust chart.
+3. The ticker shows only the latest quarter. Add a WIRE screen key to the projector.
+4. Results: remove FINAL BOARD and TRUST TRACE. NET CONTRIBUTION keeps only the movers chart, with the firm 1st by net contribution marked. The figures and ledgers move to a new CONDUCT panel.
+5. (Added during the session) The movers chart highlights the 30% of firms with the largest rises (green ▲) and the 30% with the largest falls (red ▼). This replaces "3 places or more".
+
+**Done**
+- **Board** (commit `board: remove the value share strip`): the `ShareStrip` component, `shareSegments`, `segmentLabel`, their CSS and tests are removed. Board row capacities are unchanged; the 1.5 lines are slack.
+- **Trust panel** (commits `board: replace the trust line…`, `…keep the trust figures on one line`, `…free trust-panel room for the INCIDENTS block`):
+  - `TRUST_EXPLAINER` is in `briefing.ts`.
+  - `marketAndValue()` in `src/screens/Screen/model.ts` builds the two rows from public `rounds` data only. MARKET is `rounds/{r}/M`; INDUSTRY VALUE is the sum of the public valuations. Quarter 1 is compared against the opening values.
+  - The explainer line and the INCIDENTS count row are hidden while the INCIDENTS block is shown, so the block still fits in lit-room mode.
+- **Wire** (commit `screen: limit the ticker…`):
+  - `tickerWireItems()` keeps the latest resolved quarter's headlines and the events with `seq ≥` that quarter.
+  - Shift+W opens `WIRE`. It is a letter-only key (`LETTER_BINDINGS`, shown as `⇧W WIRE`), because no F-key is free.
+  - The `WIRE` view now lists the whole session, grouped by quarter, newest first, and scrolls.
+- **Results** (commits `results: remove FINAL BOARD and TRUST TRACE…`, `results: let CONDUCT rows fill the panel…`, `results: highlight the 30%…`):
+  - There are now six panels. `RESULT_PANEL_COUNT` is 6.
+  - The τ line and the moratorium marker moved to the COUNTERFACTUAL trust chart.
+  - NET CONTRIBUTION is full width. The winner is drawn in signal amber, labelled "top net contribution" and named in the panel heading.
+  - CONDUCT has its own headline (`conductHeadline`): the firm whose market effect did the most harm, and the one that did the most good. Its rows grow to fill the panel when there are few firms.
+  - `slopeHighlightCount(N) = max(1, round(0.3 N))` per side; ties go to the better net rank.
+- **Docs:** spec §6.6, §14.1, §14.4, §15.5 and §16.3; RUNBOOK; Session 20 in SESSIONS.md; the facilitator guide text, its 21 screenshots and the PDF (32 pages, 2.12 MB, checked page by page for the results part).
+
+**Tests**
+- `npm run typecheck` passes. `lint:copy` and `lint:design` pass.
+- `npm test`: 687 passed. New and changed tests:
+  - market and value figures (4)
+  - ticker filter (3)
+  - the Shift+W key (2)
+  - NET CONTRIBUTION and CONDUCT panels, the winner, the CONDUCT headline, the 30% rule (6)
+  - the τ line and moratorium marker on COUNTERFACTUAL
+  - panel order and count
+  - removed: the share strip and the FINAL BOARD and TRUST TRACE tests.
+- `npm run test:rules`: 166 passed.
+- e2e:
+  - `test:e2e`: 338 checks pass.
+  - `test:e2e:scale`: 1,314 checks pass.
+  - `test:e2e:rehearsal`: 216 checks pass.
+  - `test:e2e:wire`: 25 checks pass.
+  - `test:e2e:incidents`: 566 checks pass.
+  - `test:e2e:long`: all checks pass (30 quarters, 50 firms). `test:e2e:scale-run`: see the line below.
+- **Failures during the session (fixed):**
+  - The CONDUCT panel left 43% of its height empty with 4 firms.
+  - An e2e regex expected the heading text after the headline.
+  - The trust figure rows wrapped at 1280×720.
+  - With the new explainer and figure rows, the INCIDENTS block no longer fitted in lit-room mode (10 checks).
+
+**Spec deviations**
+- **"Total cash in circulation"**, as the owner suggested, is not shown: other firms' cash is private (§6.5). INDUSTRY VALUE, the sum of public valuations, is used instead.
+- **The WIRE key has no F-key**, because F1, F5, F11 and F12 are never bound and every other F-key is taken.
+- **The 30% rule** rounds to the nearest whole firm. With 4 firms that is one firm per side, not two.
+
+**Open issues**
+- **The briefing deck in `mxtdnl/slides`** still has the old trust line and the seven results panels. The owner must update it.
+- **The Session 19 deck items** (six cards, three new lines) remain open.
+
+**Next steps**
+- Owner: on the live site, check the board's trust panel, the ticker, Shift+W, and the six results panels.
