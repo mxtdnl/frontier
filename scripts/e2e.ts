@@ -513,7 +513,7 @@ async function participantScenario(
   // ── Briefing: late joins are closed ──
   await key(fac, 'F9');
   await waitText(fac, /BRIEFING/, 'participant run: F9 opens the briefing', 15_000, '.scr');
-  await waitText(A, /Total market revenue tracks public trust/, 'participants see the briefing');
+  await waitText(A, /Trust sets each quarter’s revenue/, 'participants see the briefing');
   await waitText(D, /Joining is closed/, 'an open founding form is replaced by the closed notice when the briefing starts');
   await D.reload();
   await D.getByRole('button', { name: 'Continue' }).click();

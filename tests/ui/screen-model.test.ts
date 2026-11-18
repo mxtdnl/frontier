@@ -6,6 +6,7 @@ import {
   committedCount,
   joinUrl,
   leadersOf,
+  marketAndValue,
   previousTrust,
   revealInput,
   tagKey,
@@ -153,5 +154,31 @@ describe('board key strip (Session 12)', () => {
     expect(tagKey([['PACT-A']], false)).toEqual([{ tag: 'PACT-A', text: 'pact member' }]);
     const k = tagKey([['PACT-B'], ['PACT-A', 'BOT']], true);
     expect(k.map((x) => x.tag)).toEqual(['BOT', 'PACT-', '+N']);
+  });
+});
+
+describe('MARKET and INDUSTRY VALUE (Session 20)', () => {
+  const openMarket = (n: number) => PARAMS.M_PER_FIRM * n * Math.pow(PARAMS.T0 / PARAMS.TRUST_MAX, PARAMS.GAMMA);
+  it('before quarter 1 shows the opening values and no change', () => {
+    expect(marketAndValue({}, 4)).toEqual({ market: openMarket(4), marketDelta: null, value: INITIAL_VALUATION * 4, valueDelta: null });
+  });
+  it('quarter 1 is measured against the opening values', () => {
+    const r = { '1': { ...round(80, { a: { share: 0.5, profit: 2, valuation: 100, rank: 1 }, b: { share: 0.5, profit: 3, valuation: 95, rank: 2 } }), M: 150 } };
+    const mv = marketAndValue(r, 2);
+    expect(mv.market).toBe(150);
+    expect(mv.marketDelta).toBeCloseTo(150 - openMarket(2), 9);
+    expect(mv.value).toBe(195);
+    expect(mv.valueDelta).toBeCloseTo(195 - 2 * INITIAL_VALUATION, 9);
+  });
+  it('a shrinking market with rising total value reads ▼ and ▲', () => {
+    const d = data();
+    d.rounds['2'] = { ...(d.rounds['2'] as RoundNode), M: 80 };
+    const mv = marketAndValue(d.rounds, 2);
+    expect(mv.marketDelta).toBe(-20);
+    expect(mv.value).toBe(210);
+    expect(mv.valueDelta).toBe(15);
+  });
+  it('uses only public round results', () => {
+    expect(Object.keys(marketAndValue(data().rounds, 2)).sort()).toEqual(['market', 'marketDelta', 'value', 'valueDelta']);
   });
 });

@@ -1,12 +1,12 @@
 import { PARAMS } from '../../engine';
-import { CommitMark, DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, RankMove, Tag, TrendLine, ValueBar, type Column, type TagKind } from '../../ui/components';
+import { CommitMark, DataTable, Delta, GlyphCheck, LineChart, Panel, RankMove, Tag, TrendLine, ValueBar, type Column, type TagKind } from '../../ui/components';
 import { fmt, fmtInt, fmtShare, quarterLabel } from '../../ui/format';
 import { GENERAL_CAUSE, incidentBlock, type IncidentLine } from '../../ui/incidents';
-import { BRIEFING_LINES } from './briefing';
+import { TRUST_EXPLAINER } from './briefing';
 import { boardCapacity, boardChartWidths, boardMode, boardPage, boardTagWidth, fitTags } from '../../ui/layout';
 import { sharedDomain, trendWindow } from '../../ui/performance';
 
-import { committedCount, marketCeiling, previousTrust, tagKey, trustSeries, type BoardRow, type ScreenData } from './model';
+import { committedCount, marketAndValue, previousTrust, tagKey, trustSeries, type BoardRow, type ScreenData } from './model';
 
 const TAG_KINDS: ReadonlyArray<string> = ['BOT', 'AUTO', 'BREACH', 'INCID', 'INSOLV'];
 
@@ -257,6 +257,20 @@ interface TrustPanelProps {
   incidentMax?: number;
 }
 
+const FIG_LABEL_W = 15;
+
+/** One figure row under the trust chart: label, whole number, change since last quarter (▲/▼) and a dim note. */
+function FigureRow({ label, value, delta, note, attr }: { label: string; value: number; delta: number | null; note: string; attr: string }) {
+  return (
+    <div className="row" data-figure={attr} data-figure-delta={delta === null ? '' : delta.toFixed(1)}>
+      <span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>{label}</span>
+      <span className="num" style={{ width: '7ch', textAlign: 'right' }}>{fmtInt(value)}</span>
+      <span style={{ width: '8ch', textAlign: 'right' }}>{delta === null ? <span className="dim">–</span> : <Delta value={delta} digits={0} />}</span>
+      <span className="dim" style={{ marginLeft: '1ch' }}>{note}</span>
+    </div>
+  );
+}
+
 export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: TrustPanelProps) {
   const { pub, rounds } = data;
   const series = trustSeries(rounds);
@@ -266,10 +280,11 @@ export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: Tr
   const incidentCount = rounds[String(latest)]?.incidents ?? 0;
   const firmCount = Object.keys(data.firms).length;
   const activePacts = Object.values(data.pacts).filter((p) => p.status === 'active').length;
+  const mv = marketAndValue(rounds, firmCount);
   return (
     <Panel title="PUBLIC TRUST" bodyClassName="col">
       <div style={{ paddingTop: '0.5lh' }}>
-        <p className="dim">{BRIEFING_LINES.market[0]}</p>
+        <p className="dim" data-trust-explainer="">{TRUST_EXPLAINER}</p>
         <div className="big signal" data-trust-numerals="" data-trust-delta={delta.toFixed(1)}>
           <span data-roll="" data-prev={reveal ? fmt(prev) : undefined}>{fmt(pub.T)}</span>
         </div>
@@ -291,10 +306,11 @@ export function TrustPanel({ data, reveal, incidents = [], incidentMax = 4 }: Tr
         </div>
       )}
       <div className="stack" style={{ margin: '1lh 0 0.5lh', gap: 0 }}>
-        <HBar label="MARKET" labelW={11} textW={8} value={pub.M} domain={[0, marketCeiling(firmCount)]} text={fmtInt(pub.M)} describe={`Market size ${fmtInt(pub.M)}`} />
-        <div className="row"><span className="dim" style={{ width: '11ch' }}>INCIDENTS</span><span>{incidentCount} this quarter</span></div>
-        <div className="row"><span className="dim" style={{ width: '11ch' }}>PACTS</span><span>{activePacts} active</span></div>
-        <div className="row"><span className="dim" style={{ width: '11ch' }}>DISCLOSURE</span><span>{pub.disclosure ? 'ON' : 'OFF'}</span></div>
+        <FigureRow label="MARKET" value={mv.market} delta={mv.marketDelta} note="revenue this quarter" attr="market" />
+        <FigureRow label="INDUSTRY VALUE" value={mv.value} delta={mv.valueDelta} note="all firms" attr="value" />
+        <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>INCIDENTS</span><span>{incidentCount} this quarter</span></div>
+        <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>PACTS</span><span>{activePacts} active</span></div>
+        <div className="row"><span className="dim" style={{ width: `${FIG_LABEL_W}ch` }}>DISCLOSURE</span><span>{pub.disclosure ? 'ON' : 'OFF'}</span></div>
       </div>
     </Panel>
   );

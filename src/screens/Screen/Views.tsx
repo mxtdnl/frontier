@@ -6,7 +6,7 @@ import { KEY_BINDINGS } from '../../ui/keys';
 import { fillColumns, firmsGrid, firmsPage, lobbyColumns, tickerLine, truncateList } from '../../ui/layout';
 import { largestFaller, leaderOf, rankByQuarter, ranksHeadline, type FirmRef } from '../../ui/performance';
 import { allIncidents } from '../../ui/incidents';
-import { BRIEFING_LINES } from './briefing';
+import { BRIEFING_LINES, TRUST_EXPLAINER } from './briefing';
 import { boardRows, joinUrl, pactRows, previousTrust, trustSeries, valuationSeries, wireItems, type BoardRow, type PactRow, type ScreenData } from './model';
 
 export function TrustView({ data }: { data: ScreenData }) {
@@ -14,7 +14,7 @@ export function TrustView({ data }: { data: ScreenData }) {
   const delta = data.pub.round === 0 ? 0 : data.pub.T - previousTrust(data.rounds);
   return (
     <Panel title="TRST · PUBLIC TRUST HISTORY" bodyClassName="col">
-      <p className="dim" style={{ paddingTop: '0.5lh' }}>{BRIEFING_LINES.market[0]}</p>
+      <p className="dim" style={{ paddingTop: '0.5lh' }}>{TRUST_EXPLAINER}</p>
       <div className="row" style={{ alignItems: 'flex-end' }}>
         <div className="big signal" data-amber="trust">{fmt(data.pub.T)}</div>
         <div>

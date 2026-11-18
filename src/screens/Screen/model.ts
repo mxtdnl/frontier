@@ -129,6 +129,39 @@ export function previousTrust(rounds: Record<string, RoundNode>): number {
   return before === undefined ? PARAMS.T0 : (rounds[String(before)] as RoundNode).T;
 }
 
+/**
+ * MARKET and INDUSTRY VALUE beside the trust chart (Session 20): this quarter's revenue pool and the sum of every
+ * firm's public valuation, each with its change since the quarter before (quarter 1 against the opening values). Both
+ * come from `rounds` only (public data); before quarter 1 resolves they are the opening values and no change.
+ */
+export interface MarketValue {
+  market: number;
+  marketDelta: number | null;
+  value: number;
+  valueDelta: number | null;
+}
+
+const totalValuation = (r: RoundNode): number => Object.values(r.results).reduce((s, x) => s + x.valuation, 0);
+
+export function marketAndValue(rounds: Record<string, RoundNode>, firmCount: number): MarketValue {
+  const openMarket = PARAMS.M_PER_FIRM * firmCount * Math.pow(PARAMS.T0 / PARAMS.TRUST_MAX, PARAMS.GAMMA);
+  const openValue = INITIAL_VALUATION * firmCount;
+  const nums = roundNumbers(rounds);
+  const last = nums[nums.length - 1];
+  if (last === undefined) return { market: openMarket, marketDelta: null, value: openValue, valueDelta: null };
+  const cur = rounds[String(last)] as RoundNode;
+  const before = nums[nums.length - 2];
+  const prev = before === undefined ? null : (rounds[String(before)] as RoundNode);
+  const market = cur.M;
+  const value = totalValuation(cur);
+  return {
+    market,
+    marketDelta: market - (prev ? prev.M : openMarket),
+    value,
+    valueDelta: value - (prev ? totalValuation(prev) : openValue),
+  };
+}
+
 export interface WireItem {
   round: number;
   kind: string;
@@ -185,9 +218,6 @@ export function pactRows(d: ScreenData): PactRow[] {
 export function valuationSeries(id: string, rounds: Record<string, RoundNode>): number[] {
   return [INITIAL_VALUATION, ...roundNumbers(rounds).map((r) => rounds[String(r)]?.results[id]?.valuation ?? INITIAL_VALUATION)];
 }
-
-/** Largest market the firm count could support, the full-scale value for the market bar. */
-export const marketCeiling = (firmCount: number): number => PARAMS.M_PER_FIRM * Math.max(1, firmCount);
 
 /** URL participants open to join, from the page's own address. */
 export function joinUrl(code: string, href: string): string {
