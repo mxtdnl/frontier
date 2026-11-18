@@ -141,7 +141,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
   <h2>What the room is told, and what the session is built to show</h2>
   <table>
     <tr><th style="width: 50%;">What the room is told (all true; spec §6.6)</th><th>What the session is built to show</th></tr>
-    <tr><td>Total market revenue tracks public trust.</td><td>Trust is one pool shared by every firm. When it falls, the whole market shrinks for everyone.</td></tr>
+    <tr><td>Trust sets each quarter’s revenue. Value counts cash already banked.</td><td>Trust is one pool shared by every firm. When it falls, each quarter’s market shrinks for everyone, while valuations keep the cash already earned. That is why values can rise while trust falls. The trust panel shows MARKET (this quarter's revenue) and INDUSTRY VALUE (all firms' valuations) side by side, each with its change since the last quarter.</td></tr>
     <tr><td>Pace builds capability faster. Capability earns market share.</td><td>A firm keeps all of the share its pace wins. That is the private gain.</td></tr>
     <tr><td>Safety spend costs money. It lowers public exposure and incident risk.</td><td>Safety protects trust for everyone, but its cost falls on the firm that pays it.</td></tr>
     <tr><td>Trust recovers when pressure eases.</td><td>Recovery is slow, and much slower after a moratorium. Damage done early lasts.</td></tr>
@@ -229,11 +229,11 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
   <p>When to expect it (Session 17 calibration; RUNBOOK §4): every firm racing, around quarter 5; half the firms racing, around quarter 10; a room like the October 2026 classes, by quarter 14 in about half of sessions at 4 to 20 firms; every firm restrained, never.</p>
 
   <h3>The six cards</h3>
-  <p>The conduct ledger (results panel 5) counts each card for the market (▲) or against it (▼).</p>
+  <p>The conduct ledger (results panel 4, CONDUCT) counts each card for the market (▲) or against it (▼).</p>
   <table>
     <tr><th style="width: 12%;">Card</th><th class="num" style="width: 7%;">Cost</th><th>Real effect</th><th style="width: 14%;">Ledger</th></tr>
     <tr><td>POACH</td><td class="num">15</td><td>The firm gains 3 capability; the target firm loses 3 (not below 10). Needs a target; not the same target two quarters running.</td><td>▼ against; counts as rivalry taken</td></tr>
-    <tr><td>PUBLISH</td><td class="num">10</td><td>Trust +0.25 × 8/N. Halves the firm's own incident chance this quarter. On panel 5 it also earns a research credit (display only, never money).</td><td>▲ for</td></tr>
+    <tr><td>PUBLISH</td><td class="num">10</td><td>Trust +0.25 × 8/N. Halves the firm's own incident chance this quarter. On panels 3 and 4 it also earns a research credit (display only, never money).</td><td>▲ for</td></tr>
     <tr><td>LOBBY</td><td class="num">10</td><td>Waives any pact fine detected this quarter (the breach is still published). Trust −0.5, not scaled by firm count.</td><td>▼ against</td></tr>
     <tr><td>BLITZ</td><td class="num">15</td><td>Capability counts 1.2 times in this quarter's share.</td><td>▼ against; rivalry taken</td></tr>
     <tr><td>SHARE</td><td class="num">15</td><td>Every firm's incident chance this quarter, the player's own included, × 0.75; several SHARE cards multiply again.</td><td>▲ for</td></tr>
@@ -247,7 +247,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
     <li><strong>Breaches</strong> are recorded privately each quarter for every member that breaks a term. Nobody sees them until an audit.</li>
     <li><strong>Audits.</strong> You start one with F6 (Shift+F); each active pact is also audited automatically with the probability set on <code>#/new</code> (0.25 suggested). An audit examines up to the last 3 unaudited quarters and publishes what it finds.</li>
     <li><strong>Fines</strong> are a share of the firm's cash, at least 10: 10% for the first detected breach, 25% for the second, 40% for the third, and the third expels the firm from the pact. A detected breach shows a BREACH tag on the board for 2 quarters. LOBBY in the quarter of detection waives the fine but not the publication.</li>
-    <li><strong>Undetected breaches</strong> are revealed only on results panel 6.</li>
+    <li><strong>Undetected breaches</strong> are revealed only on results panel 5.</li>
   </ul>
 
   <h3>Disclosure</h3>
@@ -282,7 +282,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
     <tr><td>End mode</td><td>Random within a range (hidden end between two quarters), Fixed quarter, or Manual (until you press END, or quarter 30).</td><td>Fixed, 14; or random 10 to 14 with 8 or more firms</td></tr>
     <tr><td>Disclosure at start</td><td>Shows every firm's pace, safety and exposure from quarter 1.</td><td>Off</td></tr>
     <tr><td>Automatic audit probability</td><td>Chance that each pact is audited by itself each quarter.</td><td>0.25</td></tr>
-    <tr><td>Reveal TAU line on results screen</td><td>Draws the hidden level on the results trust trace.</td><td>Off unless you plan to discuss it</td></tr>
+    <tr><td>Reveal TAU line on results screen</td><td>Draws the hidden level on the trust chart of results panel 1 (COUNTERFACTUAL).</td><td>Off unless you plan to discuss it</td></tr>
     <tr><td>Lit-room display mode</td><td>Larger type, stronger rules and secondary text for a bright room.</td><td>As needed</td></tr>
     <tr><td>Seed</td><td>Random, or a fixed number to replay the same market (same hidden level and incident luck).</td><td>Random; fixed for rehearsal</td></tr>
     <tr><td>Bot firms</td><td>Computer-run firms, tagged BOT, with a policy each: cautious (pace 1, safety 20), standard (pace 2, safety 10), greedy (pace 3 or 4, safety 5, BLITZ when allowed) or mimic-leader (copies the leader's pace when disclosure is on). "Add 10 mixed" adds ten. Bots count towards the firm limit and always commit.</td><td>Enough to reach 6 firms</td></tr>
@@ -295,7 +295,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
     <li>On your phone, in a private tab, open the site, type the code and found a test firm.</li>
     <li>On the laptop press F9 (briefing), then F9 (quarter 1). Commit on the phone. Try F8 (summit), F7 (disclosure) and F6 (audit, after proposing a pact on the phone).</li>
     <li>Open the console's WIRE LOG link and look at a QUARTER BRIEF.</li>
-    <li>When the session ends, press F9 through the seven results panels. On the console download both exports, then DELETE SESSION.</li>
+    <li>When the session ends, press F9 through the six results panels. On the console download both exports, then DELETE SESSION.</li>
   </ol>
   <p>Check that the countdown matches on laptop and phone, that the board is readable from the back of the room, and that the results panels fit the screen.</p>
 </section>
@@ -365,7 +365,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
   <div class="dont">"That was bad luck", or "that was HRTH's fault". Incidents come from each firm's own pace, safety and cards; let the room work that out later.</div>
 
   <h3>The wire</h3>
-  <p>The ticker on the projector carries 2 to 4 headlines per quarter, plus pact and disclosure events. Headlines name firms for incidents, cards, rank changes, breaches and insolvency; the cap leaves some events out, and the wire log lists those under NOT ON THE WIRE. Pace 4 is reported by name only while disclosure is on ("Unnamed lab accelerates release schedule, sources say" otherwise).</p>
+  <p>The ticker on the projector carries only the latest quarter: its 2 to 4 headlines, plus pact and disclosure events since it resolved. Press <span class="k">Shift+W</span> (or type <code>WIRE</code>) for the WIRE screen on the projector: every headline of the session, newest quarter first; Esc returns to the board. Headlines name firms for incidents, cards, rank changes, breaches and insolvency; the cap leaves some events out, and the wire log lists those under NOT ON THE WIRE. Pace 4 is reported by name only while disclosure is on ("Unnamed lab accelerates release schedule, sources say" otherwise).</p>
 
   <h2 style="break-before: page;">4.6 The wire log and the QUARTER BRIEF (second screen)</h2>
   <p>Open the <strong>WIRE LOG</strong> link at the top of the console (a new tab; address <code>#/wire/…</code> with the same session id). Put it on a second screen or tab that the room cannot see. It lists every wire entry by quarter. Use ◄ ► or the arrow keys to change quarter, type a quarter number and press GO, or press ALL. COPY puts the selected quarter on the clipboard as plain text for the debrief.</p>
@@ -423,7 +423,8 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
     <li>"Does safety matter?" — "It lowers your exposure and incident risk. It costs money."</li>
     <li>"Will we go bankrupt if we go slow?" — "A firm becomes insolvent only if its cash falls too far below zero." (Slow firms do not, in a calm room.)</li>
     <li>"How many quarters?" — "The session ends when it ends."</li>
-    <li>"Why did everyone lose money?" — "Total market revenue tracks public trust."</li>
+    <li>"Why did everyone lose money?" — "Trust sets each quarter’s revenue."</li>
+    <li>"Why are values rising if trust is falling?" — "Value counts cash already banked. Look at MARKET: each quarter pays less."</li>
   </ul>
 
   <h3>Ending</h3>
@@ -436,41 +437,38 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
   <p>Allow 20 to 30 minutes. On the projector, <span class="k">F9</span> steps forward and <span class="k">Esc</span> steps back; the step is saved, so a reload returns to the same panel. Every panel opens with one bold sentence written from the session's data. Read it out, then ask the room. Participants see their own results card on their phones. From here on you may name the lesson.</p>
   <p>The screenshots below come from the staged practice session: 12 firms, 14 quarters, the moratorium in quarter 13.</p>
 
-  <h2>Panel 1 · FINAL BOARD</h2>
-  <figure><img src="img/results-1.png" alt="Results panel 1, final board."><figcaption>Each firm from its peak (hollow square) to its final valuation (solid square), on one axis that includes zero.</figcaption></figure>
-  <div class="say">"Who finished first? Who peaked early, and what happened after?" This is the ranking the room has been chasing.</div>
+  <h2>Panel 1 · COUNTERFACTUAL</h2>
+  <figure><img src="img/results-1.png" alt="Results panel 1, counterfactual."><figcaption>INDUSTRY VALUE (actual), ALTERNATIVE (every firm at pace 2, safety 15, no cards, same luck) and VALUE LOST; the two trust paths with the gap hatched and the moratorium quarter labelled; each firm against the alternative. The hidden level is drawn only if "Reveal TAU line" was on.</figcaption></figure>
+  <div class="say">"This is the same room, the same luck, with every firm restrained. When did you first notice trust falling? Could any single firm have prevented the difference?" Point at the steepest drops; the wire log's QUARTER BRIEF for those quarters says which firms drew most.</div>
 
-  <h2 style="break-before: page;">Panel 2 · TRUST TRACE</h2>
-  <figure><img src="img/results-2.png" alt="Results panel 2, trust trace."><figcaption>Trust quarter by quarter; red squares mark quarters that lost 5 or more; the moratorium quarter is labelled. The hidden level is drawn only if "Reveal TAU line" was on.</figcaption></figure>
-  <div class="say">"When did you first notice trust falling? What did your firm change?" Point at the steepest drops; the wire log's QUARTER BRIEF for those quarters says which firms drew most.</div>
-
-  <h2>Panel 3 · COUNTERFACTUAL</h2>
-  <figure><img src="img/results-3.png" alt="Results panel 3, counterfactual."><figcaption>INDUSTRY VALUE (actual), ALTERNATIVE (every firm at pace 2, safety 15, no cards, same luck) and VALUE LOST; the two trust paths with the gap hatched; each firm against the alternative.</figcaption></figure>
-  <div class="say">"This is the same room, the same luck, with every firm restrained. Could any single firm have prevented the difference?"</div>
-
-  <h2 style="break-before: page;">Panel 4 · ATTRIBUTION</h2>
-  <figure><img src="img/results-4.png" alt="Results panel 4, attribution."><figcaption>Each firm's share of the trust damage (left, red) against its share of the value (right).</figcaption></figure>
+  <h2 style="break-before: page;">Panel 2 · ATTRIBUTION</h2>
+  <figure><img src="img/results-2.png" alt="Results panel 2, attribution."><figcaption>Each firm's share of the trust damage (left, red) against its share of the value (right).</figcaption></figure>
   <div class="say">"Compare your share of the damage with your share of the value." This is the fairness conversation: the cost was shared, the gains were not.</div>
 
-  <h2>Panel 5 · NET CONTRIBUTION: the turning point</h2>
-  <figure><img src="img/results-5.png" alt="Results panel 5, net contribution, with a slope chart from rank by valuation to rank by net contribution."><figcaption>Left: each firm's rank by valuation, joined to its rank by net contribution; moves of 3 places or more are thick. Right: valuation, market effect (▲ or ▼), research credit (not money), rivalry taken, and the net contribution; under each firm its conduct ledger.</figcaption></figure>
+  <h2>Panel 3 · NET CONTRIBUTION: the turning point</h2>
+  <figure><img src="img/results-3.png" alt="Results panel 3, net contribution, a slope chart from rank by valuation to rank by net contribution."><figcaption>Each firm's rank by valuation (left) joined to its rank by net contribution (right); moves of 3 places or more are thick. The firm 1st by net contribution is drawn in amber and labelled "top net contribution".</figcaption></figure>
   <p>Net contribution re-ranks firms by what they did for the whole market, not only for themselves: final valuation, plus or minus what the firm's decisions did to every firm's revenue through trust (against pace 2, safety 15, no card), plus a research credit for each PUBLISH card, minus value taken from rivals with BLITZ, POACH and RUSH. The moratorium's cost is charged to the firms that drew trust down before it.</p>
   <p>This is where the board turns around. In the staged session the valuation leader, GLYN, falls from 1st to 8th, and ARCN, 10th by valuation after 14 restrained quarters, rises to 1st. In the four October 2026 live rooms the valuation leader fell to between 5th and 9th (docs/SESSIONS.md, Session 18). It depends on the room: in a calm room with no moratorium an aggressive firm can still rank high (observer report, section 3, finding 4).</p>
   <div class="say">"Ranked by value created for the whole market, where does your firm fall? Is that outcome fair, and who should pay?" Ask the valuation leader first.</div>
 
-  <h2 style="break-before: page;">Panel 6 · PACT RECORD</h2>
-  <figure><img src="img/results-6.png" alt="Results panel 6, pact record."><figcaption>Each pact's terms and members, detected and undetected breaches (now revealed), and a strip of quarter cells per firm.</figcaption></figure>
+  <h2 style="break-before: page;">Panel 4 · CONDUCT: what each firm did</h2>
+  <figure><img src="img/results-4.png" alt="Results panel 4, conduct, with each firm's figures and conduct ledger."><figcaption>Per firm, in rank of net contribution: valuation, market effect (▲ or ▼), research credit (not money), rivalry taken, and the net contribution, on one axis; under each firm its conduct ledger (▲ for the market, ▼ against it).</figcaption></figure>
+  <p>Use this panel to point out the harmful behaviour behind panel 3: the headline names the firm whose market effect did the most harm and the one that did the most for the market. Read the ▼ side of the ledgers aloud (POACH, BLITZ, LOBBY, RUSH, breaches, incidents) and compare them with the ▲ side (PUBLISH, SHARE, restraint, pacts kept).</p>
+  <div class="say">"Which of these decisions would you make again, knowing what they cost the other firms?"</div>
+
+  <h2 style="break-before: page;">Panel 5 · PACT RECORD</h2>
+  <figure><img src="img/results-5.png" alt="Results panel 5, pact record."><figcaption>Each pact's terms and members, detected and undetected breaches (now revealed), and a strip of quarter cells per firm.</figcaption></figure>
   <div class="say">"Which pacts held and which broke? Was the difference monitoring, sanctions or trust?"</div>
 
-  <h2>Panel 7 · DEBRIEF</h2>
-  <figure><img src="img/results-7.png" alt="Results panel 7, the five debrief prompts."><figcaption>The five prompts (spec §15.5).</figcaption></figure>
+  <h2>Panel 6 · DEBRIEF</h2>
+  <figure><img src="img/results-6.png" alt="Results panel 6, the five debrief prompts."><figcaption>The five prompts (spec §15.5).</figcaption></figure>
 
   <h2 style="break-before: page;">The five debrief prompts, and the answers to draw out</h2>
   <p class="note">No record of what live rooms answered is kept in the repository. The answers below are what the session's own data and model support; use the panels to get the room there.</p>
   <ol>
-    <li><strong>When did your firm first notice trust falling, and what did you change?</strong><br>Draw out: one firm's draw is about 1/N of the total and the fall builds over many quarters, so it is easy to notice late; and slowing down alone costs a firm share while rivals keep racing. Panel 2 shows when trust fell; the QUARTER BRIEF shows who drew most.</li>
-    <li><strong>Which pacts held and which broke? Was the difference monitoring, sanctions or trust?</strong><br>Draw out: a pact without audits is cheap to break (panel 6 shows undetected breaches); fines narrow the gain from breaking but, at the default settings, do not remove it. Monitoring, disclosure and graduated sanctions are Ostrom's design principles.</li>
-    <li><strong>Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay?</strong><br>Draw out: check on panel 4 whether the firms with the largest share of the damage also hold a large share of the value, and on panel 5 how the ranking changes when the shared cost is counted. A cost that falls on others is a negative externality.</li>
+    <li><strong>When did your firm first notice trust falling, and what did you change?</strong><br>Draw out: one firm's draw is about 1/N of the total and the fall builds over many quarters, so it is easy to notice late; and slowing down alone costs a firm share while rivals keep racing. Panel 1 shows when trust fell; the QUARTER BRIEF shows who drew most.</li>
+    <li><strong>Which pacts held and which broke? Was the difference monitoring, sanctions or trust?</strong><br>Draw out: a pact without audits is cheap to break (panel 5 shows undetected breaches); fines narrow the gain from breaking but, at the default settings, do not remove it. Monitoring, disclosure and graduated sanctions are Ostrom's design principles.</li>
+    <li><strong>Compare your share of the damage with your share of the value. Ranked by net contribution, where does your firm fall? Is that outcome fair, and who should pay?</strong><br>Draw out: check on panel 2 whether the firms with the largest share of the damage also hold a large share of the value, on panel 3 how the ranking changes when the shared cost is counted, and on panel 4 which decisions did it. A cost that falls on others is a negative externality.</li>
     <li><strong>Would disclosure from quarter 1 have changed your decisions? Why?</strong><br>Draw out: whether firms behaved differently while their pace and safety were visible; compare quarters with disclosure on and off on the wire log.</li>
     <li><strong>Where does this pattern appear in the real AI industry, and which of Ostrom's design principles would you add to the market?</strong><br>Draw out: racing to deploy, voluntary safety commitments, third-party audits and disclosure rules; clear boundaries, monitoring, graduated sanctions and rules the participants help make.</li>
   </ol>
@@ -509,6 +507,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
     <tr><td><span class="k">F2</span></td><td><span class="k">Shift+B</span></td><td>Board</td></tr>
     <tr><td><span class="k">F3</span></td><td><span class="k">Shift+T</span></td><td>Trust history</td></tr>
     <tr><td><span class="k">F4</span></td><td><span class="k">Shift+P</span></td><td>Pacts</td></tr>
+    <tr><td>none</td><td><span class="k">Shift+W</span></td><td>Wire: every headline of the session (no F-key is free)</td></tr>
     <tr><td><span class="k">F6</span></td><td><span class="k">Shift+F</span></td><td>Audit a pact (then the pact's number)</td></tr>
     <tr><td><span class="k">F7</span></td><td><span class="k">Shift+D</span></td><td>Disclosure on or off</td></tr>
     <tr><td><span class="k">F8</span></td><td><span class="k">Shift+S</span></td><td>Summit in or out</td></tr>
@@ -538,7 +537,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
     <tr><td><code>#/play/:gameId</code></td><td>Participants</td><td>The phone: DESK, BOOK, PACTS, WIRE</td></tr>
     <tr><td><code>#/screen/:gameId</code></td><td>Facilitator</td><td>The projector board, with the keys</td></tr>
     <tr><td><code>#/control/:gameId</code></td><td>Facilitator</td><td>Private console: timer, firms, pacts, hidden values, exports</td></tr>
-    <tr><td><code>#/results/:gameId</code></td><td>Everyone in the session</td><td>Results: the seven panels on the projector; each firm's own card on its phone</td></tr>
+    <tr><td><code>#/results/:gameId</code></td><td>Everyone in the session</td><td>Results: the six panels on the projector; each firm's own card on its phone</td></tr>
     <tr><td><code>#/new</code></td><td>Facilitator</td><td>Create a session</td></tr>
     <tr><td><code>#/wire/:gameId</code></td><td>Facilitator</td><td>The wire log by quarter, with the QUARTER BRIEF and NOT ON THE WIRE</td></tr>
   </table>
@@ -560,7 +559,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
         <li>As needed: <span class="k">F8</span> summit, <span class="k">F6</span> audit, <span class="k">F7</span> disclosure, console Pause.</li>
         <li>End: automatic, or <span class="k">F10</span> twice.</li>
         <li>Download both exports on the console.</li>
-        <li><span class="k">F9</span> through the seven results panels; panel 5 is the turning point; panel 7 the debrief.</li>
+        <li><span class="k">F9</span> through the six results panels; panel 3 is the turning point, panel 4 the conduct behind it; panel 6 the debrief.</li>
       </ol>
       <h2>Never say before the results</h2>
       <p><strong>commons, tragedy, sustainable, sustainability, cooperate, cooperation, collective, shared resource, tipping point, threshold, collapse, game, player, score, win, level</strong></p>
@@ -573,6 +572,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
         <tr><td>F2</td><td>Shift+B</td><td>Board</td></tr>
         <tr><td>F3</td><td>Shift+T</td><td>Trust</td></tr>
         <tr><td>F4</td><td>Shift+P</td><td>Pacts</td></tr>
+        <tr><td>–</td><td>Shift+W</td><td>Wire</td></tr>
         <tr><td>F6</td><td>Shift+F</td><td>Audit, then pact number</td></tr>
         <tr><td>F7</td><td>Shift+D</td><td>Disclosure</td></tr>
         <tr><td>F8</td><td>Shift+S</td><td>Summit</td></tr>
@@ -586,7 +586,7 @@ figcaption { color: var(--signal-dim); margin-top: 0.25lh; }
       <h2>If stuck</h2>
       <p>Reload the page: nothing is lost. RESOLVING stuck: Retry on the console. Results missing: Retry results.</p>
       <h2>Results panels</h2>
-      <p>1 FINAL BOARD · 2 TRUST TRACE · 3 COUNTERFACTUAL · 4 ATTRIBUTION · 5 NET CONTRIBUTION · 6 PACT RECORD · 7 DEBRIEF</p>
+      <p>1 COUNTERFACTUAL · 2 ATTRIBUTION · 3 NET CONTRIBUTION · 4 CONDUCT · 5 PACT RECORD · 6 DEBRIEF</p>
     </div>
   </div>
 </section>

@@ -827,56 +827,57 @@ async function participantScenario(
 
   // Projector: F9 on the ended board opens the results sequence.
   await key(fac, 'F9');
-  await waitText(fac, /RESULTS[\s\S]*1\/7[\s\S]*FINAL BOARD/, 'F9 on the ended board opens results panel 1', 15_000, '.scr');
-  if (res) {
+  await waitText(fac, /RESULTS[\s\S]*1\/6[\s\S]*COUNTERFACTUAL[\s\S]*INDUSTRY VALUE[\s\S]*ALTERNATIVE[\s\S]*VALUE (LOST|ADDED)/, 'F9 on the ended board opens results panel 1 (COUNTERFACTUAL)', 15_000, '.scr');
+  {
     const text1 = await screenText(fac);
-    check(Object.values(res.final).every((f) => text1.includes(f.ticker) && text1.includes(fmt(f.valuation))), 'panel 1 lists every firm with its final valuation');
+    check(!/FINAL BOARD|TRUST TRACE/.test(text1), 'FINAL BOARD and TRUST TRACE are gone (Session 20)');
+    if (res) check(text1.replace(/\s+/g, ' ').includes(`INDUSTRY VALUE ${fmt(res.industry.actual, 0)}`), 'panel 1 shows the actual industry value from the results');
+    // The τ line moved to the COUNTERFACTUAL trust chart (Session 20): absent while the setting is off.
+    check(!/τ|tau/i.test(text1) && (await fac.locator('.scr .lc-ref').count()) === 0, 'the counterfactual trust chart has no tau line while the setting is off');
+    // The line itself is drawn from the published value; publish one to check the drawing.
+    await adminSet(`games/${g}/results/tau`, 33);
+    await waitText(fac, /τ 33\.0 · a moratorium starts below this line/, 'a published tau draws the labelled line on COUNTERFACTUAL', 10_000, '.scr');
+    check((await fac.locator('.scr .lc-ref').count()) === 1, 'the tau line is drawn');
+    await snapProjector(fac, 'results-1-tau');
+    await adminSet(`games/${g}/results/tau`, null);
+    await waitText(fac, /^(?![\s\S]*τ)[\s\S]*/, 'the tau line goes when tau is removed', 10_000, '.scr');
   }
   await snapProjector(fac, 'results-1');
   const panels: Array<[number, RegExp, string]> = [
-    [2, /TRUST TRACE/, 'TRUST TRACE'],
-    [3, /COUNTERFACTUAL[\s\S]*INDUSTRY VALUE[\s\S]*ALTERNATIVE[\s\S]*VALUE (LOST|ADDED)/, 'COUNTERFACTUAL'],
-    [4, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE[\s\S]*SHARE OF VALUE/, 'ATTRIBUTION'],
-    [5, /NET CONTRIBUTION[\s\S]*Ranked by value created for the whole market[\s\S]*research credit, not money/, 'NET CONTRIBUTION'],
-    [6, /PACT RECORD/, 'PACT RECORD'],
-    [7, /DEBRIEF[\s\S]*Ranked by net contribution[\s\S]*Ostrom/, 'DEBRIEF'],
+    [2, /ATTRIBUTION[\s\S]*SHARE OF DAMAGE[\s\S]*SHARE OF VALUE/, 'ATTRIBUTION'],
+    [3, /NET CONTRIBUTION[\s\S]*Ranked by value created for the whole market[\s\S]*1st by net contribution/, 'NET CONTRIBUTION'],
+    [4, /CONDUCT[\s\S]*research credit, not money/, 'CONDUCT'],
+    [5, /PACT RECORD/, 'PACT RECORD'],
+    [6, /DEBRIEF[\s\S]*Ranked by net contribution[\s\S]*Ostrom/, 'DEBRIEF'],
   ];
   for (const [n, re, name] of panels) {
     await key(fac, 'F9');
-    await waitText(fac, new RegExp(`${n}/7`), `F9 steps to results panel ${n} (${name})`, 15_000, '.scr');
+    await waitText(fac, new RegExp(`${n}/6`), `F9 steps to results panel ${n} (${name})`, 15_000, '.scr');
     await waitText(fac, re, `panel ${n} shows ${name}`, 5_000, '.scr');
     const text = await screenText(fac);
-    if (n === 2) {
-      check(!/τ|tau/i.test(text) && (await fac.locator('.scr .lc-ref').count()) === 0, 'the trust trace has no tau line while the setting is off');
-      check(/moratorium from Q\d Y\d|no moratorium/.test(text), 'the trust trace states the moratorium marker');
-      // The line itself is drawn from the published value; publish one to check the drawing.
-      await adminSet(`games/${g}/results/tau`, 33);
-      await waitText(fac, /τ 33\.0 · a moratorium starts below this line/, 'a published tau draws the labelled line', 10_000, '.scr');
-      check((await fac.locator('.scr .lc-ref').count()) === 1, 'the tau line is drawn');
-      await snapProjector(fac, 'results-2-tau');
-      await adminSet(`games/${g}/results/tau`, null);
-      await waitText(fac, /^(?![\s\S]*τ)[\s\S]*/, 'the tau line goes when tau is removed', 10_000, '.scr');
-    }
     if (n === 3 && res) {
-      check(text.replace(/\s+/g, ' ').includes(`INDUSTRY VALUE ${fmt(res.industry.actual, 0)}`), 'panel 3 shows the actual industry value from the results');
-    }
-    if (n === 5 && res) {
       const firms = Object.keys(res.final).length;
-      check((await fac.locator('.scr [data-chart="slope"] g[data-firm]').count()) === firms, `panel 5 draws a slope for each of ${firms} firms`);
-      check((await fac.locator('.scr .nc-firm[data-firm] [data-ledger]').count()) === firms, 'panel 5 shows a conduct ledger under each firm');
+      check((await fac.locator('.scr [data-chart="slope"] g[data-firm]').count()) === firms, `panel 3 draws a slope for each of ${firms} firms`);
+      check((await fac.locator('.scr [data-chart="slope"] g[data-winner]').count()) === 1, 'panel 3 marks the firm 1st by net contribution');
+      check((await fac.locator('.scr .nc-firm').count()) === 0, 'panel 3 has no figures or ledgers (moved to CONDUCT)');
     }
-    if (n === 6) check(/UNDETECTED|No pacts were formed/.test(text), 'panel 6 reveals undetected violations or says no pact formed');
+    if (n === 4 && res) {
+      const firms = Object.keys(res.final).length;
+      check((await fac.locator('.scr .nc-firm[data-firm] [data-ledger]').count()) === firms, 'panel 4 shows a conduct ledger under each firm');
+      check((await fac.locator('.scr [data-chart="slope"]').count()) === 0, 'panel 4 has no slope chart');
+    }
+    if (n === 5) check(/UNDETECTED|No pacts were formed/.test(text), 'panel 5 reveals undetected violations or says no pact formed');
     await snapProjector(fac, `results-${n}`);
   }
   await fac.waitForTimeout(600);
   await fac.keyboard.press('F9');
   await waitText(fac, /last results panel/, 'F9 on the last panel stays put and says so', 10_000, '.scr');
-  check((await adminGet<number>(`games/${g}/public/revealStep`)) === 6, 'the results step is stored (panel 7)');
+  check((await adminGet<number>(`games/${g}/public/revealStep`)) === 5, 'the results step is stored (panel 6)');
   await fac.waitForTimeout(600);
   await fac.keyboard.press('Escape');
-  await waitText(fac, /6\/7[\s\S]*PACT RECORD/, 'Esc steps back to panel 6', 10_000, '.scr');
+  await waitText(fac, /5\/6[\s\S]*PACT RECORD/, 'Esc steps back to panel 5', 10_000, '.scr');
   await fac.reload();
-  await waitText(fac, /6\/7[\s\S]*PACT RECORD/, 'a reload restores the results step from the database', 15_000, '.scr');
+  await waitText(fac, /5\/6[\s\S]*PACT RECORD/, 'a reload restores the results step from the database', 15_000, '.scr');
 
   // Console: exports.
   await control.reload();

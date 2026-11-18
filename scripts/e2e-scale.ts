@@ -5,7 +5,7 @@
  * memory (lobby, an open quarter, six resolved quarters with pacts and disclosure, a summit, the
  * end and the results), writes each state to the emulator with one admin write, and checks:
  *  - the projector board (every page kind), lobby and summit at 1280×720 and 1920×1080
- *  - all seven results panels and every page within them
+ *  - all six results panels and every page within them
  *  - the console: control strip always in view, firms table scrolling inside its panel, filters.
  * Then a phone at 360×640 founds the 50th firm through the join screen in multiplayer mode and
  * checks the POACH picker with 49 targets and a 30-member pact.
@@ -275,10 +275,10 @@ async function ranksChecks(page: Page, n: number, name: string): Promise<void> {
 async function results(page: Page, g: string, n: number, tag = ''): Promise<void> {
   await page.goto('about:blank');
   await page.goto(`${BASE}#/results/${g}`);
-  await waitText(page, /FINAL BOARD/, `results ${n}: panel 1 loads`, 20_000, '.scr');
-  for (let step = 0; step < 7; step++) {
+  await waitText(page, /COUNTERFACTUAL/, `results ${n}: panel 1 loads`, 20_000, '.scr');
+  for (let step = 0; step < 6; step++) {
     await adminSet(`games/${g}/public/revealStep`, step);
-    const label = `${step + 1}/7`;
+    const label = `${step + 1}/6`;
     const ok = await page
       .waitForFunction((want) => document.querySelector('[data-results-pos]')?.textContent === want, label, { timeout: 10_000 })
       .then(() => true, () => false);
@@ -287,16 +287,16 @@ async function results(page: Page, g: string, n: number, tag = ''): Promise<void
     const name = `scale-${tag}${n}-results-${step + 1}`;
     await snapProjector(page, name);
     const marks = await page.evaluate(() => Array.from(document.querySelectorAll('svg [data-firm], .cmp-row[data-firm]')).map((e) => (e as HTMLElement).dataset.firm ?? ''));
-    if (step === 0 || step === 2) {
-      const what = step === 0 ? 'FINAL BOARD' : 'COUNTERFACTUAL';
+    if (step === 0) {
+      const what = 'COUNTERFACTUAL';
       check(marks.length === n, `results ${n} ${what}: all ${n} firms drawn (${marks.length})`);
       // A long list scrolls (§14.4): End reaches the last firm, Home returns, and the heading stays in view.
       const scroll = await page.evaluate(() => {
         const el = document.querySelector<HTMLElement>('[data-res-scroll]');
         return el ? { scrolls: el.scrollHeight > el.clientHeight + 1 } : null;
       });
-      // FINAL BOARD draws rows that fit without a scroll area; the comparison list always has one.
-      if (step === 2) check(scroll !== null, `results ${n} ${what}: the firm list sits in a scroll area`);
+      // The comparison list always sits in a scroll area.
+      check(scroll !== null, `results ${n} ${what}: the firm list sits in a scroll area`);
       if (scroll?.scrolls) {
         await page.keyboard.press('End');
         await page.waitForTimeout(250);
@@ -323,13 +323,18 @@ async function results(page: Page, g: string, n: number, tag = ''): Promise<void
         check(n <= 19, `results ${n} ${what}: ${n} firms fit without scrolling`);
       }
     }
-    if (step === 3) check(marks.length === (n > 24 ? 13 : n), `results ${n} ATTRIBUTION: ${marks.length} rows (${n > 24 ? '12 + OTHERS' : 'every firm'})`);
-    if (step === 4) {
-      // NET CONTRIBUTION (Session 18): every firm on the slope chart; figures follow ATTRIBUTION's 24-row rule.
+    if (step === 1) check(marks.length === (n > 24 ? 13 : n), `results ${n} ATTRIBUTION: ${marks.length} rows (${n > 24 ? '12 + OTHERS' : 'every firm'})`);
+    if (step === 2) {
+      // NET CONTRIBUTION (Session 18; slope only since Session 20): every firm on the slope chart, one marked 1st.
       const slope = await page.locator('[data-chart="slope"] g[data-firm]').count();
-      const rows = await page.locator('.nc-firm[data-firm]').count();
+      const winner = await page.locator('[data-chart="slope"] g[data-winner]').count();
       check(slope === n, `results ${n} NET CONTRIBUTION: all ${n} firms on the slope chart (${slope})`);
-      check(rows === (n > 24 ? 13 : n), `results ${n} NET CONTRIBUTION: ${rows} figure rows (${n > 24 ? '12 + OTHERS' : 'every firm'})`);
+      check(winner === 1, `results ${n} NET CONTRIBUTION: one firm marked 1st by net contribution (${winner})`);
+    }
+    if (step === 3) {
+      // CONDUCT (Session 20): figures follow ATTRIBUTION's 24-row rule.
+      const rows = await page.locator('.nc-firm[data-firm]').count();
+      check(rows === (n > 24 ? 13 : n), `results ${n} CONDUCT: ${rows} figure rows (${n > 24 ? '12 + OTHERS' : 'every firm'})`);
     }
   }
 }
