@@ -1395,7 +1395,7 @@ A room like the four live classes (observed-human room), moratorium by quarter 1
   - `test:e2e:rehearsal`: 216 checks pass.
   - `test:e2e:wire`: 25 checks pass.
   - `test:e2e:incidents`: 566 checks pass.
-  - `test:e2e:long`: all checks pass (30 quarters, 50 firms). `test:e2e:scale-run`: see the line below.
+  - `test:e2e:long`: all checks pass (30 quarters, 50 firms). `test:e2e:scale-run`: all checks pass.
 - **Failures during the session (fixed):**
   - The CONDUCT panel left 43% of its height empty with 4 firms.
   - An e2e regex expected the heading text after the headline.
