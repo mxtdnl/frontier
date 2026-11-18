@@ -2,7 +2,8 @@
 import { PACT_QUARTER, type ConductLedger, type FinalResults, type FirmContribution, type FirmFinal, type PactFinal, type PactQuarterCode } from '../../engine';
 import { ATTRIBUTION_ALL_MAX, ATTRIBUTION_TOP, tickerLine } from '../../ui/layout';
 
-export const RESULT_PANELS = ['FINAL BOARD', 'TRUST TRACE', 'COUNTERFACTUAL', 'ATTRIBUTION', 'NET CONTRIBUTION', 'PACT RECORD', 'DEBRIEF'] as const;
+/** Session 20 (owner feedback 2026-11-18): FINAL BOARD and TRUST TRACE removed; CONDUCT split from NET CONTRIBUTION. */
+export const RESULT_PANELS = ['COUNTERFACTUAL', 'ATTRIBUTION', 'NET CONTRIBUTION', 'CONDUCT', 'PACT RECORD', 'DEBRIEF'] as const;
 
 /** Spec §15.5. Prompt 3 refers to the NET CONTRIBUTION panel (owner wording, 2026-10-10, Session 18). */
 export const DEBRIEF_PROMPTS: ReadonlyArray<string> = [
@@ -60,28 +61,6 @@ export function headlineFigures(r: FinalResults): HeadlineFigures {
     alternative,
     change: { label: added ? 'VALUE ADDED' : 'VALUE LOST', amount, glyph: amount === 0 ? '' : added ? '▲' : '▼', sub },
   };
-}
-
-export interface DumbbellRow {
-  firmId: string;
-  rank: number;
-  ticker: string;
-  final: number;
-  peak: number;
-  /** final − peak; 0 or negative. */
-  fromPeak: number;
-}
-
-/** Final board rows, by rank: peak and final valuation for the dumbbell (panel 1). */
-export function finalBoardRows(r: FinalResults): DumbbellRow[] {
-  return rankedFirms(r).map((f) => ({
-    firmId: f.firmId,
-    rank: f.rank,
-    ticker: f.ticker,
-    final: f.valuation,
-    peak: f.peakValuation,
-    fromPeak: Math.min(0, f.valuation - f.peakValuation),
-  }));
 }
 
 export interface ButterflyRow {

@@ -12,8 +12,8 @@ import { fmt, quarterLabel } from '../../ui/format';
 import { matchKey, resultsKeys, type KeyAction } from '../../ui/keys';
 import { useLitRoom } from '../../ui/litRoom';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
-import { Butterfly, Dumbbell, Slope } from './charts';
-import { DEBRIEF_HEADLINE, attributionHeadline, contributionHeadline, counterfactualHeadline, finalBoardHeadline, pactHeadline, trustHeadline } from './headlines';
+import { Butterfly, Slope } from './charts';
+import { DEBRIEF_HEADLINE, attributionHeadline, conductHeadline, contributionHeadline, counterfactualHeadline, pactHeadline } from './headlines';
 import {
   DEBRIEF_PROMPTS,
   RESULT_PANELS,
@@ -21,7 +21,6 @@ import {
   contributionRows,
   contributionView,
   counterfactualTrustSeries,
-  finalBoardRows,
   headlineFigures,
   pactLines,
   pactStripRows,
@@ -97,7 +96,7 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
         e.preventDefault();
         act(a);
       } else if (SCROLL_KEYS.has(e.key)) {
-        // A long FINAL BOARD or COUNTERFACTUAL list scrolls with the arrow, page and Home/End keys (§14.4).
+        // A long COUNTERFACTUAL or CONDUCT list scrolls with the arrow, page and Home/End keys (§14.4).
         const list = document.querySelector<HTMLElement>('[data-res-scroll]');
         if (!list || list.scrollHeight <= list.clientHeight) return;
         e.preventDefault();
@@ -152,13 +151,12 @@ function LiveResults({ g, uid }: { g: string; uid: string }) {
   } else {
     body = (
       <>
-        {step === 0 ? <FinalBoard r={results} /> : null}
-        {step === 1 ? <TrustTrace r={results} /> : null}
-        {step === 2 ? <Counterfactual r={results} /> : null}
-        {step === 3 ? <Attribution r={results} /> : null}
-        {step === 4 ? <NetContribution r={results} /> : null}
-        {step === 5 ? <PactRecord r={results} /> : null}
-        {step === 6 ? <Debrief /> : null}
+        {step === 0 ? <Counterfactual r={results} /> : null}
+        {step === 1 ? <Attribution r={results} /> : null}
+        {step === 2 ? <NetContribution r={results} /> : null}
+        {step === 3 ? <Conduct r={results} /> : null}
+        {step === 4 ? <PactRecord r={results} /> : null}
+        {step === 5 ? <Debrief /> : null}
       </>
     );
   }
@@ -191,41 +189,6 @@ function Headline({ text }: { text: string }) {
     <p className="res-headline" data-headline="">
       {text}
     </p>
-  );
-}
-
-export function FinalBoard({ r }: { r: FinalResults }) {
-  return (
-    <Panel title="FINAL BOARD · ranked by final valuation" right={`peak → final valuation · ${r.rounds} QTR`} bodyClassName="pad col">
-      <Headline text={finalBoardHeadline(r)} />
-      <Dumbbell rows={finalBoardRows(r)} />
-    </Panel>
-  );
-}
-
-export function TrustTrace({ r }: { r: FinalResults }) {
-  const series = trustSeries(r);
-  const marker = r.collapseRound;
-  const last = r.trust[r.trust.length - 1] ?? r.startTrust;
-  return (
-    <Panel
-      title="TRUST TRACE"
-      right={`${marker !== null ? `moratorium from ${quarterLabel(marker)}` : 'no moratorium'}${r.tau !== null ? ' · τ revealed' : ''}`}
-      bodyClassName="pad col"
-    >
-      <Headline text={trustHeadline(r)} />
-      <LineChart
-        series={[{ values: series, label: 'Trust', tone: 'signal' }]}
-        domain="trust"
-        alarmDrop={5}
-        changeStrip
-        marker={marker !== null ? { index: marker, label: `MORATORIUM ${quarterLabel(marker)}` } : undefined}
-        reference={r.tau !== null ? { value: r.tau, label: `τ ${fmt(r.tau)} · a moratorium starts below this line`, band: true } : undefined}
-        description={`Public trust by quarter, from ${fmt(r.startTrust)} to ${fmt(last)}. ${
-          marker !== null ? `Moratorium from ${quarterLabel(marker)}.` : 'No moratorium.'
-        }${r.tau !== null ? ` Threshold ${fmt(r.tau)}.` : ''}`}
-      />
-    </Panel>
   );
 }
 
@@ -268,7 +231,12 @@ export function Counterfactual({ r }: { r: FinalResults }) {
             domain="trust"
             hatchBetween
             endLabels
-            description="Public trust by quarter: the actual path against the alternative path, gap hatched"
+            marker={r.collapseRound !== null ? { index: r.collapseRound, label: `MORATORIUM ${quarterLabel(r.collapseRound)}` } : undefined}
+            // The τ line moved here from TRUST TRACE (removed in Session 20); shown only with "Reveal threshold" on.
+            reference={r.tau !== null ? { value: r.tau, label: `τ ${fmt(r.tau)} · a moratorium starts below this line`, band: true } : undefined}
+            description={`Public trust by quarter: the actual path against the alternative path, gap hatched. ${
+              r.collapseRound !== null ? `Moratorium from ${quarterLabel(r.collapseRound)}.` : 'No moratorium.'
+            }${r.tau !== null ? ` Threshold ${fmt(r.tau)}.` : ''}`}
           />
         </div>
         <div className="col">
@@ -341,16 +309,44 @@ export function Attribution({ r }: { r: FinalResults }) {
 }
 
 /**
- * NET CONTRIBUTION (§14.4 panel 5, Session 18): the slope from valuation rank to rank by net contribution, and per firm
- * the figures on one zero-based axis (valuation, market effect, research credit, rivalry taken, net) with its conduct
- * ledger underneath.
+ * NET CONTRIBUTION (§14.4 panel 3; Session 20): the slope from valuation rank to rank by net contribution, full width,
+ * with the firm ranked 1st by net contribution marked. The figures behind it are on CONDUCT, the next panel.
  */
 export function NetContribution({ r }: { r: FinalResults }) {
+  const all = contributionRows(r);
+  if (all.length === 0) {
+    return (
+      <Panel title="NET CONTRIBUTION" bodyClassName="pad col">
+        <Headline text={contributionHeadline(r)} />
+      </Panel>
+    );
+  }
+  const top = all.find((x) => x.rank === 1);
+  return (
+    <Panel
+      title="NET CONTRIBUTION · value created for the whole market"
+      right={top ? `1st by net contribution: ${top.ticker} · CONDUCT next` : 'CONDUCT next'}
+      bodyClassName="pad col"
+    >
+      <Headline text={contributionHeadline(r)} />
+      <div className="col" style={{ flex: '1 1 0', minHeight: 0 }} data-nc-slope="">
+        <Slope rows={all} winner />
+      </div>
+    </Panel>
+  );
+}
+
+/**
+ * CONDUCT (§14.4 panel 4, Session 20): per firm in rank of net contribution, the figures on one zero-based axis
+ * (valuation, market effect, research credit, rivalry taken, net) with its conduct ledger underneath, so the facilitator
+ * can point to the conduct behind each rank. Moved from the right of NET CONTRIBUTION.
+ */
+export function Conduct({ r }: { r: FinalResults }) {
   const all = contributionRows(r);
   const alt = PARAMS.BOT_SUSTAINABLE;
   if (all.length === 0) {
     return (
-      <Panel title="NET CONTRIBUTION" bodyClassName="pad col">
+      <Panel title="CONDUCT" bodyClassName="pad col">
         <Headline text={contributionHeadline(r)} />
       </Panel>
     );
@@ -363,14 +359,9 @@ export function NetContribution({ r }: { r: FinalResults }) {
     ? `the ${rows.length} largest rank changes · OTHERS combines ${combined} firms`
     : `against every firm at pace ${alt.pace}, safety ${alt.safety} · research credit is not money`;
   return (
-    <Panel title="NET CONTRIBUTION · value created for the whole market" right={right} bodyClassName="pad col">
-      <Headline text={contributionHeadline(r)} />
-      <div className="nc-grid">
-        <div className="col">
-          <Slope rows={all} />
-        </div>
-        <ContributionList rows={rows} others={others} domain={domain} />
-      </div>
+    <Panel title="CONDUCT · what each firm did to the market" right={right} bodyClassName="pad col">
+      <Headline text={conductHeadline(r)} />
+      <ContributionList rows={rows} others={others} domain={domain} />
     </Panel>
   );
 }
