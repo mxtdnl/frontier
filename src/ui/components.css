@@ -1272,61 +1272,6 @@ legend {
 }
 
 /* ---------- Firm performance on the board (spec §14.1, Session 13) ---------- */
-/* One line plus half a line of space, so the board's two-line capacities are unchanged. */
-.share-strip {
-  display: flex;
-  align-items: stretch;
-  height: 1lh;
-  margin: 0.25lh 0;
-  white-space: nowrap;
-}
-.share-strip .ss-label {
-  flex: 0 0 12ch;
-  color: var(--dim);
-}
-.share-strip .ss-track {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  overflow: hidden;
-}
-.share-strip .ss-cap {
-  flex: 0 0 14ch;
-  text-align: right;
-  color: var(--down);
-}
-.share-strip .ss-none {
-  color: var(--dim);
-}
-/* Faded by rank by mixing with the panel colour; never below 64 %, so black text stays above 4.5:1. */
-.ss-seg {
-  flex: none;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--signal-ink);
-  border-left: 1px solid var(--base);
-}
-.ss-text {
-  margin-left: 0.5ch;
-}
-.ss-seg:first-child {
-  border-left: 0;
-}
-.ss-l0 {
-  background: var(--wire);
-}
-.ss-l1 {
-  background: color-mix(in srgb, var(--wire) 91%, var(--panel));
-}
-.ss-l2 {
-  background: color-mix(in srgb, var(--wire) 82%, var(--panel));
-}
-.ss-l3 {
-  background: color-mix(in srgb, var(--wire) 73%, var(--panel));
-}
-.ss-l4 {
-  background: color-mix(in srgb, var(--wire) 64%, var(--panel));
-}
 .neg-c {
   color: var(--down);
 }

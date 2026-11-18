@@ -232,7 +232,7 @@ async function scenario(browser: Browser): Promise<void> {
   await waitText(fac, /HELP[\s\S]*FIRMS[\s\S]*RANKS/, 'HELP lists FIRMS and RANKS', 5_000, '.scr');
   await fac.keyboard.press('Escape');
   const board1 = await fac.locator('[data-share-strip]').count();
-  check(board1 === 1 && (await fac.locator('.scr [data-value-bar]').count()) === 4, 'the board shows the value share strip and a value bar per firm');
+  check(board1 === 0 && (await fac.locator('.scr [data-value-bar]').count()) === 4, 'the board has no value share strip and a value bar per firm');
 
   // ── 6. Quarter 2: summit, timer controls ───────────────────────────────────
   await fac.keyboard.press('F9');

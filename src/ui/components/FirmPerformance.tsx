@@ -1,38 +1,6 @@
-import { barSpan, segmentLabel, type ShareSegment } from '../performance';
+import { barSpan } from '../performance';
 import { linearScale, linePath, xPositions } from '../chart';
 import { GlyphCheck, GlyphDown, GlyphUp } from './Glyph';
-
-/** Board value share strip (spec §14.1, Session 13): firms above zero, faded by rank, labelled where they fit. */
-export function ShareStrip({ segments, below, trackCh }: { segments: ReadonlyArray<ShareSegment>; below: number; trackCh: number }) {
-  const caption = below > 0 ? `${below} below zero` : '';
-  const described = segments.map((s) => `${s.ticker} ${Math.round(s.share * 100)}%`).join(', ');
-  return (
-    <div
-      className="share-strip"
-      data-share-strip=""
-      data-below={below}
-      role="img"
-      aria-label={`Market value share: ${described || 'no firm above zero'}${caption ? `; ${caption}` : ''}.`}
-    >
-      <span className="ss-label">VALUE SHARE</span>
-      <div className="ss-track">
-        {segments.length === 0 ? (
-          <span className="ss-none">No firm above zero</span>
-        ) : (
-          segments.map((s) => {
-            const label = segmentLabel(s, trackCh);
-            return (
-              <span key={s.id} className={`ss-seg ss-l${s.fade}`} style={{ width: `${(s.share * 100).toFixed(3)}%` }} data-seg={s.ticker} data-share={s.share.toFixed(4)}>
-                {label ? <span className="ss-text">{label}</span> : null}
-              </span>
-            );
-          })
-        )}
-      </div>
-      {caption ? <span className="ss-cap">{caption}</span> : null}
-    </div>
-  );
-}
 
 /** A firm's valuation as a bar from a visible zero line on a scale shared by every row. */
 export function ValueBar({ value, domain }: { value: number; domain: readonly [number, number] }) {

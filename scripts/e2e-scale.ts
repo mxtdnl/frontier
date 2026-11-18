@@ -180,21 +180,12 @@ async function boardChecks(page: Page, n: number, name: string, wantPage: number
 }
 
 /**
- * Board firm performance (§14.1, Session 13): the share strip's segments are as wide as their shares and their labels
- * are not cut; every row has a value bar where the mode has one (red, to the left of zero, for a negative value) and a
- * trend line where the mode has one; the strip's caption counts the firms below zero.
+ * Board firm performance (§14.1, Session 13): the value share strip is gone (Session 20); every row has a value bar
+ * where the mode has one (red, to the left of zero, for a negative value) and a trend line where the mode has one.
  */
-async function performanceChecks(page: Page, n: number, name: string, want: { bar: boolean; trend: boolean }): Promise<void> {
+async function performanceChecks(page: Page, _n: number, name: string, want: { bar: boolean; trend: boolean }): Promise<void> {
   const r = await page.evaluate(() => {
     const strip = document.querySelector<HTMLElement>('[data-share-strip]');
-    const track = strip?.querySelector<HTMLElement>('.ss-track');
-    const segs = Array.from(strip?.querySelectorAll<HTMLElement>('[data-seg]') ?? []);
-    const trackW = track?.getBoundingClientRect().width ?? 0;
-    const off = segs
-      .map((s) => ({ t: s.dataset.seg ?? '', want: Number(s.dataset.share) * trackW, got: s.getBoundingClientRect().width }))
-      .filter((s) => Math.abs(s.want - s.got) > 2.5)
-      .map((s) => `${s.t} ${s.got.toFixed(0)}px for ${s.want.toFixed(0)}px`);
-    const cut = segs.filter((s) => s.scrollWidth > s.clientWidth + 1).map((s) => s.dataset.seg ?? '');
     const rows = Array.from(document.querySelectorAll<HTMLElement>('[data-board-mode] tbody tr'));
     const bars = rows.map((tr) => tr.querySelector<HTMLElement>('[data-value-bar]'));
     const negRows = rows.filter((tr) => tr.querySelector('.neg-c'));
@@ -207,11 +198,6 @@ async function performanceChecks(page: Page, n: number, name: string, want: { ba
     }).length;
     return {
       strip: !!strip,
-      none: !!strip?.querySelector('.ss-none'),
-      segs: segs.length,
-      below: Number(strip?.dataset.below ?? -1),
-      off,
-      cut,
       rows: rows.length,
       bars: bars.filter(Boolean).length,
       trends: rows.filter((tr) => tr.querySelector('[data-trend], .trend-empty')).length,
@@ -223,9 +209,7 @@ async function performanceChecks(page: Page, n: number, name: string, want: { ba
       })(),
     };
   });
-  check(r.strip && r.segs + r.below <= n && (r.segs > 0 || r.none), `${name}: value share strip with ${r.segs} segments${r.none ? ' ("No firm above zero")' : ''}, ${r.below} below zero`);
-  check(r.off.length === 0, `${name}: share segments as wide as their shares${r.off.length ? ` (${r.off.slice(0, 3).join(' | ')})` : ''}`);
-  check(r.cut.length === 0, `${name}: no share label cut off${r.cut.length ? ` (${r.cut.join(' ')})` : ''}`);
+  check(!r.strip, `${name}: no value share strip (Session 20)`);
   check(r.bars === (want.bar ? r.rows : 0), `${name}: ${want.bar ? 'a value bar on every row' : 'no value bar column'} (${r.bars}/${r.rows})`);
   check(r.trends === (want.trend ? r.rows : 0), `${name}: ${want.trend ? 'a trend line on every row' : 'no trend column'} (${r.trends}/${r.rows})`);
   check(r.badNeg === 0, `${name}: negative values have red bars left of zero`);

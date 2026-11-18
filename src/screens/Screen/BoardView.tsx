@@ -1,10 +1,10 @@
 import { PARAMS } from '../../engine';
-import { CommitMark, DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, RankMove, ShareStrip, Tag, TrendLine, ValueBar, type Column, type TagKind } from '../../ui/components';
+import { CommitMark, DataTable, Delta, GlyphCheck, HBar, LineChart, Panel, RankMove, Tag, TrendLine, ValueBar, type Column, type TagKind } from '../../ui/components';
 import { fmt, fmtInt, fmtShare, quarterLabel } from '../../ui/format';
 import { GENERAL_CAUSE, incidentBlock, type IncidentLine } from '../../ui/incidents';
 import { BRIEFING_LINES } from './briefing';
-import { BOARD_W, boardCapacity, boardChartWidths, boardMode, boardPage, boardTagWidth, fitTags } from '../../ui/layout';
-import { shareSegments, sharedDomain, trendWindow } from '../../ui/performance';
+import { boardCapacity, boardChartWidths, boardMode, boardPage, boardTagWidth, fitTags } from '../../ui/layout';
+import { sharedDomain, trendWindow } from '../../ui/performance';
 
 import { committedCount, marketCeiling, previousTrust, tagKey, trustSeries, type BoardRow, type ScreenData } from './model';
 
@@ -171,12 +171,6 @@ export function boardTagW(disclosure: boolean, lit: boolean): number {
 /** Places a firm moved at the last resolution (positive or negative). */
 const moveOf = (f: BoardRow): number => f.prevIndex - (f.rank - 1);
 
-/** Label and caption beside the share strip's segments (components.css `.share-strip`). */
-const STRIP_LABEL_W = 12;
-const STRIP_CAPTION_W = 14;
-/** Panel side padding. */
-const STRIP_INSET = 2;
-
 export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, banner = false }: BoardProps) {
   // §14.1: two-line rows while they fit (12 as standard), one-line rows to 16, then pages of 10 with up to 2 pinned rows.
   const cap = boardCapacity({ lit, banner });
@@ -193,12 +187,8 @@ export function BoardPanel({ rows, disclosure, reveal, page = 0, lit = false, ba
     ...boardMnemonics(disclosure, lit),
     ...tagKey(fitted.map((t) => t.shown), fitted.some((t) => t.more > 0)),
   ];
-  // The strip and the scales cover every firm, not only the page shown.
-  const strip = shareSegments(rows.map((r) => ({ id: r.id, ticker: r.ticker, value: r.value })));
-  const trackCh = (lit ? BOARD_W.lit : BOARD_W.standard) - STRIP_INSET - STRIP_LABEL_W - (strip.below > 0 ? STRIP_CAPTION_W : 0);
   return (
     <Panel title="BOARD" right={mode === 'paged' ? `PAGE ${shown.page + 1}/${shown.pages} · ${cmt}` : cmt}>
-      <ShareStrip segments={strip.segments} below={strip.below} trackCh={trackCh} />
       <div data-board-mode={mode} data-board-page={shown.page + 1} data-board-pages={shown.pages} style={{ display: 'contents' }}>
         <DataTable
           caption={mode === 'paged' ? `Firm board, page ${shown.page + 1} of ${shown.pages}` : 'Firm board'}
