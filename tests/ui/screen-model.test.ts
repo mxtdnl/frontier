@@ -11,12 +11,13 @@ import {
   revealInput,
   tagKey,
   tickerTone,
+  tickerWireItems,
   trustSeries,
   valuationSeries,
   wireItems,
   type ScreenData,
 } from '../../src/screens/Screen/model';
-import type { FirmNode, FirmPublicNode, PublicNode, RoundNode } from '../../src/firebase/schema';
+import type { FirmNode, FirmPublicNode, PublicNode, RoundNode, WireNode } from '../../src/firebase/schema';
 
 const firm = (ticker: string, createdAt: number, isBot = false): FirmNode => ({ name: `${ticker} Inc`, ticker, createdAt, order: 0, isBot, botPolicy: isBot ? 'standard' : null });
 const fp = (over: Partial<FirmPublicNode>): FirmPublicNode => ({
@@ -180,5 +181,28 @@ describe('MARKET and INDUSTRY VALUE (Session 20)', () => {
   });
   it('uses only public round results', () => {
     expect(Object.keys(marketAndValue(data().rounds, 2)).sort()).toEqual(['market', 'marketDelta', 'value', 'valueDelta']);
+  });
+});
+
+describe('ticker: latest quarter only (Session 20)', () => {
+  const ev = (round: number, seq: number, text: string, at: number): WireNode => ({ at, round, seq, kind: 'pact-formed', text, pact: null, firm: null, joined: null });
+  const wire = {
+    w0: ev(0, -0.5, 'Pre', 1),
+    w1: ev(1, 1, 'Reveal one', 2),
+    w2: ev(2, 1.5, 'Open two', 3),
+    w3: ev(2, 2, 'Reveal two', 4),
+    w4: ev(3, 2.5, 'Open three', 5),
+  };
+  it('keeps the latest resolved quarter and the events since, newest first', () => {
+    expect(tickerWireItems(data().rounds, wire).map((h) => h.text)).toEqual(['Open three', 'Reveal two', 'Two', 'Three']);
+  });
+  it('drops every earlier quarter that the full log keeps', () => {
+    const all = wireItems(data().rounds, wire).map((h) => h.text);
+    expect(all).toContain('One');
+    expect(all).toContain('Pre');
+    expect(tickerWireItems(data().rounds, wire).map((h) => h.text)).not.toContain('One');
+  });
+  it('before quarter 1 resolves shows every event so far', () => {
+    expect(tickerWireItems({}, { w0: wire.w0 }).map((h) => h.text)).toEqual(['Pre']);
   });
 });

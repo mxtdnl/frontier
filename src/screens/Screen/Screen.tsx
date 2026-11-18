@@ -14,7 +14,7 @@ import { REVEAL, playReveal } from '../../ui/reveal';
 import { statusSentence } from '../../ui/status';
 import { FacilitatorGate } from '../Auth/FacilitatorGate';
 import { BoardPanel, TrustPanel } from './BoardView';
-import { boardRows, committedCount, latestRound, pactRows, previousTrust, revealInput, tickerTone, wireItems, type ScreenData } from './model';
+import { boardRows, committedCount, latestRound, pactRows, previousTrust, revealInput, tickerTone, tickerWireItems, type ScreenData } from './model';
 import { AuditView, BriefingView, FirmView, FirmsView, HelpView, IncidentsView, LobbyView, PactsView, RanksView, TrustView, WireView } from './Views';
 
 type View = { kind: 'board' | 'trust' | 'pacts' | 'wire' | 'help' | 'audit' | 'firms' | 'ranks' | 'incid' } | { kind: 'firm'; ticker: string };
@@ -125,6 +125,9 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
           break;
         case 'audit':
           setView({ kind: 'audit' });
+          break;
+        case 'wire':
+          setView({ kind: 'wire' });
           break;
         case 'disclosure':
           run(() => toggleDisclosure(ctx, seenRef.current));
@@ -306,7 +309,7 @@ function LiveScreen({ g, uid }: { g: string; uid: string }) {
   const showQuarter = pub.round > 0 && pub.phase !== 'lobby' && pub.phase !== 'briefing';
   const frozen = pub.phase === 'summit' || pub.paused;
   const delta = pub.T - previousTrust(rounds);
-  const ticker = wireItems(rounds, wire)
+  const ticker = tickerWireItems(rounds, wire)
     .slice(0, 12)
     .map((h) => ({ text: h.text, round: h.round, tone: tickerTone(h.kind) }));
   const status = statusSentence({

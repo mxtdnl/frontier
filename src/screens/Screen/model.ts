@@ -173,6 +173,17 @@ export function wireItems(rounds: Record<string, RoundNode>, wire: Record<string
   return mergeWire(rounds, wire).map((h) => ({ round: h.round, kind: h.kind, text: h.text }));
 }
 
+/**
+ * The board ticker (§14.1, Session 20): only the latest resolved quarter's headlines and the pact and disclosure events
+ * since it resolved (during its reveal and the next open quarter). Before quarter 1 resolves, every event so far.
+ */
+export function tickerWireItems(rounds: Record<string, RoundNode>, wire: Record<string, WireNode> = {}): WireItem[] {
+  const last = latestRound(rounds);
+  return mergeWire(rounds, wire)
+    .filter((h) => last === 0 || h.seq >= last)
+    .map((h) => ({ round: h.round, kind: h.kind, text: h.text }));
+}
+
 export interface PactRow {
   id: string;
   name: string;

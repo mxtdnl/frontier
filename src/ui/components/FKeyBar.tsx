@@ -1,4 +1,4 @@
-import { KEY_BINDINGS, type KeyAction, type ShownKey } from '../keys';
+import { KEY_BINDINGS, keyCap, keyWords, type KeyAction, type ShownKey } from '../keys';
 
 interface Props {
   onAction: (a: KeyAction) => void;
@@ -15,12 +15,12 @@ export function FKeyBar({ onAction, keys = KEY_BINDINGS.map((b) => ({ ...b, prim
           type="button"
           className={`fkey${b.primary ? ' is-primary' : ''}`}
           onClick={() => onAction(b.action)}
-          title={`${b.fKey} or Shift+${b.letter}`}
-          aria-keyshortcuts={`${b.fKey} Shift+${b.letter}`}
-          data-key={b.fKey}
+          title={keyWords(b, ' or ')}
+          aria-keyshortcuts={b.fKey ? `${b.fKey} Shift+${b.letter}` : `Shift+${b.letter}`}
+          data-key={b.fKey ?? `Shift+${b.letter}`}
           data-primary={b.primary ? '' : undefined}
         >
-          <span className="k">{b.fKey}</span>
+          <span className="k">{keyCap(b)}</span>
           <span>{b.label}</span>
         </button>
       ))}

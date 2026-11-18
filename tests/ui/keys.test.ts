@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KEY_BINDINGS, NEVER_BOUND, matchKey, projectorKeys, resultsKeys, type KeyContext, type KeyLike } from '../../src/ui/keys';
+import { ALL_BINDINGS, KEY_BINDINGS, LETTER_BINDINGS, NEVER_BOUND, keyCap, keyWords, matchKey, projectorKeys, resultsKeys, type KeyContext, type KeyLike } from '../../src/ui/keys';
 
 const key = (k: string, mods: Partial<KeyLike> = {}): KeyLike => ({
   key: k,
@@ -51,15 +51,15 @@ describe('key map', () => {
 
 describe('F-key bar per screen (Session 12)', () => {
   const ctx = (over: Partial<KeyContext> = {}): KeyContext => ({ phase: 'open', view: 'board', activePacts: 1, ...over });
-  const shown = (c: KeyContext) => projectorKeys(c).map((k) => k.fKey);
+  const shown = (c: KeyContext) => projectorKeys(c).map(keyCap);
   const primary = (c: KeyContext) => projectorKeys(c).filter((k) => k.primary).map((k) => k.fKey);
 
   it('an open quarter on the board shows every acting key, F9 solid', () => {
-    expect(shown(ctx())).toEqual(['F3', 'F4', 'F6', 'F7', 'F8', 'F9', 'F10']);
+    expect(shown(ctx())).toEqual(['F3', 'F4', '⇧W', 'F6', 'F7', 'F8', 'F9', 'F10']);
     expect(primary(ctx())).toEqual(['F9']);
   });
   it('a view key is hidden while its view shows, and F2 returns', () => {
-    expect(shown(ctx({ view: 'trust' }))).toEqual(['F2', 'F4', 'F6', 'F7', 'F8', 'F9', 'F10']);
+    expect(shown(ctx({ view: 'trust' }))).toEqual(['F2', 'F4', '⇧W', 'F6', 'F7', 'F8', 'F9', 'F10']);
     expect(shown(ctx({ view: 'firm' }))).toContain('F2');
   });
   it('lobby and briefing show only disclosure and advance', () => {
@@ -75,14 +75,14 @@ describe('F-key bar per screen (Session 12)', () => {
   });
   it('resolving has no primary and hides advance, summit and end', () => {
     expect(primary(ctx({ phase: 'resolving' }))).toEqual([]);
-    expect(shown(ctx({ phase: 'resolving' }))).toEqual(['F3', 'F4', 'F7']);
+    expect(shown(ctx({ phase: 'resolving' }))).toEqual(['F3', 'F4', '⇧W', 'F7']);
   });
   it('a summit makes F8 the primary key and hides F9', () => {
     expect(primary(ctx({ phase: 'summit' }))).toEqual(['F8']);
     expect(shown(ctx({ phase: 'summit' }))).not.toContain('F9');
   });
   it('after the end only the views and F9 (results) remain', () => {
-    expect(shown(ctx({ phase: 'ended' }))).toEqual(['F3', 'F4', 'F9']);
+    expect(shown(ctx({ phase: 'ended' }))).toEqual(['F3', 'F4', '⇧W', 'F9']);
     expect(primary(ctx({ phase: 'ended' }))).toEqual(['F9']);
   });
   it('exactly one solid key outside resolving, and it is always shown', () => {
@@ -94,6 +94,21 @@ describe('F-key bar per screen (Session 12)', () => {
     expect(resultsKeys(false).map((k) => k.fKey).sort()).toEqual(['F2', 'F9']);
     expect(resultsKeys(false).find((k) => k.primary)?.fKey).toBe('F9');
     expect(resultsKeys(true).some((k) => k.primary)).toBe(false);
+  });
+  it('Shift+W opens WIRE; the key is hidden while WIRE shows and in lobby and briefing (Session 20)', () => {
+    expect(matchKey(key('W', { shiftKey: true }), false)).toBe('wire');
+    expect(matchKey(key('w', { shiftKey: true }), false)).toBe('wire');
+    expect(matchKey(key('W', { shiftKey: true }), true)).toBeNull();
+    expect(shown(ctx({ view: 'wire' }))).not.toContain('⇧W');
+    expect(shown(ctx({ view: 'wire' }))).toContain('F2');
+    expect(shown(ctx({ phase: 'lobby' }))).not.toContain('⇧W');
+    expect(LETTER_BINDINGS.every((b) => b.fKey === null)).toBe(true);
+    expect(new Set(ALL_BINDINGS.map((b) => b.letter)).size).toBe(ALL_BINDINGS.length);
+    expect(keyWords(LETTER_BINDINGS[0]!)).toBe('Shift+W');
+    expect(keyWords(KEY_BINDINGS[0]!)).toBe('F2 / Shift+B');
+  });
+  it('the results screen ignores Shift+W', () => {
+    expect(resultsKeys(false).some((k) => k.action === 'wire')).toBe(false);
   });
   it('F7 is labelled DISCLOSURE in full', () => {
     expect(KEY_BINDINGS.find((b) => b.fKey === 'F7')?.label).toBe('DISCLOSURE');
